@@ -19,6 +19,7 @@ using System.Threading;
 using System.Xml;
 using System.Xml.Linq;
 using System;
+using System.Text;
 
 
 namespace Unity.Robotics.UrdfImporter
@@ -147,13 +148,27 @@ namespace Unity.Robotics.UrdfImporter
             thread.Start();
             thread.Join();
         }
+        
+        public class UTF8StringWriter : StringWriter
+        {
+            public override Encoding Encoding
+            {
+                get
+                {
+                    return Encoding.UTF8;
+                }
+            }
+        }
+        
         private void writeToUrdf()
         {
             Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
             Directory.CreateDirectory(Path.GetDirectoryName(filename));
-            XmlWriterSettings settings = new XmlWriterSettings { Indent = true, NewLineOnAttributes = false };
+            XmlWriterSettings settings = new XmlWriterSettings { Indent = true, NewLineOnAttributes = false, Encoding = new UTF8Encoding(true) };
 
-            using (XmlWriter writer = XmlWriter.Create(filename, settings))
+            //StringBuilder xmlBuilder = new StringBuilder();
+            StringWriter stringWriter = new UTF8StringWriter();
+            using (XmlWriter writer = XmlWriter.Create(stringWriter, settings))
             {
                 writer.WriteStartDocument();
                 writer.WriteStartElement("robot");
@@ -173,6 +188,8 @@ namespace Unity.Robotics.UrdfImporter
 
                 writer.Close();
             }
+            
+            File.WriteAllBytes(filename, settings.Encoding.GetBytes(stringWriter.ToString()));
         }
     }
     public class InvalidNameException : System.Exception

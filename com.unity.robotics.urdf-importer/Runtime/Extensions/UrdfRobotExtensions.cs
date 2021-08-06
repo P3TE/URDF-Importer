@@ -17,6 +17,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Unity.Robotics.UrdfImporter.Control;
+using Unity.Robotics.UrdfImporter.Urdf.Extensions;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -284,7 +285,9 @@ namespace Unity.Robotics.UrdfImporter
 
         public static void ExportRobotToUrdf(this UrdfRobot urdfRobot, string exportRootFolder, string exportDestination = "")
         {
+            
 #if UNITY_EDITOR
+            UrdfUnityMaterial.ClearPreviousExportData();
             UrdfExportPathHandler.SetExportPath(exportRootFolder, exportDestination);
 
             urdfRobot.FilePath = Path.Combine(UrdfExportPathHandler.GetExportDestination(), urdfRobot.name + ".urdf");

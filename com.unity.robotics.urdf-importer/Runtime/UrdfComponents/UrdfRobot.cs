@@ -28,6 +28,9 @@ namespace Unity.Robotics.UrdfImporter
         private ImportSettings.axisType currentOrientation = ImportSettings.axisType.yAxis;
         public List<CollisionIgnore> collisionExceptions;
 
+        [SerializeField] public string exportPackageDirectory = "";
+        [SerializeField] public string exportPackageName = "";
+
         //Current Settings
         public static bool collidersConvex = true;
         public static bool useUrdfInertiaData = false;

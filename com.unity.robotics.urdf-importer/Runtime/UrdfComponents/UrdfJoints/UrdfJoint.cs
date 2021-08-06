@@ -233,9 +233,16 @@ namespace Unity.Robotics.UrdfImporter
 #endif
             CheckForUrdfCompatibility();
 
+            string usedJointName = jointName;
+            if (usedJointName == "")
+            {
+                usedJointName = $"{gameObject.name}_joint";
+                Debug.LogWarning($"No joint name speficied for {gameObject.name}, defaulting to {usedJointName}");
+            }
+            
             //Data common to all joints
             Joint joint = new Joint(
-                jointName,
+                usedJointName,
                 JointType.ToString().ToLower(),
                 gameObject.transform.parent.name,
                 gameObject.name,

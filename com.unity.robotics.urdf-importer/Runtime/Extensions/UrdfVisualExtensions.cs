@@ -10,8 +10,10 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/  
+*/
 
+using System.Collections.Generic;
+using Unity.Robotics.UrdfImporter.Urdf.Extensions;
 using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
@@ -50,6 +52,28 @@ namespace Unity.Robotics.UrdfImporter
             UrdfCollisionExtensions.Create(collisions.transform, urdfVisual.geometryType, urdfVisual.transform);
         }
 
+
+        private static List<UrdfUnityMaterial.ExportMaterial> ExportMaterialData(this UrdfVisual urdfVisual)
+        {
+
+            List<UrdfUnityMaterial.ExportMaterial> exportMaterials = new List<UrdfUnityMaterial.ExportMaterial>();
+            
+            MeshRenderer[] meshRenderers = urdfVisual.GetComponentsInChildren<MeshRenderer>();
+            foreach (MeshRenderer meshRenderer in meshRenderers)
+            {
+                foreach (Material meshRendererMaterial in meshRenderer.sharedMaterials)
+                {
+                    UrdfUnityMaterial.ExportMaterial urdfUnityMaterial = UrdfUnityMaterial.GenerateAndExportNewMaterial(meshRendererMaterial);
+                    if (urdfUnityMaterial != null)
+                    {
+                        exportMaterials.Add(urdfUnityMaterial);
+                    }
+                }
+            }
+
+            return exportMaterials;
+        }
+
         public static Link.Visual ExportVisualData(this UrdfVisual urdfVisual)
         {
             UrdfGeometry.CheckForUrdfCompatibility(urdfVisual.transform, urdfVisual.geometryType);
@@ -57,13 +81,15 @@ namespace Unity.Robotics.UrdfImporter
             Link.Geometry geometry = UrdfGeometry.ExportGeometryData(urdfVisual.geometryType, urdfVisual.transform);
 
             Link.Visual.Material material = null;
-            if ((geometry.mesh != null )) 
+            List<UrdfUnityMaterial.ExportMaterial> exportMaterials = null;
+            if ((geometry.mesh != null ))
             {
-                material = UrdfMaterial.ExportMaterialData(urdfVisual.GetComponentInChildren<MeshRenderer>().sharedMaterial);
+                exportMaterials = urdfVisual.ExportMaterialData();
+                //material = UrdfMaterial.ExportMaterialData(urdfVisual.GetComponentInChildren<MeshRenderer>().sharedMaterial);
             }
             string visualName = urdfVisual.name == "unnamed" ? null : urdfVisual.name;
 
-            return new Link.Visual(geometry, visualName, UrdfOrigin.ExportOriginData(urdfVisual.transform), material);
+            return new Link.Visual(geometry, visualName, UrdfOrigin.ExportOriginData(urdfVisual.transform), material, exportMaterials);
         }
     }
 }

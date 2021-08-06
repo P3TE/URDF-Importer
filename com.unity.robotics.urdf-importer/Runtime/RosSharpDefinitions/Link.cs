@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
 using System.Xml.Linq;
+using Unity.Robotics.UrdfImporter.Urdf.Extensions;
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -195,6 +196,7 @@ namespace Unity.Robotics.UrdfImporter
             public Origin origin;
             public Geometry geometry;
             public Material material;
+            public List<UrdfUnityMaterial.ExportMaterial> exportedMaterials;
 
             public Visual(XElement node)
             {
@@ -204,12 +206,14 @@ namespace Unity.Robotics.UrdfImporter
                 material = (node.Element("material") != null) ? new Material(node.Element("material")) : null; // optional
             }
 
-            public Visual(Geometry geometry, string name = null, Origin origin = null, Material material = null)
+            public Visual(Geometry geometry, string name = null, Origin origin = null, Material material = null,
+                List<UrdfUnityMaterial.ExportMaterial> exportedMaterials = null)
             {
                 this.name = name;
                 this.origin = origin;
                 this.geometry = geometry;
                 this.material = material;
+                this.exportedMaterials = exportedMaterials;
             }
 
             public void WriteToUrdf(XmlWriter writer)
@@ -222,6 +226,13 @@ namespace Unity.Robotics.UrdfImporter
                 origin?.WriteToUrdf(writer);
                 geometry?.WriteToUrdf(writer);
                 material?.WriteToUrdf(writer);
+                if(exportedMaterials != null && exportedMaterials.Count > 0)
+                {
+                    foreach (UrdfUnityMaterial.ExportMaterial exportedMaterial in exportedMaterials)
+                    {
+                        exportedMaterial.WriteToUrdf(writer);
+                    }
+                }
 
                 writer.WriteEndElement();
             }

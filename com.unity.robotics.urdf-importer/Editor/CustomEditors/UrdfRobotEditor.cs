@@ -85,10 +85,26 @@ namespace Unity.Robotics.UrdfImporter.Editor
 
             GUILayout.Space(5);
             GUILayout.Label("URDF Files", EditorStyles.boldLabel);
+            
+            EditorGUILayout.BeginHorizontal();
+            GUIContent overrideExportPackageNameLabel = new GUIContent("Export Package Directory",
+                "Whether to override the name of the package when generating relative paths for the exported URDF.");
+            EditorGUILayout.PrefixLabel(overrideExportPackageNameLabel);
+            urdfRobot.exportPackageDirectory = GUILayout.TextField(urdfRobot.exportPackageDirectory);
+            EditorGUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUIContent exportPackageNameLabel = new GUIContent("Export Package Name",
+                "The name of the package when generating relative paths for the exported URDF.");
+            EditorGUILayout.PrefixLabel(exportPackageNameLabel);
+            urdfRobot.exportPackageName = GUILayout.TextField(urdfRobot.exportPackageName);
+            GUILayout.EndHorizontal();
+            
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Export robot to URDF"))
             {
-                exportRoot = EditorUtility.OpenFolderPanel("Select export directory", exportRoot, "");
+                string directorySelection = Path.Combine(urdfRobot.exportPackageDirectory, urdfRobot.exportPackageName);
+                exportRoot = EditorUtility.OpenFolderPanel("Select export directory", directorySelection, "");
 
                 if (exportRoot.Length == 0)
                     return;
@@ -96,7 +112,19 @@ namespace Unity.Robotics.UrdfImporter.Editor
                     EditorUtility.DisplayDialog("Export Error", "Export root folder must be defined and folder must exist.", "Ok");
                 else
                 {
-                    urdfRobot.ExportRobotToUrdf(exportRoot);
+
+                    if(UrdfAssetPathHandler.DirectoryContainsFileWithName(exportRoot, "package.xml"))
+                    {
+                        urdfRobot.exportPackageDirectory = Directory.GetParent(exportRoot).FullName;
+                        urdfRobot.exportPackageName = Path.GetFileName(exportRoot);;
+                    }
+                    else
+                    {
+                        urdfRobot.exportPackageDirectory = exportRoot;
+                        urdfRobot.exportPackageName = "";
+                    }
+                    
+                    urdfRobot.ExportRobotToUrdf(urdfRobot.exportPackageDirectory, urdfRobot.exportPackageName);
                     SetEditorPrefs();
                 }
             }

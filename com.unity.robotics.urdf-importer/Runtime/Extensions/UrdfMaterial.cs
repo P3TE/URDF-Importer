@@ -172,6 +172,9 @@ namespace Unity.Robotics.UrdfImporter
             {
                 return null;
             }
+            
+            
+            //TODO - Update.
 
             if (!Materials.ContainsKey(material.name))
             {

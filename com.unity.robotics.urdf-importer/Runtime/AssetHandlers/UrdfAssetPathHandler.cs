@@ -12,8 +12,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -79,9 +84,169 @@ namespace Unity.Robotics.UrdfImporter
             }
             return fullPath.SetSeparatorChar();
         }
+        
+        // This method accepts two strings the represent two files to
+        // compare. A return value of 0 indicates that the contents of the files
+        // are the same. A return value of any other value indicates that the
+        // files are not the same.
+        private static bool FileCompare(string file1, string file2)
+        {
+            int file1byte;
+            int file2byte;
+            FileStream fs1;
+            FileStream fs2;
+
+            // Determine if the same file was referenced two times.
+            if (file1 == file2)
+            {
+                // Return true to indicate that the files are the same.
+                return true;
+            }
+
+            // Open the two files.
+            fs1 = new FileStream(file1, FileMode.Open, FileAccess.Read);
+            fs2 = new FileStream(file2, FileMode.Open, FileAccess.Read);
+
+            // Check the file sizes. If they are not the same, the files
+            // are not the same.
+            if (fs1.Length != fs2.Length)
+            {
+                // Close the file
+                fs1.Close();
+                fs2.Close();
+
+                // Return false to indicate files are different
+                return false;
+            }
+
+            // Read and compare a byte from each file until either a
+            // non-matching set of bytes is found or until the end of
+            // file1 is reached.
+            do
+            {
+                // Read one byte from each file.
+                file1byte = fs1.ReadByte();
+                file2byte = fs2.ReadByte();
+            }
+            while ((file1byte == file2byte) && (file1byte != -1));
+
+            // Close the files.
+            fs1.Close();
+            fs2.Close();
+
+            // Return the success of the comparison. "file1byte" is
+            // equal to "file2byte" at this point only if the files are
+            // the same.
+            return ((file1byte - file2byte) == 0);
+        }
+
+        public static bool DirectoryContainsFileWithName(string directoryPath, string filename)
+        {
+            string[] filesInDirectory = Directory.GetFiles(directoryPath);
+            foreach (string path in filesInDirectory)
+            {
+                if (Path.GetFileName(path) == filename)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static string AttemptToCopyFileToAssets(string urdfPath)
+        {
+
+            string absolutePath = urdfPath.Substring(7);
+            
+            if (!File.Exists(absolutePath))
+            {
+                throw new Exception($"No file found at {absolutePath}");
+            }
+
+            string fileName = Path.GetFileName(absolutePath);
+
+            DirectoryInfo parentDirectoryInfo = Directory.GetParent(absolutePath);
+
+            bool useFallback = true;
+
+            LinkedList<string> result = new LinkedList<string>();
+
+            while (useFallback && parentDirectoryInfo != null && parentDirectoryInfo.Exists)
+            {
+                result.AddFirst(parentDirectoryInfo.Name);
+                if(DirectoryContainsFileWithName(parentDirectoryInfo.FullName, "package.xml"))
+                {
+                    useFallback = false;
+                }
+                parentDirectoryInfo = Directory.GetParent(parentDirectoryInfo.FullName);
+            }
+            
+            
+            if (useFallback)
+            {
+                result.Clear();
+                result.AddLast("resources");
+            }
+            
+            //Copy the file to the Assets directory.
+            string localDirectoryLocalPath = packageRoot;
+            string localDirectoryLocalPathNoRoot = "";
+            foreach (string directoryName in result)
+            {
+                localDirectoryLocalPathNoRoot = Path.Combine(localDirectoryLocalPathNoRoot, directoryName);
+            }
+
+            localDirectoryLocalPath = Path.Combine(localDirectoryLocalPath, localDirectoryLocalPathNoRoot);
+#if UNITY_EDITOR
+            string parentFolder = packageRoot;
+            foreach (string directoryName in result)
+            {
+                if (!AssetDatabase.IsValidFolder(localDirectoryLocalPath))
+                {
+                    AssetDatabase.CreateFolder(parentFolder, directoryName);
+                }
+                parentFolder = Path.Combine(parentFolder, directoryName);
+            }
+#else
+            if (!Directory.Exists(localDirectoryLocalPath))
+            {
+                Directory.CreateDirectory(localDirectoryLocalPath);
+            }
+#endif
+            
+            string localFilePath = Path.Combine(localDirectoryLocalPath, fileName);
+            bool copyNewFile = true;
+            if (File.Exists(localFilePath))
+            {
+                if (FileCompare(absolutePath, localFilePath))
+                {
+                    copyNewFile = false;
+                }
+                else
+                {
+                    File.Delete(localFilePath);
+                }
+            }
+
+            if (copyNewFile)
+            {
+                File.Copy(absolutePath, localFilePath);
+#if UNITY_EDITOR
+                AssetDatabase.ImportAsset(localFilePath);
+#endif
+            }
+            
+            string packagePrefixFilePath = @"package://" + Path.Combine(localDirectoryLocalPathNoRoot, fileName);
+            return packagePrefixFilePath;
+        }
 
         public static string GetRelativeAssetPathFromUrdfPath(string urdfPath, bool convertToPrefab=true)
         {
+            if (urdfPath.StartsWith(@"file://"))
+            {
+                //Copy the files to the Assets directory.
+                urdfPath = AttemptToCopyFileToAssets(urdfPath);
+            }
             if (!urdfPath.StartsWith(@"package://"))
             {
                Debug.LogWarning(@$"{urdfPath} is not a valid URDF package file path. Path should start with package://, and URDF file should be in the directory root.");
