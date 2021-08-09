@@ -19,9 +19,11 @@ using System.Linq;
 using Unity.Robotics.UrdfImporter.Control;
 using Unity.Robotics.UrdfImporter.Urdf.Extensions;
 #if UNITY_EDITOR
+using System.Xml;
 using UnityEditor;
 #endif
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -339,6 +341,14 @@ namespace Unity.Robotics.UrdfImporter
 
             robot.materials = UrdfMaterial.Materials.Values.ToList();
             robot.plugins = urdfRobot.GetComponentInChildren<UrdfPlugins>().ExportPluginsData();
+
+            IUrdfPluginImplementation[] additionalPlugins =
+                urdfRobot.GetComponentsInChildren<IUrdfPluginImplementation>();
+            foreach (IUrdfPluginImplementation additionalPlugin in additionalPlugins)
+            {
+                UrdfPluginDescription pluginDescription = PluginManagerBase.BuildXmlDocument(additionalPlugin, robot.name);
+                robot.plugins.Add(pluginDescription);
+            }
 
             return robot;
 #else

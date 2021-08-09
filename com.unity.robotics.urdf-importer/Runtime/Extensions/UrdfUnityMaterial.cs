@@ -100,7 +100,7 @@ namespace Unity.Robotics.UrdfImporter.Urdf.Extensions
             
             public string exportedName;
 
-            public ExportColor? color;
+            public ExportColor color;
             public ExportTexture exportedTexture;
 
             public List<IWritesToUrdf> unityElements = new List<IWritesToUrdf>();
