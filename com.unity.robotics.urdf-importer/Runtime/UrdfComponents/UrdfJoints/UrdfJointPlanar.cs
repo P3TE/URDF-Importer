@@ -54,7 +54,7 @@ namespace Unity.Robotics.UrdfImporter
             return distanceFromAnchor.magnitude;
         }
 
-        protected override void ImportJointData(Joint joint)
+        protected override void ImportJointData(UrdfJointDescription joint)
         {
 #if UNITY_2020_1_OR_NEWER
             AdjustMovement(joint);
@@ -80,7 +80,7 @@ namespace Unity.Robotics.UrdfImporter
 #endif
         }
 
-        private static JointDrive GetJointDrive(Joint.Dynamics dynamics)
+        private static JointDrive GetJointDrive(UrdfJointDescription.Dynamics dynamics)
         {
             return new JointDrive
             {
@@ -90,7 +90,7 @@ namespace Unity.Robotics.UrdfImporter
             };
         }
 
-        private static JointSpring GetJointSpring(Joint.Dynamics dynamics)
+        private static JointSpring GetJointSpring(UrdfJointDescription.Dynamics dynamics)
         {
             return new JointSpring
             {
@@ -100,18 +100,18 @@ namespace Unity.Robotics.UrdfImporter
             };
         }
 
-        private static SoftJointLimit GetLinearLimit(Joint.Limit limit)
+        private static SoftJointLimit GetLinearLimit(UrdfJointDescription.Limit limit)
         {
             return new SoftJointLimit { limit = (float)limit.upper };
         }
 
         #region Export
 
-        protected override Joint ExportSpecificJointData(Joint joint)
+        protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
         {
 #if UNITY_2020_1_OR_NEWER
             joint.axis = GetAxisData(axisofMotion);
-            joint.dynamics = new Joint.Dynamics(unityJoint.linearDamping, unityJoint.jointFriction);
+            joint.dynamics = new UrdfJointDescription.Dynamics(unityJoint.linearDamping, unityJoint.jointFriction);
             joint.limit = ExportLimitData();
 #else
             ConfigurableJoint configurableJoint = (ConfigurableJoint)unityJoint;
@@ -122,11 +122,11 @@ namespace Unity.Robotics.UrdfImporter
             return joint;
         }
 
-        protected override Joint.Limit ExportLimitData()
+        protected override UrdfJointDescription.Limit ExportLimitData()
         {
 #if UNITY_2020_1_OR_NEWER
             ArticulationDrive drive = GetComponent<ArticulationBody>().yDrive;
-            return new Joint.Limit(drive.lowerLimit, drive.upperLimit, EffortLimit, VelocityLimit);
+            return new UrdfJointDescription.Limit(drive.lowerLimit, drive.upperLimit, EffortLimit, VelocityLimit);
 #else
             ConfigurableJoint configurableJoint = (ConfigurableJoint)unityJoint;
             return new Joint.Limit(
@@ -166,11 +166,11 @@ namespace Unity.Robotics.UrdfImporter
 #endif
         }
 
-        protected override void AdjustMovement(Joint joint)
+        protected override void AdjustMovement(UrdfJointDescription joint)
         {
             if (joint.axis == null || joint.axis.xyz == null)
             {
-                joint.axis = new Joint.Axis(new double[] { 1, 0, 0 });
+                joint.axis = new UrdfJointDescription.Axis(new double[] { 1, 0, 0 });
             }
             axisofMotion = new Vector3((float)joint.axis.xyz[0], (float)joint.axis.xyz[1], (float)joint.axis.xyz[2]);
             int motionAxis = joint.axis.AxisofMotion();

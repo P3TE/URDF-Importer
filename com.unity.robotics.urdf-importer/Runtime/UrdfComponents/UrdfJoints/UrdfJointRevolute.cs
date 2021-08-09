@@ -97,17 +97,17 @@ namespace Unity.Robotics.UrdfImporter
 
         #endregion
 
-        protected override void ImportJointData(Joint joint)
+        protected override void ImportJointData(UrdfJointDescription joint)
         {
             AdjustMovement(joint);
             SetDynamics(joint.dynamics);
         }
 
-        protected override Joint ExportSpecificJointData(Joint joint)
+        protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
         {
 #if UNITY_2020_1_OR_NEWER
             joint.axis = GetAxisData(axisofMotion);
-            joint.dynamics = new Joint.Dynamics(unityJoint.angularDamping, unityJoint.jointFriction);
+            joint.dynamics = new UrdfJointDescription.Dynamics(unityJoint.angularDamping, unityJoint.jointFriction);
             joint.limit = ExportLimitData();
 #else
             joint.axis = GetAxisData(unityJoint.axis);
@@ -130,11 +130,11 @@ namespace Unity.Robotics.UrdfImporter
 #endif
         }
 
-        protected override Joint.Limit ExportLimitData()
+        protected override UrdfJointDescription.Limit ExportLimitData()
         {
 #if UNITY_2020_1_OR_NEWER
             ArticulationDrive drive = unityJoint.xDrive;
-            return new Joint.Limit(drive.lowerLimit * Mathf.Deg2Rad, drive.upperLimit * Mathf.Deg2Rad, drive.forceLimit, unityJoint.maxAngularVelocity);
+            return new UrdfJointDescription.Limit(drive.lowerLimit * Mathf.Deg2Rad, drive.upperLimit * Mathf.Deg2Rad, drive.forceLimit, unityJoint.maxAngularVelocity);
 #else
             HingeJointLimitsManager hingeJointLimits = GetComponent<HingeJointLimitsManager>();
             return new Joint.Limit(
@@ -149,7 +149,7 @@ namespace Unity.Robotics.UrdfImporter
         /// Reads axis joint information and rotation to the articulation body to produce the required motion
         /// </summary>
         /// <param name="joint">Structure containing joint information</param>
-        protected override void AdjustMovement(Joint joint)
+        protected override void AdjustMovement(UrdfJointDescription joint)
         {
             axisofMotion = (joint.axis != null && joint.axis.xyz != null) ? joint.axis.xyz.ToVector3() : new Vector3(1, 0, 0);
             unityJoint.linearLockX = ArticulationDofLock.LimitedMotion;

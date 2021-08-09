@@ -20,7 +20,7 @@ namespace Unity.Robotics.UrdfImporter
 {
     public class UrdfGeometryVisual : UrdfGeometry
     {
-        public static void Create(Transform parent, GeometryTypes geometryType, Link.Geometry geometry = null)
+        public static void Create(Transform parent, GeometryTypes geometryType, UrdfLinkDescription.Geometry geometry = null)
         {
             GameObject geometryGameObject = null;
 
@@ -57,7 +57,7 @@ namespace Unity.Robotics.UrdfImporter
             }
         }
 
-        private static GameObject CreateMeshVisual(Link.Geometry.Mesh mesh)
+        private static GameObject CreateMeshVisual(UrdfLinkDescription.Geometry.Mesh mesh)
         {
 #if UNITY_EDITOR
             if (!RuntimeUrdf.IsRuntimeMode())
@@ -69,7 +69,7 @@ namespace Unity.Robotics.UrdfImporter
             return CreateMeshVisualRuntime(mesh);
         }
 
-        private static GameObject CreateMeshVisualRuntime(Link.Geometry.Mesh mesh)
+        private static GameObject CreateMeshVisualRuntime(UrdfLinkDescription.Geometry.Mesh mesh)
         {
             GameObject meshObject = null;
             if (!string.IsNullOrEmpty(mesh.filename))

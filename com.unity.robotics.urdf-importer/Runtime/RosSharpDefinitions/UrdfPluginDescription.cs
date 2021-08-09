@@ -17,16 +17,16 @@ using System.Xml.Linq;
 
 namespace Unity.Robotics.UrdfImporter
 {
-    public class Plugin
+    public class UrdfPluginDescription
     {
         public string text;
 
-        public Plugin(XElement node)
+        public UrdfPluginDescription(XElement node)
         {
             text = node.ToString();
         }
 
-        public Plugin(string text)
+        public UrdfPluginDescription(string text)
         {
             this.text = text;
         }

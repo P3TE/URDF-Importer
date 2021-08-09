@@ -21,7 +21,7 @@ namespace Unity.Robotics.UrdfImporter
 {
     public class UrdfGeometryCollision : UrdfGeometry
     {
-        public static void Create(Transform parent, GeometryTypes geometryType, Link.Geometry geometry = null)
+        public static void Create(Transform parent, GeometryTypes geometryType, UrdfLinkDescription.Geometry geometry = null)
         {
             GameObject geometryGameObject = null;
             
@@ -61,7 +61,7 @@ namespace Unity.Robotics.UrdfImporter
             }
         }
 
-        private static GameObject CreateMeshCollider(Link.Geometry.Mesh mesh)
+        private static GameObject CreateMeshCollider(UrdfLinkDescription.Geometry.Mesh mesh)
         {
             if (!RuntimeUrdf.IsRuntimeMode())
             {
@@ -80,7 +80,7 @@ namespace Unity.Robotics.UrdfImporter
             return CreateMeshColliderRuntime(mesh);
         }
 
-        private static GameObject CreateMeshColliderRuntime(Link.Geometry.Mesh mesh)
+        private static GameObject CreateMeshColliderRuntime(UrdfLinkDescription.Geometry.Mesh mesh)
         {
             string meshFilePath = UrdfAssetPathHandler.GetRelativeAssetPathFromUrdfPath(mesh.filename, false);
             GameObject meshObject = null;
@@ -105,7 +105,7 @@ namespace Unity.Robotics.UrdfImporter
             GameObject gameObject = new GameObject("Cylinder");
             MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
 
-            Link.Geometry.Cylinder cylinder = new Link.Geometry.Cylinder(0.5, 2); //Default unity cylinder sizes
+            UrdfLinkDescription.Geometry.Cylinder cylinder = new UrdfLinkDescription.Geometry.Cylinder(0.5, 2); //Default unity cylinder sizes
 
             meshFilter.sharedMesh = CreateCylinderMesh(cylinder);
             ConvertCylinderToCollider(meshFilter);

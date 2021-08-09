@@ -6,16 +6,16 @@ namespace Unity.Robotics.UrdfImporter
 {
     public class UrdfComparator
     {
-        Robot source;
-        Robot exported;
+        UrdfRobotDescription source;
+        UrdfRobotDescription exported;
         string logFileName = "";
         System.Text.StringBuilder jointLog;
         System.Text.StringBuilder linkLog;
 
         public UrdfComparator(string sourceFilePath, string exportedFilePath, string logFilePath)
         {
-            this.source = new Robot(sourceFilePath);
-            this.exported = new Robot(exportedFilePath);
+            this.source = new UrdfRobotDescription(sourceFilePath);
+            this.exported = new UrdfRobotDescription(exportedFilePath);
             this.logFileName = @logFilePath + "/" + Path.GetFileName(sourceFilePath) + "_" + Path.GetFileName(exportedFilePath)
                                    + "_" + DateTime.Now.TimeOfDay + ".txt";
             Debug.Log("Compared Log Filepath :" + logFilePath);
@@ -81,7 +81,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second link to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareLink( Link source,  Link exported, int indent)
+        private bool CompareLink( UrdfLinkDescription source,  UrdfLinkDescription exported, int indent)
         {
             linkLog.AppendLine("\n\n********LINK*****\n");
 
@@ -162,9 +162,9 @@ namespace Unity.Robotics.UrdfImporter
                 return false;
             }
 
-            foreach (Joint jointSource in source.joints)
+            foreach (UrdfJointDescription jointSource in source.joints)
             {
-                Joint jointExported = exported.joints.Find(x => x.name == jointSource.name); // Check for no match
+                UrdfJointDescription jointExported = exported.joints.Find(x => x.name == jointSource.name); // Check for no match
                 if (jointExported == null)
                 {
                     linkLog.AppendLine(String.Format("{0}Joint Not Found in Exported: Joint Name:{1,12}",Indent(indent + 1),jointSource.name));
@@ -186,7 +186,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second joint to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareJoint( Joint source,  Joint exported, int indent) // This function does not test for Mimic, Calibration and SafetyController as they are not imported in Unity
+        private bool CompareJoint( UrdfJointDescription source,  UrdfJointDescription exported, int indent) // This function does not test for Mimic, Calibration and SafetyController as they are not imported in Unity
         {
             linkLog.AppendLine("\n\n********Joint*****\n");
 
@@ -274,7 +274,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second link's inertial information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareInertial(Link.Inertial source, Link.Inertial exported, int indent)
+        private bool CompareInertial(UrdfLinkDescription.Inertial source, UrdfLinkDescription.Inertial exported, int indent)
         {
             if (source == null && exported == null)
             {
@@ -310,7 +310,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second link's origin information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareOrigin( Origin source,  Origin exported, int indent)
+        private bool CompareOrigin( UrdfOriginDescription source,  UrdfOriginDescription exported, int indent)
         {
             linkLog.AppendLine(String.Format("{0}Origin Checks", Indent(indent)));
 
@@ -429,7 +429,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second link's visual information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareVisual( Link.Visual source,  Link.Visual exported, int indent)
+        private bool CompareVisual( UrdfLinkDescription.Visual source,  UrdfLinkDescription.Visual exported, int indent)
         {
             bool visualNameEqual = (source.name == exported.name);
             linkLog.AppendLine(String.Format("{0}Visual Component Name : {1,6}", Indent(indent + 1), visualNameEqual));
@@ -478,7 +478,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second visuals's geometry information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareGeometry( Link.Geometry source,  Link.Geometry exported, int indent)
+        private bool CompareGeometry( UrdfLinkDescription.Geometry source,  UrdfLinkDescription.Geometry exported, int indent)
         {
             if (source.box != null && exported != null)
             {
@@ -580,7 +580,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second visuals's material information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareMaterial( Link.Visual.Material source,  Link.Visual.Material exported, int indent)
+        private bool CompareMaterial( UrdfLinkDescription.Visual.Material source,  UrdfLinkDescription.Visual.Material exported, int indent)
         {
             bool materialNameEqual = source.name == exported.name;
             linkLog.AppendLine(String.Format("{0}Name Equal:{1,6}", Indent(indent), materialNameEqual));
@@ -648,7 +648,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second link's collision information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareCollisions( Link.Collision source,  Link.Collision exported, int indent)
+        private bool CompareCollisions( UrdfLinkDescription.Collision source,  UrdfLinkDescription.Collision exported, int indent)
         {
             bool colliisonNameEqual = (source.name == exported.name);
             linkLog.AppendLine(String.Format("{0}Collision Name", Indent(indent)));
@@ -673,7 +673,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second joint's axis information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareAxis(Joint.Axis source, Joint.Axis exported, int indent)
+        private bool CompareAxis(UrdfJointDescription.Axis source, UrdfJointDescription.Axis exported, int indent)
         {
             linkLog.AppendLine(String.Format("{0}Axis Checks", Indent(indent)));
             if (source == null && source == null)
@@ -731,7 +731,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second link's dynamics information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareDynamics(Joint.Dynamics source, Joint.Dynamics exported, int indent)
+        private bool CompareDynamics(UrdfJointDescription.Dynamics source, UrdfJointDescription.Dynamics exported, int indent)
         {
             linkLog.AppendLine(String.Format("{0}Dynamics Checks", Indent(indent)));
             if (source == null && source == null)
@@ -812,7 +812,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second joint's limit information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareLimit(Joint.Limit source, Joint.Limit exported, int indent)
+        private bool CompareLimit(UrdfJointDescription.Limit source, UrdfJointDescription.Limit exported, int indent)
         {
             //Lower
             if ((source.lower == double.NaN && exported.lower == 0) || (source.lower == 0 && exported.lower == double.NaN))

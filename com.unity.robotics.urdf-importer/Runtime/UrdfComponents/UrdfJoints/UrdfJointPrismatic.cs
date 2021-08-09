@@ -112,7 +112,7 @@ namespace Unity.Robotics.UrdfImporter
 
         #region Import
 
-        protected override void ImportJointData(Joint joint)
+        protected override void ImportJointData(UrdfJointDescription joint)
         {
             AdjustMovement(joint);
             SetDynamics(joint.dynamics);
@@ -122,7 +122,7 @@ namespace Unity.Robotics.UrdfImporter
         /// Reads axis joint information and rotation to the articulation body to produce the required motion
         /// </summary>
         /// <param name="joint">Structure containing joint information</param>
-        protected override void AdjustMovement(Joint joint) // Test this function
+        protected override void AdjustMovement(UrdfJointDescription joint) // Test this function
         {
             axisofMotion = (joint.axis != null && joint.axis.xyz != null) ? joint.axis.xyz.ToVector3() : new Vector3(1, 0, 0);
             unityJoint.linearLockX = (joint.limit != null) ? ArticulationDofLock.LimitedMotion : ArticulationDofLock.FreeMotion;
@@ -154,11 +154,11 @@ namespace Unity.Robotics.UrdfImporter
 
         #region Export
 
-        protected override Joint ExportSpecificJointData(Joint joint)
+        protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
         {
 #if UNITY_2020_1_OR_NEWER
             joint.axis = GetAxisData(axisofMotion);
-            joint.dynamics = new Joint.Dynamics(unityJoint.linearDamping, unityJoint.jointFriction);
+            joint.dynamics = new UrdfJointDescription.Dynamics(unityJoint.linearDamping, unityJoint.jointFriction);
             joint.limit = ExportLimitData();
 #else
             ConfigurableJoint configurableJoint = (ConfigurableJoint)unityJoint;
@@ -181,12 +181,12 @@ namespace Unity.Robotics.UrdfImporter
 #endif
         }
 
-        protected override Joint.Limit ExportLimitData()
+        protected override UrdfJointDescription.Limit ExportLimitData()
         {
 #if UNITY_2020_1_OR_NEWER
             ArticulationDrive drive = GetComponent<ArticulationBody>().xDrive;
 #if UNITY_2020_2_OR_NEWER
-            return new Joint.Limit(drive.lowerLimit, drive.upperLimit, drive.forceLimit, unityJoint.maxLinearVelocity);
+            return new UrdfJointDescription.Limit(drive.lowerLimit, drive.upperLimit, drive.forceLimit, unityJoint.maxLinearVelocity);
 #elif UNITY_2020_1
             return new Joint.Limit(drive.lowerLimit, drive.upperLimit, drive.forceLimit, maxLinearVelocity);
 #endif

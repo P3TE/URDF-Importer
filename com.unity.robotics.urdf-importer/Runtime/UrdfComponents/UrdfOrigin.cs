@@ -20,7 +20,7 @@ namespace Unity.Robotics.UrdfImporter
     {
         #region Import
 
-        public static void ImportOriginData(Transform transform, Origin origin)
+        public static void ImportOriginData(Transform transform, UrdfOriginDescription origin)
         {
             if (origin != null)
             {
@@ -28,14 +28,14 @@ namespace Unity.Robotics.UrdfImporter
                 transform.Rotate(GetRotationFromUrdf(origin));
             }
         }
-        public static Vector3 GetPositionFromUrdf(Origin origin)
+        public static Vector3 GetPositionFromUrdf(UrdfOriginDescription origin)
         {
             if (origin.Xyz != null)
                 return origin.Xyz.ToVector3().Ros2Unity();
             
             return Vector3.zero;
         }
-        public static Vector3 GetRotationFromUrdf(Origin origin)
+        public static Vector3 GetRotationFromUrdf(UrdfOriginDescription origin)
         {
             if (origin.Rpy != null)
                 return new Vector3(
@@ -50,13 +50,13 @@ namespace Unity.Robotics.UrdfImporter
 
         #region Export
 
-        public static Origin ExportOriginData(Transform transform)
+        public static UrdfOriginDescription ExportOriginData(Transform transform)
         {
             double[] xyz = ExportXyzData(transform);
             double[] rpy = ExportRpyData(transform);
 
             if (xyz != null || rpy != null)
-                return new Origin(xyz, rpy);
+                return new UrdfOriginDescription(xyz, rpy);
 
             return null;
         }

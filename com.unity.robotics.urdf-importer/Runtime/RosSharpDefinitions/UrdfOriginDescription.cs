@@ -17,18 +17,18 @@ using System.Xml.Linq;
 
 namespace Unity.Robotics.UrdfImporter
 {
-    public class Origin
+    public class UrdfOriginDescription
     {
         public double[] Xyz;
         public double[] Rpy;
 
-        public Origin(XElement node)
+        public UrdfOriginDescription(XElement node)
         {
             Xyz = node.Attribute("xyz") != null ? node.Attribute("xyz").ReadDoubleArray() : null;
             Rpy = node.Attribute("rpy") != null ? node.Attribute("rpy").ReadDoubleArray() : null;
         }
 
-        public Origin(double[] xyz, double[] rpy)
+        public UrdfOriginDescription(double[] xyz, double[] rpy)
         {
             Xyz = xyz;
             Rpy = rpy;

@@ -155,7 +155,7 @@ namespace Unity.Robotics.UrdfImporter
             return jointLimits;
         }
 
-        public void InitializeLimits(Joint.Limit limit, HingeJoint joint)
+        public void InitializeLimits(UrdfJointDescription.Limit limit, HingeJoint joint)
         {
             LargeAngleLimitMin = (float)limit.lower * Mathf.Rad2Deg;
             LargeAngleLimitMax = (float)limit.upper * Mathf.Rad2Deg;

@@ -20,15 +20,15 @@ using Unity.Robotics.UrdfImporter.Urdf.Extensions;
 
 namespace Unity.Robotics.UrdfImporter
 {
-    public class Link
+    public class UrdfLinkDescription
     {
         public string name;
         public Inertial inertial;
         public List<Visual> visuals;
         public List<Collision> collisions;
-        public List<Joint> joints;
+        public List<UrdfJointDescription> joints;
 
-        public Link(XElement node)
+        public UrdfLinkDescription(XElement node)
         {
             name = (string)node.Attribute("name");  // required
             inertial = (node.Element("inertial") != null) ? new Inertial(node.Element("inertial")) : null;  // optional     
@@ -36,14 +36,14 @@ namespace Unity.Robotics.UrdfImporter
             collisions = readCollisions(node); // optional   
         }
 
-        public Link(string name, Inertial inertial = null)
+        public UrdfLinkDescription(string name, Inertial inertial = null)
         {
             this.name = name;
             this.inertial = inertial;
 
             visuals = new List<Visual>();
             collisions = new List<Collision>();
-            joints = new List<Joint>();
+            joints = new List<UrdfJointDescription>();
         }
 
         public void WriteToUrdf(XmlWriter writer)
@@ -80,17 +80,17 @@ namespace Unity.Robotics.UrdfImporter
         public class Inertial
         {
             public double mass;
-            public Origin origin;
+            public UrdfOriginDescription origin;
             public Inertia inertia;
 
             public Inertial(XElement node)
             {
-                origin = (node.Element("origin") != null) ? new Origin(node.Element("origin")) : null; // optional  
+                origin = (node.Element("origin") != null) ? new UrdfOriginDescription(node.Element("origin")) : null; // optional  
                 mass = (double)node.Element("mass").Attribute("value");// required
                 inertia = new Inertia(node.Element("inertia")); // required
             }
 
-            public Inertial(double mass, Origin origin, Inertia inertia)
+            public Inertial(double mass, UrdfOriginDescription origin, Inertia inertia)
             {
                 this.mass = mass;
                 this.origin = origin;
@@ -159,17 +159,17 @@ namespace Unity.Robotics.UrdfImporter
         public class Collision
         {
             public string name;
-            public Origin origin;
+            public UrdfOriginDescription origin;
             public Geometry geometry;
 
             public Collision(XElement node)
             {
                 name = (string)node.Attribute("name"); // optional
-                origin = (node.Element("origin") != null) ? new Origin(node.Element("origin")) : null; // optional  
+                origin = (node.Element("origin") != null) ? new UrdfOriginDescription(node.Element("origin")) : null; // optional  
                 geometry = new Geometry(node.Element("geometry")); // required
             }
 
-            public Collision(Geometry geometry, string name = null, Origin origin = null)
+            public Collision(Geometry geometry, string name = null, UrdfOriginDescription origin = null)
             {
                 this.name = name;
                 this.origin = origin;
@@ -193,7 +193,7 @@ namespace Unity.Robotics.UrdfImporter
         public class Visual
         {
             public string name;
-            public Origin origin;
+            public UrdfOriginDescription origin;
             public Geometry geometry;
             public Material material;
             public List<UrdfUnityMaterial.ExportMaterial> exportedMaterials;
@@ -201,12 +201,12 @@ namespace Unity.Robotics.UrdfImporter
             public Visual(XElement node)
             {
                 name = (string)node.Attribute("name"); // optional
-                origin = (node.Element("origin") != null) ? new Origin(node.Element("origin")) : null; // optional
+                origin = (node.Element("origin") != null) ? new UrdfOriginDescription(node.Element("origin")) : null; // optional
                 geometry = new Geometry(node.Element("geometry")); // required
                 material = (node.Element("material") != null) ? new Material(node.Element("material")) : null; // optional
             }
 
-            public Visual(Geometry geometry, string name = null, Origin origin = null, Material material = null,
+            public Visual(Geometry geometry, string name = null, UrdfOriginDescription origin = null, Material material = null,
                 List<UrdfUnityMaterial.ExportMaterial> exportedMaterials = null)
             {
                 this.name = name;

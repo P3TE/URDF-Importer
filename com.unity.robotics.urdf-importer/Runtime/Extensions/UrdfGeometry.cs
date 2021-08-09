@@ -21,21 +21,21 @@ namespace Unity.Robotics.UrdfImporter
     {
         private const int RoundDigits = 6;
 
-        public static Link.Geometry ExportGeometryData(GeometryTypes geometryType, Transform transform, bool isCollisionGeometry = false)
+        public static UrdfLinkDescription.Geometry ExportGeometryData(GeometryTypes geometryType, Transform transform, bool isCollisionGeometry = false)
         {
-            Link.Geometry geometry = null;
+            UrdfLinkDescription.Geometry geometry = null;
             switch (geometryType)
             {
                 case GeometryTypes.Box:
-                    geometry = new Link.Geometry(new Link.Geometry.Box(ExportUrdfSize(transform)));
+                    geometry = new UrdfLinkDescription.Geometry(new UrdfLinkDescription.Geometry.Box(ExportUrdfSize(transform)));
                     break;
                 case GeometryTypes.Cylinder:
-                    geometry = new Link.Geometry(
+                    geometry = new UrdfLinkDescription.Geometry(
                         null,
-                        new Link.Geometry.Cylinder(ExportUrdfRadius(transform), ExportCylinderHeight(transform)));
+                        new UrdfLinkDescription.Geometry.Cylinder(ExportUrdfRadius(transform), ExportCylinderHeight(transform)));
                     break;
                 case GeometryTypes.Sphere:
-                    geometry = new Link.Geometry(null, null, new Link.Geometry.Sphere(ExportUrdfRadius(transform)));
+                    geometry = new UrdfLinkDescription.Geometry(null, null, new UrdfLinkDescription.Geometry.Sphere(ExportUrdfRadius(transform)));
                     break;
                 case GeometryTypes.Mesh:
                     geometry = ExportGeometryMeshData(transform.GetChild(0).gameObject, ExportUrdfSize(transform), isCollisionGeometry);
@@ -47,7 +47,7 @@ namespace Unity.Robotics.UrdfImporter
         
         #region Import Helpers
 
-        public static GeometryTypes GetGeometryType(Link.Geometry geometry)
+        public static GeometryTypes GetGeometryType(UrdfLinkDescription.Geometry geometry)
         {
             if (geometry.box != null)
                 return GeometryTypes.Box;
@@ -59,7 +59,7 @@ namespace Unity.Robotics.UrdfImporter
             return GeometryTypes.Mesh;
         }
 
-        public static void SetScale(Transform transform, Link.Geometry geometry, GeometryTypes geometryType)
+        public static void SetScale(Transform transform, UrdfLinkDescription.Geometry geometry, GeometryTypes geometryType)
         {
             switch (geometryType)
             {
@@ -90,7 +90,7 @@ namespace Unity.Robotics.UrdfImporter
             }
         }
 
-        public static Mesh CreateCylinderMesh(Link.Geometry.Cylinder cylinder)
+        public static Mesh CreateCylinderMesh(UrdfLinkDescription.Geometry.Cylinder cylinder)
         {
             float height = (float)cylinder.length;
             float bottomRadius = (float)cylinder.radius;
@@ -300,12 +300,12 @@ namespace Unity.Robotics.UrdfImporter
             return Math.Round(transform.localScale.y * 2, RoundDigits);
         }
 
-        private static Link.Geometry ExportGeometryMeshData(GameObject geometryObject, double[] urdfSize, bool isCollisionGeometry)
+        private static UrdfLinkDescription.Geometry ExportGeometryMeshData(GameObject geometryObject, double[] urdfSize, bool isCollisionGeometry)
         {
             string newFilePath = UrdfMeshExportHandler.CopyOrCreateMesh(geometryObject, isCollisionGeometry);
             string packagePath = UrdfExportPathHandler.GetPackagePathForMesh(newFilePath);
 
-            return new Link.Geometry(null, null, null, new Link.Geometry.Mesh(packagePath, urdfSize));
+            return new UrdfLinkDescription.Geometry(null, null, null, new UrdfLinkDescription.Geometry.Mesh(packagePath, urdfSize));
         }
 
         public static bool CheckForUrdfCompatibility(Transform transform, GeometryTypes type)

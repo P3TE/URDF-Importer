@@ -69,7 +69,7 @@ namespace Unity.Robotics.UrdfImporter
             return softJointLimit;
         }
 
-        public void InitializeLimits(Joint.Limit limit)
+        public void InitializeLimits(UrdfJointDescription.Limit limit)
         {
             PositionLimitMax = (float)limit.upper;
             PositionLimitMin = (float)limit.lower;

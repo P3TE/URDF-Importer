@@ -20,7 +20,7 @@ namespace Unity.Robotics.UrdfImporter
 { 
     public static class UrdfCollisionsExtensions
     {
-        public static UrdfCollisions Create(Transform parent, List<Link.Collision> collisions = null)
+        public static UrdfCollisions Create(Transform parent, List<UrdfLinkDescription.Collision> collisions = null)
         {
             GameObject collisionsObject = new GameObject("Collisions");
             collisionsObject.transform.SetParentAndAlign(parent);
@@ -31,7 +31,7 @@ namespace Unity.Robotics.UrdfImporter
             
             if (collisions != null)
             {
-                foreach (Link.Collision collision in collisions)
+                foreach (UrdfLinkDescription.Collision collision in collisions)
                 {
                     UrdfCollisionExtensions.Create(urdfCollisions.transform, collision);
                 }
@@ -39,7 +39,7 @@ namespace Unity.Robotics.UrdfImporter
             return urdfCollisions;
         }
         
-        public static List<Link.Collision> ExportCollisionsData(this UrdfCollisions urdfCollisions)
+        public static List<UrdfLinkDescription.Collision> ExportCollisionsData(this UrdfCollisions urdfCollisions)
         {
             UrdfCollision[] urdfCollisionsList = urdfCollisions.GetComponentsInChildren<UrdfCollision>();
             return urdfCollisionsList.Select(urdfCollision => urdfCollision.ExportCollisionData()).ToList();

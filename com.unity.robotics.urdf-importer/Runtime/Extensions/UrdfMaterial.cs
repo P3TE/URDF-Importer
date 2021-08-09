@@ -26,11 +26,11 @@ namespace Unity.Robotics.UrdfImporter
         private const string DefaultMaterialName = "Default";
         private const int RoundDigits = 4;
 
-        public static Dictionary<string, Link.Visual.Material> Materials =
-            new Dictionary<string, Link.Visual.Material>();
+        public static Dictionary<string, UrdfLinkDescription.Visual.Material> Materials =
+            new Dictionary<string, UrdfLinkDescription.Visual.Material>();
         
         #region Import
-        private static Material CreateMaterial(this Link.Visual.Material urdfMaterial)
+        private static Material CreateMaterial(this UrdfLinkDescription.Visual.Material urdfMaterial)
         {
             if (urdfMaterial.name == "")
             {
@@ -86,7 +86,7 @@ namespace Unity.Robotics.UrdfImporter
 #endif
         }
 
-        private static string GenerateMaterialName(Link.Visual.Material urdfMaterial)
+        private static string GenerateMaterialName(UrdfLinkDescription.Visual.Material urdfMaterial)
         {
             var materialName = "";
             if (urdfMaterial.color != null)
@@ -105,7 +105,7 @@ namespace Unity.Robotics.UrdfImporter
             return materialName;
         }
 
-        private static Color CreateColor(Link.Visual.Material.Color urdfColor)
+        private static Color CreateColor(UrdfLinkDescription.Visual.Material.Color urdfColor)
         {
             return new Color(
                 (float)urdfColor.rgba[0],
@@ -120,14 +120,14 @@ namespace Unity.Robotics.UrdfImporter
         }
 
 
-        public static void InitializeRobotMaterials(Robot robot)
+        public static void InitializeRobotMaterials(UrdfRobotDescription robot)
         {
             CreateDefaultMaterial();
             foreach (var material in robot.materials)
                 CreateMaterial(material);
         }
         
-        public static void SetUrdfMaterial(GameObject gameObject, Link.Visual.Material urdfMaterial)
+        public static void SetUrdfMaterial(GameObject gameObject, UrdfLinkDescription.Visual.Material urdfMaterial)
         {
             if (urdfMaterial != null)
             {
@@ -166,7 +166,7 @@ namespace Unity.Robotics.UrdfImporter
 
         #region Export
 
-        public static Link.Visual.Material ExportMaterialData(Material material)
+        public static UrdfLinkDescription.Visual.Material ExportMaterialData(Material material)
         {
             if (material == null)
             {
@@ -180,13 +180,13 @@ namespace Unity.Robotics.UrdfImporter
             {
                 if (material.mainTexture != null)
                 {
-                    Link.Visual.Material.Texture texture = ExportTextureData(material.mainTexture);
-                    Materials[material.name] = new Link.Visual.Material(material.name, null, texture);
+                    UrdfLinkDescription.Visual.Material.Texture texture = ExportTextureData(material.mainTexture);
+                    Materials[material.name] = new UrdfLinkDescription.Visual.Material(material.name, null, texture);
                 }
                 else if (!material.color.Equals(Color.clear))
                 {
-                    Link.Visual.Material.Color color = new Link.Visual.Material.Color(ExportRgbaData(material));
-                    Materials[material.name] = new Link.Visual.Material(material.name, color);
+                    UrdfLinkDescription.Visual.Material.Color color = new UrdfLinkDescription.Visual.Material.Color(ExportRgbaData(material));
+                    Materials[material.name] = new UrdfLinkDescription.Visual.Material(material.name, color);
                 }
                 else
                 {
@@ -208,7 +208,7 @@ namespace Unity.Robotics.UrdfImporter
             };
         }
 
-        private static Link.Visual.Material.Texture ExportTextureData(Texture texture)
+        private static UrdfLinkDescription.Visual.Material.Texture ExportTextureData(Texture texture)
         {
             string oldTexturePath = UrdfAssetPathHandler.GetFullAssetPath(RuntimeUrdf.AssetDatabase_GetAssetPath(texture));
             string newTexturePath = UrdfExportPathHandler.GetNewResourcePath(Path.GetFileName(oldTexturePath));
@@ -218,7 +218,7 @@ namespace Unity.Robotics.UrdfImporter
             }
 
             string packagePath = UrdfExportPathHandler.GetPackagePathForResource(newTexturePath);
-            return new Link.Visual.Material.Texture(packagePath);
+            return new UrdfLinkDescription.Visual.Material.Texture(packagePath);
         }
 
         #endregion

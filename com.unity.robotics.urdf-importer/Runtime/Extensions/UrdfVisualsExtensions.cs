@@ -20,7 +20,7 @@ namespace Unity.Robotics.UrdfImporter
 {
     public static class UrdfVisualsExtensions
     {
-        public static void Create(Transform parent, List<Link.Visual> visuals = null)
+        public static void Create(Transform parent, List<UrdfLinkDescription.Visual> visuals = null)
         {
             GameObject visualsObject = new GameObject("Visuals");
             visualsObject.transform.SetParentAndAlign(parent);
@@ -31,14 +31,14 @@ namespace Unity.Robotics.UrdfImporter
 
             if (visuals != null)
             {
-                foreach (Link.Visual visual in visuals)
+                foreach (UrdfLinkDescription.Visual visual in visuals)
                 {
                     UrdfVisualExtensions.Create(urdfVisuals.transform, visual);
                 }
             }
         }
 
-        public static List<Link.Visual> ExportVisualsData(this UrdfVisuals urdfVisuals)
+        public static List<UrdfLinkDescription.Visual> ExportVisualsData(this UrdfVisuals urdfVisuals)
         {
             UrdfVisual[] urdfVisualsList = urdfVisuals.GetComponentsInChildren<UrdfVisual>();
 

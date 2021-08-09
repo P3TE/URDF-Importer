@@ -58,9 +58,9 @@ namespace Unity.Robotics.UrdfImporter
             public bool wasRuntimeMode;
             public bool loadStatus;
             public bool forceRuntimeMode;
-            public Robot robot;
+            public UrdfRobotDescription robot;
             public GameObject robotGameObject;
-            public Stack<Tuple<Link, Transform, Joint>> importStack;
+            public Stack<Tuple<UrdfLinkDescription, Transform, UrdfJointDescription>> importStack;
         }
 
         // Initializes import pipeline and reads the urdf file.
@@ -77,7 +77,7 @@ namespace Unity.Robotics.UrdfImporter
                 RuntimeUrdf.SetRuntimeMode(true);
             }
 
-            im.robot = new Robot(filename);
+            im.robot = new UrdfRobotDescription(filename);
 
             if (!UrdfAssetPathHandler.IsValidAssetPath(im.robot.filename))
             {
@@ -122,19 +122,19 @@ namespace Unity.Robotics.UrdfImporter
         {
             if (im.importStack == null) 
             {
-                im.importStack = new Stack<Tuple<Link, Transform, Joint>>();
-                im.importStack.Push(new Tuple<Link, Transform, Joint>(im.robot.root, im.robotGameObject.transform, null));
+                im.importStack = new Stack<Tuple<UrdfLinkDescription, Transform, UrdfJointDescription>>();
+                im.importStack.Push(new Tuple<UrdfLinkDescription, Transform, UrdfJointDescription>(im.robot.root, im.robotGameObject.transform, null));
             }
             
             if (im.importStack.Count != 0)
             {
-                Tuple<Link, Transform, Joint> currentLink = im.importStack.Pop();
+                Tuple<UrdfLinkDescription, Transform, UrdfJointDescription> currentLink = im.importStack.Pop();
                 GameObject importedLink = UrdfLinkExtensions.Create(currentLink.Item2, currentLink.Item1, currentLink.Item3);
                 im.settings.linksLoaded++;
-                foreach (Joint childJoint in currentLink.Item1.joints)
+                foreach (UrdfJointDescription childJoint in currentLink.Item1.joints)
                 {
-                    Link child = childJoint.ChildLink;
-                    im.importStack.Push(new Tuple<Link, Transform, Joint>(child, importedLink.transform, childJoint));
+                    UrdfLinkDescription child = childJoint.ChildLink;
+                    im.importStack.Push(new Tuple<UrdfLinkDescription, Transform, UrdfJointDescription>(child, importedLink.transform, childJoint));
                 }
                 return true;
             }
@@ -263,7 +263,7 @@ namespace Unity.Robotics.UrdfImporter
             robotScript.SetOrientation();
         }
 
-        private static void CreateCollisionExceptions(Robot robot, GameObject robotGameObject)
+        private static void CreateCollisionExceptions(UrdfRobotDescription robot, GameObject robotGameObject)
         {
             List<CollisionIgnore> CollisionList = new List<CollisionIgnore>();
             if (robot.ignoreCollisionPair.Count > 0)
@@ -292,7 +292,7 @@ namespace Unity.Robotics.UrdfImporter
 
             urdfRobot.FilePath = Path.Combine(UrdfExportPathHandler.GetExportDestination(), urdfRobot.name + ".urdf");
 
-            Robot robot = urdfRobot.ExportRobotData();
+            UrdfRobotDescription robot = urdfRobot.ExportRobotData();
             if (robot == null) return;
 
             robot.WriteToUrdf();
@@ -307,10 +307,10 @@ namespace Unity.Robotics.UrdfImporter
 #endif
         }
 
-        private static Robot ExportRobotData(this UrdfRobot urdfRobot)
+        private static UrdfRobotDescription ExportRobotData(this UrdfRobot urdfRobot)
         {
 #if UNITY_EDITOR
-            Robot robot = new Robot(urdfRobot.FilePath, urdfRobot.gameObject.name);
+            UrdfRobotDescription robot = new UrdfRobotDescription(urdfRobot.FilePath, urdfRobot.gameObject.name);
 
             List<string> linkNames = new List<string>();
 

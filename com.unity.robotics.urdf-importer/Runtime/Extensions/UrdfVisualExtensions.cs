@@ -33,7 +33,7 @@ namespace Unity.Robotics.UrdfImporter
 #endif
         }
 
-        public static void Create(Transform parent, Link.Visual visual)
+        public static void Create(Transform parent, UrdfLinkDescription.Visual visual)
         {
             GameObject visualObject = new GameObject(visual.name ?? "unnamed");
             visualObject.transform.SetParentAndAlign(parent);
@@ -74,13 +74,13 @@ namespace Unity.Robotics.UrdfImporter
             return exportMaterials;
         }
 
-        public static Link.Visual ExportVisualData(this UrdfVisual urdfVisual)
+        public static UrdfLinkDescription.Visual ExportVisualData(this UrdfVisual urdfVisual)
         {
             UrdfGeometry.CheckForUrdfCompatibility(urdfVisual.transform, urdfVisual.geometryType);
 
-            Link.Geometry geometry = UrdfGeometry.ExportGeometryData(urdfVisual.geometryType, urdfVisual.transform);
+            UrdfLinkDescription.Geometry geometry = UrdfGeometry.ExportGeometryData(urdfVisual.geometryType, urdfVisual.transform);
 
-            Link.Visual.Material material = null;
+            UrdfLinkDescription.Visual.Material material = null;
             List<UrdfUnityMaterial.ExportMaterial> exportMaterials = null;
             if ((geometry.mesh != null ))
             {
@@ -89,7 +89,7 @@ namespace Unity.Robotics.UrdfImporter
             }
             string visualName = urdfVisual.name == "unnamed" ? null : urdfVisual.name;
 
-            return new Link.Visual(geometry, visualName, UrdfOrigin.ExportOriginData(urdfVisual.transform), material, exportMaterials);
+            return new UrdfLinkDescription.Visual(geometry, visualName, UrdfOrigin.ExportOriginData(urdfVisual.transform), material, exportMaterials);
         }
     }
 }

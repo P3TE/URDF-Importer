@@ -36,7 +36,7 @@ namespace Unity.Robotics.UrdfImporter
         private const float MinInertia = 1e-6f;
         private const float minMass = 0.1f;
 
-        public static void Create(GameObject linkObject, Link.Inertial inertial = null)
+        public static void Create(GameObject linkObject, UrdfLinkDescription.Inertial inertial = null)
         {
             UrdfInertial urdfInertial = linkObject.AddComponent<UrdfInertial>();
 
@@ -121,7 +121,7 @@ namespace Unity.Robotics.UrdfImporter
 
 #region Import
 
-        private void ImportInertiaData(Link.Inertial inertial)
+        private void ImportInertiaData(UrdfLinkDescription.Inertial inertial)
         {
             Vector3 eigenvalues;
             Vector3[] eigenvectors;
@@ -162,7 +162,7 @@ namespace Unity.Robotics.UrdfImporter
             return new Vector3(vector3.y, vector3.z, vector3.x);
         }
 
-        private static Matrix3x3 ToMatrix3x3(Link.Inertial.Inertia inertia)
+        private static Matrix3x3 ToMatrix3x3(UrdfLinkDescription.Inertial.Inertia inertia)
         {
             return new Matrix3x3(
                 new[] { (float)inertia.ixx, (float)inertia.ixy, (float)inertia.ixz,
@@ -223,7 +223,7 @@ namespace Unity.Robotics.UrdfImporter
 #endregion
 
 #region Export
-        public Link.Inertial ExportInertialData() 
+        public UrdfLinkDescription.Inertial ExportInertialData() 
         {
 #if UNITY_2020_1_OR_NEWER
             ArticulationBody robotLink = GetComponent<ArticulationBody>();
@@ -237,13 +237,13 @@ namespace Unity.Robotics.UrdfImporter
 
             UpdateLinkData();
             Vector3 originAngles = inertialAxisRotation.eulerAngles;
-            Origin inertialOrigin = new Origin(robotLink.centerOfMass.Unity2Ros().ToRoundedDoubleArray(), new double[] { (double)originAngles.x, (double)originAngles.y, (double)originAngles.z });
-            Link.Inertial.Inertia inertia = ExportInertiaData();
+            UrdfOriginDescription inertialOrigin = new UrdfOriginDescription(robotLink.centerOfMass.Unity2Ros().ToRoundedDoubleArray(), new double[] { (double)originAngles.x, (double)originAngles.y, (double)originAngles.z });
+            UrdfLinkDescription.Inertial.Inertia inertia = ExportInertiaData();
 
-            return new Link.Inertial(Math.Round(robotLink.mass, RoundDigits), inertialOrigin, inertia);
+            return new UrdfLinkDescription.Inertial(Math.Round(robotLink.mass, RoundDigits), inertialOrigin, inertia);
         }
 
-        private Link.Inertial.Inertia ExportInertiaData()
+        private UrdfLinkDescription.Inertial.Inertia ExportInertiaData()
         {
 #if UNITY_2020_1_OR_NEWER
             ArticulationBody robotLink = GetComponent<ArticulationBody>();
@@ -291,16 +291,16 @@ namespace Unity.Robotics.UrdfImporter
                 1 - (2 * qx * qx) - (2 * qy * qy)});
         }
 
-        private static Link.Inertial.Inertia ToInertia(Matrix3x3 matrix)
+        private static UrdfLinkDescription.Inertial.Inertia ToInertia(Matrix3x3 matrix)
         {
-            return new Link.Inertial.Inertia(matrix[0][0], matrix[0][1], matrix[0][2],
+            return new UrdfLinkDescription.Inertial.Inertia(matrix[0][0], matrix[0][1], matrix[0][2],
                 matrix[1][1], matrix[1][2],
                 matrix[2][2]);
         }
 
-        private static Link.Inertial.Inertia ToRosCoordinates(Link.Inertial.Inertia unityInertia)
+        private static UrdfLinkDescription.Inertial.Inertia ToRosCoordinates(UrdfLinkDescription.Inertial.Inertia unityInertia)
         {
-            return new Link.Inertial.Inertia(0, 0, 0, 0, 0, 0)
+            return new UrdfLinkDescription.Inertial.Inertia(0, 0, 0, 0, 0, 0)
             {
                 ixx = unityInertia.izz,
                 iyy = unityInertia.ixx,

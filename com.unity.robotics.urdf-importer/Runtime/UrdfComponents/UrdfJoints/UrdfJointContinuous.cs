@@ -94,17 +94,17 @@ namespace Unity.Robotics.UrdfImporter
 
         #endregion
 
-        protected override void ImportJointData(Joint joint)
+        protected override void ImportJointData(UrdfJointDescription joint)
         {
             AdjustMovement(joint);
             SetDynamics(joint.dynamics);
         }
 
-        protected override Joint ExportSpecificJointData(Joint joint)
+        protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
         {
 #if UNITY_2020_1_OR_NEWER
             joint.axis = GetAxisData(axisofMotion);
-            joint.dynamics = new Joint.Dynamics(unityJoint.angularDamping, unityJoint.jointFriction);
+            joint.dynamics = new UrdfJointDescription.Dynamics(unityJoint.angularDamping, unityJoint.jointFriction);
             joint.limit = ExportLimitData();
 #else
 
@@ -121,7 +121,7 @@ namespace Unity.Robotics.UrdfImporter
         /// Reads axis joint information and rotation to the articulation body to produce the required motion
         /// </summary>
         /// <param name="joint">Structure containing joint information</param>
-        protected override void AdjustMovement(Joint joint)
+        protected override void AdjustMovement(UrdfJointDescription joint)
         {
             axisofMotion = joint.axis.xyz.ToVector3();
             unityJoint.linearLockX = ArticulationDofLock.LockedMotion;

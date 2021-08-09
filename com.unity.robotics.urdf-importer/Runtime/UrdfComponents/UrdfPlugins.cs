@@ -20,7 +20,7 @@ namespace Unity.Robotics.UrdfImporter
 {
     public class UrdfPlugins : MonoBehaviour
     {
-        public static void Create(Transform robot, List<Plugin> plugins = null)
+        public static void Create(Transform robot, List<UrdfPluginDescription> plugins = null)
         {
             GameObject pluginsObject = new GameObject("Plugins");
             pluginsObject.transform.SetParentAndAlign(robot);
@@ -32,7 +32,7 @@ namespace Unity.Robotics.UrdfImporter
                 UrdfPlugin.Create(pluginsObject.transform, plugin);
         }
 
-        public List<Plugin> ExportPluginsData()
+        public List<UrdfPluginDescription> ExportPluginsData()
         {
             return GetComponents<UrdfPlugin>()
                 .Select(urdfPlugin => urdfPlugin.ExportPluginData())

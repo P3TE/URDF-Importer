@@ -55,7 +55,7 @@ namespace Unity.Robotics.UrdfImporter
         protected int defaultDamping = 0;
         protected int defaultFriction = 0;
 
-        public static UrdfJoint Create(GameObject linkObject, JointTypes jointType, Joint joint = null)
+        public static UrdfJoint Create(GameObject linkObject, JointTypes jointType, UrdfJointDescription joint = null)
         {
 #if UNITY_2020_1_OR_NEWER
 #else
@@ -184,9 +184,9 @@ namespace Unity.Robotics.UrdfImporter
             }
         }
 
-        protected virtual void ImportJointData(Joint joint) { }
+        protected virtual void ImportJointData(UrdfJointDescription joint) { }
 
-        protected static Vector3 GetAxis(Joint.Axis axis)
+        protected static Vector3 GetAxis(UrdfJointDescription.Axis axis)
         {
             return axis.xyz.ToVector3().Ros2Unity();
         }
@@ -196,9 +196,9 @@ namespace Unity.Robotics.UrdfImporter
             return new Vector3(-1, 0, 0);
         }
 
-        protected virtual void AdjustMovement(Joint joint) { }
+        protected virtual void AdjustMovement(UrdfJointDescription joint) { }
 
-        protected void SetDynamics(Joint.Dynamics dynamics)
+        protected void SetDynamics(UrdfJointDescription.Dynamics dynamics)
         {
             if (unityJoint == null)
             {
@@ -224,7 +224,7 @@ namespace Unity.Robotics.UrdfImporter
 
         #region Export
 
-        public Joint ExportJointData()
+        public UrdfJointDescription ExportJointData()
         {
 #if UNITY_2020_1_OR_NEWER
             unityJoint = GetComponent<UnityEngine.ArticulationBody>();
@@ -241,7 +241,7 @@ namespace Unity.Robotics.UrdfImporter
             }
             
             //Data common to all joints
-            Joint joint = new Joint(
+            UrdfJointDescription joint = new UrdfJointDescription(
                 usedJointName,
                 JointType.ToString().ToLower(),
                 gameObject.transform.parent.name,
@@ -252,9 +252,9 @@ namespace Unity.Robotics.UrdfImporter
             return ExportSpecificJointData(joint);
         }
 
-        public static Joint ExportDefaultJoint(Transform transform)
+        public static UrdfJointDescription ExportDefaultJoint(Transform transform)
         {
-            return new Joint(
+            return new UrdfJointDescription(
                 transform.parent.name + "_" + transform.name + "_joint",
                 JointTypes.Fixed.ToString().ToLower(),
                 transform.parent.name,
@@ -264,12 +264,12 @@ namespace Unity.Robotics.UrdfImporter
 
         #region ExportHelpers
 
-        protected virtual Joint ExportSpecificJointData(Joint joint)
+        protected virtual UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
         {
             return joint;
         }
 
-        protected virtual Joint.Limit ExportLimitData()
+        protected virtual UrdfJointDescription.Limit ExportLimitData()
         {
             return null; // limits aren't used
         }
@@ -299,10 +299,10 @@ namespace Unity.Robotics.UrdfImporter
             jointName = transform.parent.name + "_" + transform.name + "_joint";
         }
 
-        protected static Joint.Axis GetAxisData(Vector3 axis)
+        protected static UrdfJointDescription.Axis GetAxisData(Vector3 axis)
         {
             double[] rosAxis = axis.ToRoundedDoubleArray();
-            return new Joint.Axis(rosAxis);
+            return new UrdfJointDescription.Axis(rosAxis);
         }
 
         private bool IsAnchorTransformed() // TODO : Check for tolerances before implementation

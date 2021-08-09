@@ -18,7 +18,7 @@ namespace Unity.Robotics.UrdfImporter
 {
     public static class UrdfLinkExtensions
     { 
-        public static GameObject Create(Transform parent, Link link = null, Joint joint = null)
+        public static GameObject Create(Transform parent, UrdfLinkDescription link = null, UrdfJointDescription joint = null)
         {
             GameObject linkObject = new GameObject("link");
             linkObject.transform.SetParentAndAlign(parent);
@@ -41,7 +41,7 @@ namespace Unity.Robotics.UrdfImporter
             return linkObject;
         }
 
-        private static void ImportLinkData(this UrdfLink urdfLink, Link link, Joint joint)
+        private static void ImportLinkData(this UrdfLink urdfLink, UrdfLinkDescription link, UrdfJointDescription joint)
         {
             if (link.inertial == null && joint == null)
             {
@@ -63,12 +63,12 @@ namespace Unity.Robotics.UrdfImporter
 
         } 
         
-        public static Link ExportLinkData(this UrdfLink urdfLink)
+        public static UrdfLinkDescription ExportLinkData(this UrdfLink urdfLink)
         {
             if (urdfLink.transform.localScale != Vector3.one)
                 Debug.LogWarning("Only visuals should be scaled. Scale on link \"" + urdfLink.gameObject.name + "\" cannot be saved to the URDF file.", urdfLink.gameObject);
             UrdfInertial urdfInertial = urdfLink.gameObject.GetComponent<UrdfInertial>();
-            Link link = new Link(urdfLink.gameObject.name)
+            UrdfLinkDescription link = new UrdfLinkDescription(urdfLink.gameObject.name)
             {
                 visuals = urdfLink.GetComponentInChildren<UrdfVisuals>().ExportVisualsData(),
                 collisions = urdfLink.GetComponentInChildren<UrdfCollisions>().ExportCollisionsData(),

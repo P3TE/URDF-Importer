@@ -17,11 +17,11 @@ using System.Xml.Linq;
 
 namespace Unity.Robotics.UrdfImporter
 {
-    public class Joint
+    public class UrdfJointDescription
     {
         public string name;
         public string type;
-        public Origin origin;
+        public UrdfOriginDescription origin;
         public string parent;
         public string child;
         public Axis axis;
@@ -31,13 +31,13 @@ namespace Unity.Robotics.UrdfImporter
         public Mimic mimic;
         public SafetyController safetyController;
 
-        public Link ChildLink;
+        public UrdfLinkDescription ChildLink;
 
-        public Joint(XElement node)
+        public UrdfJointDescription(XElement node)
         {
             name = (string)node.Attribute("name"); // required
             type = (string)node.Attribute("type"); // required
-            origin = (node.Element("origin") != null) ? new Origin(node.Element("origin")) : null; // optional  
+            origin = (node.Element("origin") != null) ? new UrdfOriginDescription(node.Element("origin")) : null; // optional  
             parent = (string)node.Element("parent").Attribute("link"); // required
             child = (string)node.Element("child").Attribute("link"); // required
             axis = (node.Element("axis") != null) ? new Axis(node.Element("axis")) : null;  // optional 
@@ -48,8 +48,8 @@ namespace Unity.Robotics.UrdfImporter
             safetyController = (node.Element("safety_controller") != null) ? new SafetyController(node.Element("safety_controller")) : null;  // optional
         }
 
-        public Joint(string name, string type, string parent, string child,
-            Origin origin = null, Axis axis = null, Calibration calibration = null,
+        public UrdfJointDescription(string name, string type, string parent, string child,
+            UrdfOriginDescription origin = null, Axis axis = null, Calibration calibration = null,
             Dynamics dynamics = null, Limit limit = null, Mimic mimic = null, SafetyController safetyController = null)
         {
             this.name = name;
