@@ -342,9 +342,9 @@ namespace Unity.Robotics.UrdfImporter
             robot.materials = UrdfMaterial.Materials.Values.ToList();
             robot.plugins = urdfRobot.GetComponentInChildren<UrdfPlugins>().ExportPluginsData();
 
-            IUrdfPluginImplementation[] additionalPlugins =
-                urdfRobot.GetComponentsInChildren<IUrdfPluginImplementation>();
-            foreach (IUrdfPluginImplementation additionalPlugin in additionalPlugins)
+            UrdfPluginImplementation[] additionalPlugins =
+                urdfRobot.GetComponentsInChildren<UrdfPluginImplementation>();
+            foreach (UrdfPluginImplementation additionalPlugin in additionalPlugins)
             {
                 UrdfPluginDescription pluginDescription = PluginManagerBase.BuildXmlDocument(additionalPlugin, robot.name);
                 robot.plugins.Add(pluginDescription);

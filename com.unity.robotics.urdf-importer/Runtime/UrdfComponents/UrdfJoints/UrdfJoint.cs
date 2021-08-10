@@ -224,6 +224,24 @@ namespace Unity.Robotics.UrdfImporter
 
         #region Export
 
+        public string UsedJointName
+        {
+            get
+            {
+                if (jointName == null)
+                {
+                    GenerateUniqueJointName();
+                }
+                string usedJointName = jointName;
+                if (usedJointName == "")
+                {
+                    usedJointName = $"{gameObject.name}_joint";
+                    Debug.LogWarning($"No joint name speficied for {gameObject.name}, defaulting to {usedJointName}");
+                }
+                return usedJointName;
+            }
+        }
+
         public UrdfJointDescription ExportJointData()
         {
 #if UNITY_2020_1_OR_NEWER
@@ -233,16 +251,9 @@ namespace Unity.Robotics.UrdfImporter
 #endif
             CheckForUrdfCompatibility();
 
-            string usedJointName = jointName;
-            if (usedJointName == "")
-            {
-                usedJointName = $"{gameObject.name}_joint";
-                Debug.LogWarning($"No joint name speficied for {gameObject.name}, defaulting to {usedJointName}");
-            }
-            
             //Data common to all joints
             UrdfJointDescription joint = new UrdfJointDescription(
-                usedJointName,
+                UsedJointName,
                 JointType.ToString().ToLower(),
                 gameObject.transform.parent.name,
                 gameObject.name,

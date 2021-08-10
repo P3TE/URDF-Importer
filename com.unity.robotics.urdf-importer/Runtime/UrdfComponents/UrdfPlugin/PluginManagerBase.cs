@@ -18,7 +18,7 @@ namespace Unity.Robotics.UrdfImporter
         public const string _FilenameAttribute = "filename";
         public const string _NameAttribute = "name";
 
-        public IUrdfPluginImplementation GeneratePlugin(UrdfPluginDescription pluginDescription)
+        public UrdfPluginImplementation GeneratePlugin(UrdfPluginDescription pluginDescription)
         {
 
             XmlDocument xmlDocument = new XmlDocument();
@@ -61,7 +61,7 @@ namespace Unity.Robotics.UrdfImporter
             bool validPlugin = false;
             foreach (Type typeInterface in pluginType.GetInterfaces())
             {
-                if (typeInterface == typeof(IUrdfPluginImplementation))
+                if (typeInterface == typeof(UrdfPluginImplementation))
                 {
                     validPlugin = true;
                     break;
@@ -71,7 +71,7 @@ namespace Unity.Robotics.UrdfImporter
             if (!validPlugin)
             {
                 Debug.LogError($"Plugin with filename {filenameAttribute} is invalid, " +
-                               $"it must extend {nameof(IUrdfPluginImplementation)}");
+                               $"it must extend {nameof(UrdfPluginImplementation)}");
                 return null;
             }
             
@@ -79,17 +79,10 @@ namespace Unity.Robotics.UrdfImporter
 
         }
 
-        public static UrdfPluginDescription BuildXmlDocument(IUrdfPluginImplementation plugin, string robotName = "")
+        public static UrdfPluginDescription BuildXmlDocument(UrdfPluginImplementation plugin, string robotName = "")
         {
             XmlDocument pluginDocument = new XmlDocument();
-            XmlElement gazeboElement = pluginDocument.CreateElement(string.Empty, _GazeboTag, string.Empty);
-            pluginDocument.AppendChild(gazeboElement);
-            XmlElement pluginElement = pluginDocument.CreateElement(string.Empty, _PluginTag, string.Empty);
-            pluginElement.SetAttribute(_FilenameAttribute, plugin.PluginFilename);
-            pluginElement.SetAttribute(_NameAttribute, $"{robotName}_{plugin.PluginNamePostfix}");
-            gazeboElement.AppendChild(pluginElement);
-            
-            plugin.BuildExportPluginData(pluginDocument, pluginElement);
+            plugin.BuildExportData(robotName, pluginDocument);
             
             return new UrdfPluginDescription(pluginDocument.InnerXml);
         }

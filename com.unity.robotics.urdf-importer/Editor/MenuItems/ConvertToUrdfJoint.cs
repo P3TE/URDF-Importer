@@ -22,15 +22,24 @@ namespace Unity.Robotics.UrdfImporter.Editor
             ConvertSingleToUrdf(selectedObject, true);
         }
 
+        private static void ResetTransform(Transform transformToReset)
+        {
+            transformToReset.localPosition = Vector3.zero;
+            transformToReset.localRotation = Quaternion.identity;
+            transformToReset.localScale = Vector3.one;
+        }
+
         private static void ConvertSingleToUrdf(GameObject toConvert, bool recursive = false)
         {
             
             if (toConvert.TryGetComponent<UrdfVisuals>(out _))
             {
+                ResetTransform(toConvert.transform);
                 return;
             }
             if (toConvert.TryGetComponent<UrdfCollisions>(out _))
             {
+                ResetTransform(toConvert.transform);
                 return;
             }
             
@@ -73,6 +82,7 @@ namespace Unity.Robotics.UrdfImporter.Editor
                 visuals.transform.SetParent(toConvert.transform);
                 visuals.AddComponent<UrdfVisuals>();
                 visuals.transform.SetSiblingIndex(0);
+                ResetTransform(visuals.transform);
             }
 
             if (createCollisions)
@@ -81,6 +91,7 @@ namespace Unity.Robotics.UrdfImporter.Editor
                 collisions.transform.SetParent(toConvert.transform);
                 collisions.AddComponent<UrdfCollisions>();
                 collisions.transform.SetSiblingIndex(1);
+                ResetTransform(collisions.transform);
             }
 
             if (recursive)

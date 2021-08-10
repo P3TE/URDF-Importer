@@ -36,7 +36,7 @@ namespace Unity.Robotics.UrdfImporter
             XmlDocument xDoc = new XmlDocument {PreserveWhitespace = true};
             xDoc.LoadXml(text);
             xDoc.WriteContentTo(writer);
-            writer.WriteWhitespace("\n");
+            //writer.WriteWhitespace("\n");
         }
     }
 }
