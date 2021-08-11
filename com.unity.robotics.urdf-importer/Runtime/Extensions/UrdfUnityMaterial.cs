@@ -219,9 +219,11 @@ namespace Unity.Robotics.UrdfImporter.Urdf.Extensions
             {
                 color = unityMaterial.color
             };
-            newExportMaterial.exportedTexture = GenerateExportTexture(unityMaterial.mainTexture);
-            newExportMaterial.exportedTexture.shaderPropertyName = "";
-
+            if (unityMaterial.mainTexture != null)
+            {
+                newExportMaterial.exportedTexture = GenerateExportTexture(unityMaterial.mainTexture);
+                newExportMaterial.exportedTexture.shaderPropertyName = "";
+            }
             
 #if UNITY_EDITOR
             //unityMaterial.mainTexture

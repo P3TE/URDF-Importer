@@ -297,6 +297,8 @@ namespace Unity.Robotics.UrdfImporter
             UrdfRobotDescription robot = urdfRobot.ExportRobotData();
             if (robot == null) return;
 
+            robot.exportPlugins = urdfRobot.exportPlugins;
+            
             robot.WriteToUrdf();
 
             Debug.Log(robot.name + " was exported to " + UrdfExportPathHandler.GetExportDestination());

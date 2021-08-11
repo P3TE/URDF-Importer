@@ -30,6 +30,7 @@ namespace Unity.Robotics.UrdfImporter
 
         [SerializeField] public string exportPackageDirectory = "";
         [SerializeField] public string exportPackageName = "";
+        [SerializeField] public bool exportPlugins = true;
 
         //Current Settings
         public static bool collidersConvex = true;

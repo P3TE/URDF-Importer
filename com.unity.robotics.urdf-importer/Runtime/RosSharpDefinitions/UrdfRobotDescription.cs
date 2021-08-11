@@ -34,6 +34,7 @@ namespace Unity.Robotics.UrdfImporter
         public List<UrdfLinkDescription> links;
         public List<UrdfJointDescription> joints;
         public List<UrdfPluginDescription> plugins;
+        public bool exportPlugins = true;
         public List<Tuple<string, string>> ignoreCollisionPair;
 
         public UrdfRobotDescription(string filename)
@@ -180,8 +181,10 @@ namespace Unity.Robotics.UrdfImporter
                     link.WriteToUrdf(writer);
                 foreach (var joint in joints)
                     joint.WriteToUrdf(writer);
-                foreach (var plugin in plugins)
-                    plugin.WriteToUrdf(writer);
+                if (exportPlugins)
+                    foreach (var plugin in plugins)
+                        plugin.WriteToUrdf(writer);
+                
                 
                 writer.WriteEndElement();
                 writer.WriteEndDocument();

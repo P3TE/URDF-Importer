@@ -101,6 +101,13 @@ namespace Unity.Robotics.UrdfImporter.Editor
             GUILayout.EndHorizontal();
             
             GUILayout.BeginHorizontal();
+            GUIContent exportPluiginsLabel = new GUIContent("Export Plugins",
+                "Whether plugins should be included in the export.");
+            EditorGUILayout.PrefixLabel(exportPluiginsLabel);
+            urdfRobot.exportPlugins = GUILayout.Toggle(urdfRobot.exportPlugins, "");
+            GUILayout.EndHorizontal();
+            
+            GUILayout.BeginHorizontal();
             if (GUILayout.Button("Export robot to URDF"))
             {
                 string directorySelection = Path.Combine(urdfRobot.exportPackageDirectory, urdfRobot.exportPackageName);
