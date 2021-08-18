@@ -43,7 +43,7 @@ namespace Unity.Robotics.UrdfImporter
             BuildPluginElement(gazeboElement);
         }
 
-        protected virtual XmlElement BuildPluginElement(XmlElement gazeboXmlElement)
+        protected virtual void BuildPluginElement(XmlElement gazeboXmlElement)
         {
             XmlElement pluginElement = xmlDocument.CreateElement(string.Empty, PluginManagerBase._PluginTag, string.Empty);
             pluginElement.SetAttribute(PluginManagerBase._FilenameAttribute, PluginFilename);
@@ -51,8 +51,6 @@ namespace Unity.Robotics.UrdfImporter
             gazeboXmlElement.AppendChild(pluginElement);
             
             ExportPluginData(pluginElement);
-            
-            return pluginElement;
         }
 
         public string LinkName => transform.name;
@@ -149,6 +147,26 @@ namespace Unity.Robotics.UrdfImporter
             {
                 XmlElement newElement = xmlDocument.CreateElement(tagName);
                 newElement.InnerText = $"{value.x} {value.y} {value.z}"; //TODO RUF/FLU...
+                parentXmlElement.AppendChild(newElement);
+            }
+            else
+            {
+                throw new NotImplementedException("TODO...");
+            }
+        }
+        
+        protected void TranscodePose(XmlElement parentXmlElement, string tagName, ref Vector3 translation, ref Quaternion orientation)
+        {
+            if(encode)
+            {
+
+                Vector3 rollPitchYawDegrees = orientation.eulerAngles;
+                Vector3 rollPitchYawRadians = rollPitchYawDegrees * Mathf.Deg2Rad;
+                
+                XmlElement newElement = xmlDocument.CreateElement(tagName);
+                //TODO RUF/FLU...
+                newElement.InnerText = $"{translation.x} {translation.y} {translation.z}" +
+                                       $"{rollPitchYawRadians.x} {rollPitchYawRadians.y} {rollPitchYawRadians.z}";
                 parentXmlElement.AppendChild(newElement);
             }
             else
