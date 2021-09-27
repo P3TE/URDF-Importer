@@ -20,6 +20,11 @@ namespace Unity.Robotics.UrdfImporter
 {
     public enum GeometryTypes { Box, Cylinder, Sphere, Mesh }
 
+    public enum UrdfCoordinateSpace
+    {
+        ENUFLU = 0, NEDFRD = 1
+    }
+
     public class UrdfRobot : MonoBehaviour
     {
         public string FilePath;
@@ -31,6 +36,8 @@ namespace Unity.Robotics.UrdfImporter
         [SerializeField] public string exportPackageDirectory = "";
         [SerializeField] public string exportPackageName = "";
         [SerializeField] public bool exportPlugins = true;
+
+        [SerializeField] public UrdfCoordinateSpace coordinateSpace = UrdfCoordinateSpace.ENUFLU;
 
         //Current Settings
         public static bool collidersConvex = true;
