@@ -81,7 +81,7 @@ namespace Unity.Robotics.UrdfImporter
         // Add a rotation in the model which gives the correct correspondence between UnitySpace and RosSpace
         public void ChangeToCorrectedSpace()
         {
-            this.transform.Rotate(0, 180, 0);
+            //this.transform.Rotate(0, 180, 0);
             changetoCorrectedSpace = !changetoCorrectedSpace;
         }
 
