@@ -39,7 +39,7 @@ namespace Unity.Robotics.UrdfImporter.Editor
 
             EditorGUILayout.PropertyField(axisType, new GUIContent("Axis Type"));
             serializedObject.ApplyModifiedProperties();
-            UrdfRobotExtensions.CorrectAxis(urdfRobot.gameObject);
+            //UrdfRobotExtensions.CorrectAxis(urdfRobot.gameObject); TODO - This correct axis is causing issues.
 
             GUILayout.Space(5);
             GUILayout.Label("All Rigidbodies", EditorStyles.boldLabel);
@@ -63,7 +63,7 @@ namespace Unity.Robotics.UrdfImporter.Editor
             GUILayout.Space(5);
             EditorGUILayout.PropertyField(axisType, new GUIContent("Axis Type", "Adjust this if the models that make up your robot are facing the wrong direction."));
             serializedObject.ApplyModifiedProperties();
-            UrdfRobotExtensions.CorrectAxis(urdfRobot.gameObject);
+            //UrdfRobotExtensions.CorrectAxis(urdfRobot.gameObject); TODO - This correct axis is causing issues.
 
             if (urdfRobot.GetComponent<Unity.Robotics.UrdfImporter.Control.Controller>() == null || urdfRobot.GetComponent<Unity.Robotics.UrdfImporter.Control.FKRobot>() == null)
             {
