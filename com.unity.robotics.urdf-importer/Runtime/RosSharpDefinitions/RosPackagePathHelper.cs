@@ -1,12 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using J2N.Text;
 using Debug = UnityEngine.Debug;
 
 namespace Unity.Robotics.UrdfImporter
