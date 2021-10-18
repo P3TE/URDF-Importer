@@ -29,7 +29,7 @@ namespace Unity.Robotics.UrdfImporter
         public string filename;
         public string name;
         public UrdfLinkDescription root;
-        public List<UrdfLinkDescription.Visual.Material> materials;
+        public List<UrdfMaterialDescription> materials;
 
         public List<UrdfLinkDescription> links;
         public List<UrdfJointDescription> joints;
@@ -72,14 +72,14 @@ namespace Unity.Robotics.UrdfImporter
             links = new List<UrdfLinkDescription>();
             joints = new List<UrdfJointDescription>();
             plugins = new List<UrdfPluginDescription>();
-            materials = new List<UrdfLinkDescription.Visual.Material>();
+            materials = new List<UrdfMaterialDescription>();
         }
 
-        private static List<UrdfLinkDescription.Visual.Material> ReadMaterials(XElement node)
+        private static List<UrdfMaterialDescription> ReadMaterials(XElement node)
         {
             var materials =
                 from child in node.Elements("material")
-                select new UrdfLinkDescription.Visual.Material(child);
+                select new UrdfMaterialDescription(child);
             return materials.ToList();
         }
 

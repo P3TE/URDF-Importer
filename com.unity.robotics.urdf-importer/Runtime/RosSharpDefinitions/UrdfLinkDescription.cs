@@ -195,7 +195,7 @@ namespace Unity.Robotics.UrdfImporter
             public string name;
             public UrdfOriginDescription origin;
             public Geometry geometry;
-            public Material material;
+            public UrdfMaterialDescription material;
             public List<UrdfUnityMaterial.ExportMaterial> exportedMaterials;
 
             public Visual(XElement node)
@@ -203,10 +203,10 @@ namespace Unity.Robotics.UrdfImporter
                 name = (string)node.Attribute("name"); // optional
                 origin = (node.Element("origin") != null) ? new UrdfOriginDescription(node.Element("origin")) : null; // optional
                 geometry = new Geometry(node.Element("geometry")); // required
-                material = (node.Element("material") != null) ? new Material(node.Element("material")) : null; // optional
+                material = (node.Element("material") != null) ? new UrdfMaterialDescription(node.Element("material")) : null; // optional
             }
 
-            public Visual(Geometry geometry, string name = null, UrdfOriginDescription origin = null, Material material = null,
+            public Visual(Geometry geometry, string name = null, UrdfOriginDescription origin = null, UrdfMaterialDescription material = null,
                 List<UrdfUnityMaterial.ExportMaterial> exportedMaterials = null)
             {
                 this.name = name;

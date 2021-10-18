@@ -580,7 +580,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second visuals's material information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareMaterial( UrdfLinkDescription.Visual.Material source,  UrdfLinkDescription.Visual.Material exported, int indent)
+        private bool CompareMaterial( UrdfMaterialDescription source,  UrdfMaterialDescription exported, int indent)
         {
             bool materialNameEqual = source.name == exported.name;
             linkLog.AppendLine(String.Format("{0}Name Equal:{1,6}", Indent(indent), materialNameEqual));

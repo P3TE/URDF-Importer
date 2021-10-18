@@ -187,16 +187,24 @@ namespace Unity.Robotics.UrdfImporter
                 result.Clear();
                 result.AddLast("resources");
             }
-            
+
             //Copy the file to the Assets directory.
             string localDirectoryLocalPath = packageRoot;
             string localDirectoryLocalPathNoRoot = "";
+
+            if (!parentDirectoryInfo.FullName.StartsWith(packageRoot))
+            {
+                localDirectoryLocalPath = parentDirectoryInfo.FullName;
+                return absolutePath;
+            }
+            
             foreach (string directoryName in result)
             {
                 localDirectoryLocalPathNoRoot = Path.Combine(localDirectoryLocalPathNoRoot, directoryName);
             }
 
             localDirectoryLocalPath = Path.Combine(localDirectoryLocalPath, localDirectoryLocalPathNoRoot);
+
 #if UNITY_EDITOR
             string parentFolder = packageRoot;
             foreach (string directoryName in result)
@@ -257,7 +265,7 @@ namespace Unity.Robotics.UrdfImporter
                }
                else
                {
-                   return null;
+                   return urdfPath;
                }
             }
             string path;

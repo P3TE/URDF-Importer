@@ -80,7 +80,7 @@ namespace Unity.Robotics.UrdfImporter
 
             UrdfLinkDescription.Geometry geometry = UrdfGeometry.ExportGeometryData(urdfVisual.geometryType, urdfVisual.transform);
 
-            UrdfLinkDescription.Visual.Material material = null;
+            UrdfMaterialDescription material = null;
             List<UrdfUnityMaterial.ExportMaterial> exportMaterials = null;
             if ((geometry.mesh != null ))
             {
