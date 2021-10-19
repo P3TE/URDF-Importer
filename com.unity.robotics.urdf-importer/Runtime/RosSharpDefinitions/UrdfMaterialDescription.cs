@@ -172,7 +172,7 @@ namespace Unity.Robotics.UrdfImporter
                 Debug.LogWarning("TODO - Load a texture...");
             }
 
-            texture = RuntimeTextureManager.LoadTextureFromFile(AbsoluteFilePath);
+            texture = UrdfRuntimeTextureManager.Instance.LoadTextureFromFile(AbsoluteFilePath);
             
             if (string.IsNullOrEmpty(propertyName))
             {
@@ -313,7 +313,7 @@ namespace Unity.Robotics.UrdfImporter
             if (textureElement != null) texture = new UrdfTextureDescription(textureElement);
             
             XElement unityAdditionAttributesElement = xElement.Element(UrdfUnityMaterialExtensionDescription.PropertyId);
-            if (unityAdditionalAttributes != null) unityAdditionalAttributes = new UrdfUnityMaterialExtensionDescription(unityAdditionAttributesElement);
+            if (unityAdditionAttributesElement != null) unityAdditionalAttributes = new UrdfUnityMaterialExtensionDescription(unityAdditionAttributesElement);
         }
 
         public UrdfMaterialDescription(Material material)
