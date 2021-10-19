@@ -172,7 +172,15 @@ namespace Unity.Robotics.UrdfImporter
                 Debug.LogWarning("TODO - Load a texture...");
             }
 
-            texture = UrdfRuntimeTextureManager.Instance.LoadTextureFromFile(AbsoluteFilePath);
+            if (RuntimeUrdf.IsRuntimeMode())
+            {
+                texture = UrdfRuntimeTextureManager.Instance.LoadTextureFromFile(AbsoluteFilePath);
+            }
+            else
+            {
+                Debug.LogError("TODO - Implement texture copies for non runtime imports!");
+                return;
+            }
             
             if (string.IsNullOrEmpty(propertyName))
             {
