@@ -131,6 +131,14 @@ namespace Unity.Robotics.UrdfImporter
             if (im.importStack.Count != 0)
             {
                 Tuple<UrdfLinkDescription, Transform, UrdfJointDescription> currentLink = im.importStack.Pop();
+                if (currentLink.Item1 == null)
+                {
+                    throw new Exception("Failed to find link for joint!");
+                }
+                if (currentLink.Item2 == null)
+                {
+                    throw new Exception("Failed to find transform for joint!");
+                }                
                 GameObject importedLink = UrdfLinkExtensions.Create(currentLink.Item2, currentLink.Item1, currentLink.Item3);
                 im.settings.linksLoaded++;
                 foreach (UrdfJointDescription childJoint in currentLink.Item1.joints)

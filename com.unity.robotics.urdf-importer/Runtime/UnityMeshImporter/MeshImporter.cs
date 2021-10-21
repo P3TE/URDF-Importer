@@ -250,7 +250,7 @@ namespace UnityMeshImporter
                 return uOb;
             }
             
-            return NodeToGameObject(scene.RootNode);;
+            return NodeToGameObject(scene.RootNode);
 #else
             Debug.LogError("Runtime import of collada files is not currently supported in builds created with 'IL2CPP' scripting backend." + 
                            "\nEither create a build with the scripting backend set as 'Mono' in 'Player Settings' or use STL meshes instead of Collada (dae) meshes.");

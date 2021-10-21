@@ -216,7 +216,7 @@ namespace Unity.Robotics.UrdfImporter
                         propertyDescriptions.Add(new UrdfFloatDescription(xElement));
                         break;
                     default:
-                        //TODO - Log a warning - unhandled element type.
+                        Debug.LogWarning($"Unhandled material element type {xElement.Name.LocalName}! Ignoring...");
                         break;
                 }
             }
@@ -245,6 +245,8 @@ namespace Unity.Robotics.UrdfImporter
                         }
                         urdfMaterialPropertyDescription = new UrdfTextureDescription(texture);
                         break;
+                    case ShaderUtil.ShaderPropertyType.Vector:
+                        //Assuming vectors are handled the same way colours are.
                     case ShaderUtil.ShaderPropertyType.Color:
                         Vector4 colourAsVector4 = unityMaterial.GetVector(shaderPropertyName);
                         Vector4 propertyDefaultVectorValue = unityMaterial.shader.GetPropertyDefaultVectorValue(i);
@@ -255,6 +257,11 @@ namespace Unity.Robotics.UrdfImporter
                         Color colour = unityMaterial.GetColor(shaderPropertyName);
                         urdfMaterialPropertyDescription = new UrdfColorDescription(colour);
                         break;
+                    case ShaderUtil.ShaderPropertyType.Int:
+                        //Assuming that ints can be interpreted as floats here.
+                        //TODO - Check: This may not be true, but may be ok.
+                    case ShaderUtil.ShaderPropertyType.Range:
+                        //Assuming ranges work the same way floats do.
                     case ShaderUtil.ShaderPropertyType.Float:
                         float floatValue = unityMaterial.GetFloat(shaderPropertyName);
                         float defaultFloatValue = unityMaterial.shader.GetPropertyDefaultFloatValue(i);
@@ -265,7 +272,7 @@ namespace Unity.Robotics.UrdfImporter
                         urdfMaterialPropertyDescription = new UrdfFloatDescription(floatValue);
                         break;
                     default:
-                        //TODO - Unhandled type...
+                        Debug.LogError($"Unhandled shaderPropertyType: {shaderPropertyType}");
                         break;
                 }
 

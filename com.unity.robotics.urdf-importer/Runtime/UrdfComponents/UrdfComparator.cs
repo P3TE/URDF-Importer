@@ -234,7 +234,7 @@ namespace Unity.Robotics.UrdfImporter
             {
                 return false;
             }
-            if (source.type == "revolute" || source.type == "revolute")
+            if (source.type == "revolute" || exported.type == "revolute")
             {
                 if (!CompareLimit(source.limit, exported.limit, indent + 2))
                 {
