@@ -202,10 +202,13 @@ namespace Unity.Robotics.UrdfImporter
             public double effort;
             public double velocity;
 
+            private const string _LowerAttributeName = "lower";
+            private const string _UpperAttributeName = "lower";
+
             public Limit(XElement node)
             {
-                lower = node.Attribute("lower").ReadOptionalDouble(); // optional
-                upper = node.Attribute("upper").ReadOptionalDouble(); // optional
+                lower = node.Attribute(_LowerAttributeName).ReadOptionalDouble(); // optional
+                upper = node.Attribute(_UpperAttributeName).ReadOptionalDouble(); // optional
                 effort = (double)node.Attribute("effort"); // required
                 velocity = (double)node.Attribute("velocity"); // required
             }

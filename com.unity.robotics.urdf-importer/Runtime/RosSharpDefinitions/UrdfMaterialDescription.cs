@@ -167,11 +167,6 @@ namespace Unity.Robotics.UrdfImporter
         
         public override void ApplyPropertyToMaterial(Material material)
         {
-            if (texture == null)
-            {
-                Debug.LogWarning("TODO - Load a texture...");
-            }
-
             if (RuntimeUrdf.IsRuntimeMode())
             {
                 texture = UrdfRuntimeTextureManager.Instance.LoadTextureFromFile(AbsoluteFilePath);

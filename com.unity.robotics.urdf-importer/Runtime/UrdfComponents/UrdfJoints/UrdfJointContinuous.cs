@@ -123,7 +123,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="joint">Structure containing joint information</param>
         protected override void AdjustMovement(UrdfJointDescription joint)
         {
-            axisofMotion = joint.axis.xyz.ToVector3();
+            axisofMotion = (joint.axis != null && joint.axis.xyz != null) ? joint.axis.xyz.ToVector3() : new Vector3(1, 0, 0);
             unityJoint.linearLockX = ArticulationDofLock.LockedMotion;
             unityJoint.linearLockY = ArticulationDofLock.LockedMotion;
             unityJoint.linearLockZ = ArticulationDofLock.LockedMotion;
