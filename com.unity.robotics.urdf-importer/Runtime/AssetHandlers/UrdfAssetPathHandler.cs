@@ -15,7 +15,9 @@ limitations under the License.
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using UnityEngine;
+using UnityEngine.Assertions;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -27,6 +29,11 @@ namespace Unity.Robotics.UrdfImporter
         //Relative to Assets folder
         private static string packageRoot;
         private const string MaterialFolderName = "Materials";
+        
+        private const string _AbsoluteFilePathPrefix = @"file://";
+        private const string _PackageFilePathPrefix = @"package://";
+
+        private const string _PackageXmlFileName = "package.xml";
 
         #region SetAssetRootFolder
         public static void SetPackageRoot(string newPath, bool correctingIncorrectPackageRoot = false)
@@ -152,6 +159,99 @@ namespace Unity.Robotics.UrdfImporter
             }
             return false;
         }
+        
+        private static string FromAbsolutePath(string urdfPath)
+        {
+            Assert.IsTrue(urdfPath.StartsWith(_AbsoluteFilePathPrefix),
+                $"path {urdfPath} should start with {_AbsoluteFilePathPrefix}");
+            
+            string absolutePath = urdfPath.Substring(_AbsoluteFilePathPrefix.Length);
+            
+            if (!File.Exists(absolutePath))
+            {
+                throw new Exception($"No file found at {absolutePath}");
+            }
+
+            return absolutePath;
+        }
+
+        private static bool FromPackagePath(string urdfPath)
+        {
+            
+            //A URDF may have a line like this:
+            //<mesh filename="package://urdf_tutorial/meshes/l_finger.dae"/>
+            //For this to work, we have to know this 'package' this is referring to.
+            //My proposal to figure this out would be to use the file location of the
+            //imported URDF.
+            //This doesn't work if you don't know what that was (urdf was a ros parameter).
+            throw new NotImplementedException("Needs work, see above.");
+            Debug.LogError("TODO...");
+            
+            Assert.IsTrue(urdfPath.StartsWith(_PackageFilePathPrefix),
+                $"path {urdfPath} should start with {_PackageFilePathPrefix}");
+            
+            string relativePath = urdfPath.Substring(_PackageFilePathPrefix.Length);
+            //_PackageFilePathPrefix
+            
+            //TODO...
+            
+            //RosPackagePathHelper.TryResolvePackageNamePath()
+        }
+
+        private static void TryFindRosPackageForFile(string absolutePath)
+        {
+            
+            string fileName = Path.GetFileName(absolutePath);
+
+            LinkedList<string> relativePathList = new LinkedList<string>();
+            relativePathList.AddLast(fileName);
+            
+            DirectoryInfo parentDirectoryInfo = Directory.GetParent(absolutePath);
+            
+            bool packageFound = false;
+            
+            while (!packageFound && parentDirectoryInfo != null && parentDirectoryInfo.Exists)
+            {
+                relativePathList.AddFirst(parentDirectoryInfo.Name);
+                if(DirectoryContainsFileWithName(parentDirectoryInfo.FullName, _PackageXmlFileName))
+                {
+                    packageFound = true;
+                }
+                parentDirectoryInfo = Directory.GetParent(parentDirectoryInfo.FullName);
+            }
+            
+            if (packageFound)
+            {
+
+                string packageXmlPath = $"{parentDirectoryInfo.FullName}{Path.PathSeparator}{_PackageXmlFileName}";
+                FileInfo packageXmlFile = new FileInfo(packageXmlPath);
+                RosPackagePathHelper.ReadPackageXmlForPackageName(packageXmlFile, out string packageName);
+                
+                StringBuilder relativePathBuilder = new StringBuilder();
+
+                LinkedListNode<string> relativePathNode = relativePathList.First;
+                for (int i = 0; relativePathNode != null; i++)
+                {
+                    if (i > 0)
+                    {
+                        relativePathBuilder.Append(Path.PathSeparator);
+                    }
+                    relativePathBuilder.Append(relativePathNode.Value);
+                    relativePathNode = relativePathNode.Next;
+                }
+
+                string relativePath = relativePathBuilder.ToString();
+
+                string packagePath = parentDirectoryInfo.FullName;
+            
+                Assert.AreEqual(absolutePath, $"{packagePath}{Path.PathSeparator}{relativePath}", "");
+            }
+            else
+            {
+                
+            }
+
+        }
 
         private static string AttemptToCopyFileToAssets(string urdfPath)
         {
@@ -250,8 +350,9 @@ namespace Unity.Robotics.UrdfImporter
 
         public static string GetRelativeAssetPathFromUrdfPath(string urdfPath, bool convertToPrefab=true)
         {
-            if (urdfPath.StartsWith(@"file://"))
+            if (urdfPath.StartsWith(_AbsoluteFilePathPrefix))
             {
+                FromAbsolutePath(urdfPath);
                 //Copy the files to the Assets directory.
                 urdfPath = AttemptToCopyFileToAssets(urdfPath);
             }

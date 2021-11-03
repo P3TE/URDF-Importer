@@ -15,6 +15,7 @@ namespace Unity.Robotics.UrdfImporter
         public static List<string> _packagePaths = new List<string>();
 
         private static bool foundPackagesResolved = false;
+        //Contains a mapping of packageName to fullPath
         public static Dictionary<string, string> _foundPackages = new Dictionary<string, string>();
 
         public static List<string> PackagePaths
@@ -121,10 +122,16 @@ namespace Unity.Robotics.UrdfImporter
                 {
                     try
                     {
-                        string packageName = ReadPackageXmlForPackageName(file);
-                        if (!FoundPackages.ContainsKey(packageName))
+                        if (ReadPackageXmlForPackageName(file, out string packageName))
                         {
-                            FoundPackages.Add(packageName, directoryInfo.FullName);
+                            if (!FoundPackages.ContainsKey(packageName))
+                            {
+                                FoundPackages.Add(packageName, directoryInfo.FullName);
+                            }
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"Skipping invalid package.xml at {file.FullName}");
                         }
                     }
                     catch (Exception e)
@@ -144,13 +151,25 @@ namespace Unity.Robotics.UrdfImporter
             
         }
 
-        private static string ReadPackageXmlForPackageName(FileInfo packageXmlFile)
+        public static bool ReadPackageXmlForPackageName(FileInfo packageXmlFile, out string packageName)
         {
             using Stream xmlStream = packageXmlFile.OpenRead();
             XDocument xdoc = XDocument.Load(xmlStream);
             XElement packageNode = xdoc.Element("package");
+            if (packageNode == null)
+            {
+                packageName = "";
+                return false;
+            }
             XElement nameNode = packageNode.Element("name");
-            return nameNode.Value;
+            if (nameNode == null)
+            {
+                packageName = "";
+                return false;
+            }
+
+            packageName = nameNode.Value;
+            return !"".Equals(packageName);
         }
         
     }

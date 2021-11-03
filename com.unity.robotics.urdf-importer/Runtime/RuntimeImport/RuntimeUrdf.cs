@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -26,6 +27,9 @@ public static class RuntimeUrdf
     {
         runtimeModeEnabled = enabled;
     }
+
+    public static LinkedList<Exception> urdfBuildErrors = new LinkedList<Exception>();
+    public static LinkedList<string> urdfBuildWarnings = new LinkedList<string>();
 
     public static T AssetDatabase_LoadAssetAtPath<T>(string fileAssetPath) where T : UnityEngine.Object 
     {

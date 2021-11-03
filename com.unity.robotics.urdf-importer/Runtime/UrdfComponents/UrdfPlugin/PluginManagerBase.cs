@@ -18,7 +18,7 @@ namespace Unity.Robotics.UrdfImporter
         public const string _FilenameAttribute = "filename";
         public const string _NameAttribute = "name";
 
-        public UrdfPluginImplementation GeneratePlugin(UrdfPluginDescription pluginDescription)
+        public UrdfPluginImplementationOld GeneratePlugin(UrdfPluginDescription pluginDescription)
         {
 
             XmlDocument xmlDocument = new XmlDocument();
@@ -61,7 +61,7 @@ namespace Unity.Robotics.UrdfImporter
             bool validPlugin = false;
             foreach (Type typeInterface in pluginType.GetInterfaces())
             {
-                if (typeInterface == typeof(UrdfPluginImplementation))
+                if (typeInterface == typeof(UrdfPluginImplementationOld))
                 {
                     validPlugin = true;
                     break;
@@ -71,7 +71,7 @@ namespace Unity.Robotics.UrdfImporter
             if (!validPlugin)
             {
                 Debug.LogError($"Plugin with filename {filenameAttribute} is invalid, " +
-                               $"it must extend {nameof(UrdfPluginImplementation)}");
+                               $"it must extend {nameof(UrdfPluginImplementationOld)}");
                 return null;
             }
             
@@ -79,7 +79,7 @@ namespace Unity.Robotics.UrdfImporter
 
         }
 
-        public static UrdfPluginDescription BuildXmlDocument(UrdfPluginImplementation plugin, string robotName = "")
+        public static UrdfPluginDescription BuildXmlDocument(UrdfPluginImplementationOld plugin, string robotName = "")
         {
             XmlDocument pluginDocument = new XmlDocument();
             plugin.BuildExportData(robotName, pluginDocument);

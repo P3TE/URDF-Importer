@@ -78,6 +78,9 @@ namespace Unity.Robotics.UrdfImporter
             {
                 RuntimeUrdf.SetRuntimeMode(true);
             }
+            
+            RuntimeUrdf.urdfBuildErrors.Clear();
+            RuntimeUrdf.urdfBuildWarnings.Clear();
 
             im.robot = new UrdfRobotDescription(filename);
 
@@ -201,6 +204,17 @@ namespace Unity.Robotics.UrdfImporter
             }
 
             ImportPipelinePostCreate(im);
+
+            foreach (Exception urdfBuildError in RuntimeUrdf.urdfBuildErrors)
+            {
+                Debug.LogException(urdfBuildError);
+            }
+
+            foreach (string urdfBuildWarning in RuntimeUrdf.urdfBuildWarnings)
+            {
+                Debug.LogWarning(urdfBuildWarning);
+            }
+            
             yield return im.robotGameObject;
         }
 
@@ -352,9 +366,9 @@ namespace Unity.Robotics.UrdfImporter
             robot.materials = UrdfMaterial.Materials.Values.ToList();
             robot.plugins = urdfRobot.GetComponentInChildren<UrdfPlugins>().ExportPluginsData();
 
-            UrdfPluginImplementation[] additionalPlugins =
-                urdfRobot.GetComponentsInChildren<UrdfPluginImplementation>();
-            foreach (UrdfPluginImplementation additionalPlugin in additionalPlugins)
+            UrdfPluginImplementationOld[] additionalPlugins =
+                urdfRobot.GetComponentsInChildren<UrdfPluginImplementationOld>();
+            foreach (UrdfPluginImplementationOld additionalPlugin in additionalPlugins)
             {
                 UrdfPluginDescription pluginDescription = PluginManagerBase.BuildXmlDocument(additionalPlugin, robot.name);
                 robot.plugins.Add(pluginDescription);

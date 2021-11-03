@@ -4,7 +4,8 @@ using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
 {
-    public abstract class UrdfPluginImplementation : MonoBehaviour
+    [Obsolete("No longer used...")]
+    public abstract class UrdfPluginImplementationOld : MonoBehaviour
     {
 
         protected string robotName;
@@ -78,13 +79,14 @@ namespace Unity.Robotics.UrdfImporter
         public abstract void DecodeExportPlugin(XmlDocument pluginDescriptionXml);
         
         
-        protected void TranscodeValue(XmlElement parentXmlElement, string tagName, ref float value)
+        protected bool TranscodeValue(XmlElement parentXmlElement, string tagName, ref float value, float defaultValue = 0.0f)
         {
             if(encode)
             {
                 XmlElement newElement = xmlDocument.CreateElement(tagName);
                 newElement.InnerText = value.ToString("0.###");
                 parentXmlElement.AppendChild(newElement);
+                return true;
             }
             else
             {
