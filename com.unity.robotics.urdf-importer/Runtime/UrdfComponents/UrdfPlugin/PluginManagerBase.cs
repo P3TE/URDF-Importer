@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Xml;
+using System.Xml.Linq;
 using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
@@ -8,7 +8,24 @@ namespace Unity.Robotics.UrdfImporter
     public abstract class PluginManagerBase : MonoBehaviour
     {
 
-        public abstract Dictionary<string, Type> ImplementedPlugins
+        public static PluginManagerBase Instance
+        {
+            get;
+            protected set;
+        }
+        
+        protected virtual void Awake()
+        {
+            if (Instance != null)
+            {
+                Debug.LogError($"Multiple instances of {GetType().Name}");
+            }
+            Instance = this;
+        }
+
+        public delegate UrdfPluginImplementation GeneratePluginDelegate(PluginData pluginData);
+
+        public abstract Dictionary<string, GeneratePluginDelegate> ImplementedPlugins
         {
             get;
         }
@@ -17,88 +34,82 @@ namespace Unity.Robotics.UrdfImporter
         public const string _PluginTag = "plugin";
         public const string _FilenameAttribute = "filename";
         public const string _NameAttribute = "name";
+        public const string _LinkNameElement = "linkName";
 
-        public UrdfPluginImplementationOld GeneratePlugin(UrdfPluginDescription pluginDescription)
+        public class PluginData
         {
-
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.LoadXml(pluginDescription.text);
-
-            XmlNode gazeboNode = xmlDocument.DocumentElement.SelectSingleNode(_GazeboTag);
-            if (gazeboNode == null)
-            {
-                Debug.LogError($"Plugin must begin with {_GazeboTag}");
-                return null;
-            }
+            //Used for determining the type of plugin.
+            public string filename;
+            //Generic name for the plugin.
+            public string name = "";
+            //Used for deserialising the xml.
+            public XElement innerPluginXml;
             
-            XmlNode pluginNode = gazeboNode.SelectSingleNode(_PluginTag);
-            if (pluginNode == null)
-            {
-                Debug.LogError($"Plugin must contain a {_PluginTag} tag");
-                return null;
-            }
+            //To neaten the layout, the following parameters are used to define what game object the plugin is added to. 
+            public string urdfLinkName = "";
+            public UrdfLink urdfLink = null;
+            public GameObject fallbackGameObjectParent = null;
 
-            string filenameAttribute = pluginNode.Attributes[_FilenameAttribute]?.InnerText;
-            if (filenameAttribute == null)
+            //Used when creating the new Component.
+            public GameObject ObjectToAttachTo
             {
-                Debug.LogError($"Plugin must contain a {_FilenameAttribute} attribute");
-                return null;
-            }
-            
-            string nameAttribute = pluginNode.Attributes[_NameAttribute]?.InnerText;
-            if (nameAttribute == null)
-            {
-                nameAttribute = "";
-            }
-
-            if (!ImplementedPlugins.ContainsKey(filenameAttribute))
-            {
-                return null;
-            }
-
-            Type pluginType = ImplementedPlugins[filenameAttribute];
-
-            bool validPlugin = false;
-            foreach (Type typeInterface in pluginType.GetInterfaces())
-            {
-                if (typeInterface == typeof(UrdfPluginImplementationOld))
+                get
                 {
-                    validPlugin = true;
-                    break;
+                    if (urdfLink != null)
+                    {
+                        return urdfLink.gameObject;
+                    }
+                    return fallbackGameObjectParent;
                 }
             }
+        }
 
-            if (!validPlugin)
+        public UrdfPluginImplementation GeneratePlugin(UrdfPluginDescription pluginDescription)
+        {
+            XElement xmlElement = XElement.Parse(pluginDescription.text);
+            XElement pluginElement = xmlElement.Element(_PluginTag);
+            if (pluginElement == null)
             {
-                Debug.LogError($"Plugin with filename {filenameAttribute} is invalid, " +
-                               $"it must extend {nameof(UrdfPluginImplementationOld)}");
+                RuntimeUrdf.urdfBuildWarnings.AddLast($"Plugin of type {xmlElement.Name} lacks a child of type {_PluginTag} and was ignored!");
                 return null;
             }
+            PluginData pluginData = new PluginData();
+            XAttribute filenameAttribute = pluginElement.Attribute(_FilenameAttribute);
+            if (filenameAttribute == null)
+            {
+                RuntimeUrdf.urdfBuildWarnings.AddLast($"Plugin of type {xmlElement.Name}:{_PluginTag} is missing attribute {_FilenameAttribute} and will be ignored!");
+                return null;
+            }
+            pluginData.filename = filenameAttribute.Value;
+            XAttribute nameAttribute = pluginElement.Attribute(_NameAttribute);
+            if (nameAttribute != null)
+            {
+                pluginData.name = filenameAttribute.Value;
+            }
             
-            throw new NotImplementedException();
+            //Find the link if applicable.
+            if (UrdfPluginImplementation.ReadStringFromXElement(pluginElement, _LinkNameElement,
+                out pluginData.urdfLinkName, false))
+            {
+                //A valid link name exists.
+                UrdfLinkExtensions.TryFindLink(pluginData.urdfLinkName, out pluginData.urdfLink);
+            }
 
-        }
-
-        public static UrdfPluginDescription BuildXmlDocument(UrdfPluginImplementationOld plugin, string robotName = "")
-        {
-            XmlDocument pluginDocument = new XmlDocument();
-            plugin.BuildExportData(robotName, pluginDocument);
+            if (ImplementedPlugins.TryGetValue(pluginData.filename, out GeneratePluginDelegate generatePluginDelegate))
+            {
+                UrdfPluginImplementation result = generatePluginDelegate(pluginData);
+                if (result == null)
+                {
+                    throw new Exception($"Failed to generate plugin with filename {pluginData.filename}");
+                }
+                result.DeserialiseFromXml(pluginData.innerPluginXml);
+                return result;
+            }
             
-            return new UrdfPluginDescription(pluginDocument.InnerXml);
+            RuntimeUrdf.urdfBuildWarnings.AddLast($"No plugin implementation for plugin with filename {pluginData.filename} it will be ignored!");
+
+            return null;
         }
-
-        /*const string _UrdfPluginBuilderPrefabName = "UrdfPluginBuilder";
-        GameObject pluginBuilderPrefab = Resources.Load<GameObject>(_UrdfPluginBuilderPrefabName);
-
-            if (pluginBuilderPrefab == null)
-        {
-            Debug.LogError($"Unable to locate {_UrdfPluginBuilderPrefabName} in the resources directory of this project! No custom plugins loaded.");
-        }
-
-        PluginManagerBase pluginManagerBase = pluginBuilderPrefab.GetComponent<PluginManagerBase>();
-            
-        //Cleanup.
-        Object.DestroyImmediate(pluginBuilderPrefab, true);*/
 
     }
 }

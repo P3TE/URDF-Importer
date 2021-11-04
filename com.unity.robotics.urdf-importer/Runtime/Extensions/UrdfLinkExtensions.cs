@@ -10,14 +10,36 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/  
+*/
 
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
 {
+    
     public static class UrdfLinkExtensions
-    { 
+    {
+        
+        private static Dictionary<string, UrdfLink> linkMap = new Dictionary<string, UrdfLink>();
+        private static Dictionary<string, UrdfJoint> jointMap = new Dictionary<string, UrdfJoint>();
+
+        public static void ClearLinkAndJointMaps()
+        {
+            linkMap.Clear();
+            jointMap.Clear();
+        }
+
+        public static bool TryFindLink(string linkName, out UrdfLink value)
+        {
+            return linkMap.TryGetValue(linkName, out value);
+        }
+        
+        public static bool TryFindJoint(string linkName, out UrdfJoint value)
+        {
+            return jointMap.TryGetValue(linkName, out value);
+        }
+        
         public static GameObject Create(Transform parent, UrdfLinkDescription link = null, UrdfJointDescription joint = null)
         {
             GameObject linkObject = new GameObject("link");
@@ -48,6 +70,8 @@ namespace Unity.Robotics.UrdfImporter
                 urdfLink.IsBaseLink = true;
             }
             urdfLink.gameObject.name = link.name;
+            linkMap.Add(link.name, urdfLink);
+            
             if (joint?.origin != null)
                 UrdfOrigin.ImportOriginData(urdfLink.transform, joint.origin);
 
@@ -56,10 +80,17 @@ namespace Unity.Robotics.UrdfImporter
                 UrdfInertial.Create(urdfLink.gameObject, link.inertial);
 
                 if (joint != null)
-                    UrdfJoint.Create(urdfLink.gameObject, UrdfJoint.GetJointType(joint.type), joint);
+                {
+                    UrdfJoint newJoint = UrdfJoint.Create(urdfLink.gameObject, UrdfJoint.GetJointType(joint.type), joint);
+                    jointMap.Add(joint.name, newJoint);
+                }
+                    
             }
             else if (joint != null)
-                UrdfJoint.Create(urdfLink.gameObject, UrdfJoint.GetJointType(joint.type), joint);
+            {
+                UrdfJoint newJoint = UrdfJoint.Create(urdfLink.gameObject, UrdfJoint.GetJointType(joint.type), joint);
+                jointMap.Add(joint.name, newJoint);
+            }
 
         } 
         

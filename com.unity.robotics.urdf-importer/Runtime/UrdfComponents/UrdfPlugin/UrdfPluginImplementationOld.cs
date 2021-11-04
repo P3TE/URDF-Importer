@@ -39,16 +39,16 @@ namespace Unity.Robotics.UrdfImporter
 
         protected virtual void ExportGazeboData()
         {
-            XmlElement gazeboElement = xmlDocument.CreateElement(string.Empty, PluginManagerBase._GazeboTag, string.Empty);
+            XmlElement gazeboElement = xmlDocument.CreateElement(string.Empty, PluginManagerBaseOld._GazeboTag, string.Empty);
             xmlDocument.AppendChild(gazeboElement);
             BuildPluginElement(gazeboElement);
         }
 
         protected virtual void BuildPluginElement(XmlElement gazeboXmlElement)
         {
-            XmlElement pluginElement = xmlDocument.CreateElement(string.Empty, PluginManagerBase._PluginTag, string.Empty);
-            pluginElement.SetAttribute(PluginManagerBase._FilenameAttribute, PluginFilename);
-            pluginElement.SetAttribute(PluginManagerBase._NameAttribute, $"{robotName}_{PluginNamePostfix}");
+            XmlElement pluginElement = xmlDocument.CreateElement(string.Empty, PluginManagerBaseOld._PluginTag, string.Empty);
+            pluginElement.SetAttribute(PluginManagerBaseOld._FilenameAttribute, PluginFilename);
+            pluginElement.SetAttribute(PluginManagerBaseOld._NameAttribute, $"{robotName}_{PluginNamePostfix}");
             gazeboXmlElement.AppendChild(pluginElement);
             
             ExportPluginData(pluginElement);

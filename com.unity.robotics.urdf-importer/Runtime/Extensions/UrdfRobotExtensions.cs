@@ -81,6 +81,7 @@ namespace Unity.Robotics.UrdfImporter
             
             RuntimeUrdf.urdfBuildErrors.Clear();
             RuntimeUrdf.urdfBuildWarnings.Clear();
+            UrdfLinkExtensions.ClearLinkAndJointMaps();
 
             im.robot = new UrdfRobotDescription(filename);
 
@@ -238,10 +239,47 @@ namespace Unity.Robotics.UrdfImporter
             while (ProcessJointStack(im))
             {// process the stack until finished.
             }
+            
+            LoadPlugins(im);
 
             ImportPipelinePostCreate(im);
 
             return im.robotGameObject;
+        }
+
+        private static void LoadPlugins(ImportPipelineData im)
+        {
+
+            PluginManagerBase pluginManager = PluginManagerBase.Instance;
+            if (pluginManager == null)
+            {
+                RuntimeUrdf.urdfBuildErrors.AddLast(new Exception("No PluginManagerBase Instance set!"));
+                return;
+            }
+            
+            LinkedList<UrdfPluginImplementation> loadedPlugins = new LinkedList<UrdfPluginImplementation>();
+            
+            foreach (UrdfPluginDescription urdfPluginDescription in im.robot.plugins)
+            {
+                try
+                {
+                    UrdfPluginImplementation urdfPluginImplementation = pluginManager.GeneratePlugin(urdfPluginDescription);
+                    if (urdfPluginImplementation != null)
+                    {
+                        loadedPlugins.AddLast(urdfPluginImplementation);
+                    }
+                }
+                catch (Exception e)
+                {
+                    RuntimeUrdf.urdfBuildErrors.AddLast(e);
+                }
+            }
+
+            foreach (UrdfPluginImplementation urdfPluginImplementation in loadedPlugins)
+            {
+                //urdfPluginImplementation.
+            }
+            
         }
 
         public static void CorrectAxis(GameObject robot)
@@ -370,7 +408,7 @@ namespace Unity.Robotics.UrdfImporter
                 urdfRobot.GetComponentsInChildren<UrdfPluginImplementationOld>();
             foreach (UrdfPluginImplementationOld additionalPlugin in additionalPlugins)
             {
-                UrdfPluginDescription pluginDescription = PluginManagerBase.BuildXmlDocument(additionalPlugin, robot.name);
+                UrdfPluginDescription pluginDescription = PluginManagerBaseOld.BuildXmlDocument(additionalPlugin, robot.name);
                 robot.plugins.Add(pluginDescription);
             }
 
