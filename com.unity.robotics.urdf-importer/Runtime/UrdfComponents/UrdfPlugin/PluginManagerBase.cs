@@ -25,9 +25,20 @@ namespace Unity.Robotics.UrdfImporter
 
         public delegate UrdfPluginImplementation GeneratePluginDelegate(PluginData pluginData);
 
-        public abstract Dictionary<string, GeneratePluginDelegate> ImplementedPlugins
+        public abstract Dictionary<string, GeneratePluginDelegate> BuildPluginFactories();
+
+        private Dictionary<string, GeneratePluginDelegate> pluginFactories = null;
+
+        private Dictionary<string, GeneratePluginDelegate> PluginFactories
         {
-            get;
+            get
+            {
+                if (pluginFactories == null)
+                {
+                    pluginFactories = BuildPluginFactories();
+                }
+                return pluginFactories;
+            }
         }
 
         public const string _GazeboTag = "gazebo";
@@ -66,36 +77,37 @@ namespace Unity.Robotics.UrdfImporter
 
         public UrdfPluginImplementation GeneratePlugin(UrdfPluginDescription pluginDescription)
         {
+            PluginData pluginData = new PluginData();
             XElement xmlElement = XElement.Parse(pluginDescription.text);
-            XElement pluginElement = xmlElement.Element(_PluginTag);
-            if (pluginElement == null)
+            pluginData.innerPluginXml = xmlElement.Element(_PluginTag);
+            if (pluginData.innerPluginXml == null)
             {
-                RuntimeUrdf.urdfBuildWarnings.AddLast($"Plugin of type {xmlElement.Name} lacks a child of type {_PluginTag} and was ignored!");
+                RuntimeUrdf.AddImportWarning($"Plugin of type {xmlElement.Name} lacks a child of type {_PluginTag} and was ignored!");
                 return null;
             }
-            PluginData pluginData = new PluginData();
-            XAttribute filenameAttribute = pluginElement.Attribute(_FilenameAttribute);
+            
+            XAttribute filenameAttribute = pluginData.innerPluginXml.Attribute(_FilenameAttribute);
             if (filenameAttribute == null)
             {
-                RuntimeUrdf.urdfBuildWarnings.AddLast($"Plugin of type {xmlElement.Name}:{_PluginTag} is missing attribute {_FilenameAttribute} and will be ignored!");
+                RuntimeUrdf.AddImportWarning($"Plugin of type {xmlElement.Name}:{_PluginTag} is missing attribute {_FilenameAttribute} and will be ignored!");
                 return null;
             }
             pluginData.filename = filenameAttribute.Value;
-            XAttribute nameAttribute = pluginElement.Attribute(_NameAttribute);
+            XAttribute nameAttribute = pluginData.innerPluginXml.Attribute(_NameAttribute);
             if (nameAttribute != null)
             {
                 pluginData.name = filenameAttribute.Value;
             }
             
             //Find the link if applicable.
-            if (UrdfPluginImplementation.ReadStringFromXElement(pluginElement, _LinkNameElement,
+            if (UrdfPluginImplementation.ReadStringFromXElement(pluginData.innerPluginXml, _LinkNameElement,
                 out pluginData.urdfLinkName, false))
             {
                 //A valid link name exists.
                 UrdfLinkExtensions.TryFindLink(pluginData.urdfLinkName, out pluginData.urdfLink);
             }
 
-            if (ImplementedPlugins.TryGetValue(pluginData.filename, out GeneratePluginDelegate generatePluginDelegate))
+            if (PluginFactories.TryGetValue(pluginData.filename, out GeneratePluginDelegate generatePluginDelegate))
             {
                 UrdfPluginImplementation result = generatePluginDelegate(pluginData);
                 if (result == null)
@@ -106,7 +118,7 @@ namespace Unity.Robotics.UrdfImporter
                 return result;
             }
             
-            RuntimeUrdf.urdfBuildWarnings.AddLast($"No plugin implementation for plugin with filename {pluginData.filename} it will be ignored!");
+            RuntimeUrdf.AddImportWarning($"No plugin implementation for plugin with filename {pluginData.filename} it will be ignored!");
 
             return null;
         }

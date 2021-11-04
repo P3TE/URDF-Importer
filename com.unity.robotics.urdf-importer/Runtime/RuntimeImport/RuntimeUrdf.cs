@@ -29,7 +29,22 @@ public static class RuntimeUrdf
     }
 
     public static LinkedList<Exception> urdfBuildErrors = new LinkedList<Exception>();
-    public static LinkedList<string> urdfBuildWarnings = new LinkedList<string>();
+    private static LinkedList<string> urdfBuildWarnings = new LinkedList<string>();
+
+    public static void ClearImportWarningsAndErrors()
+    {
+        urdfBuildErrors.Clear();
+        urdfBuildWarnings.Clear();
+    }
+
+    public static IEnumerable<string> UrdfBuildWarnings => urdfBuildWarnings;
+
+    public static void AddImportWarning(string warningMessage)
+    {
+        urdfBuildWarnings.AddLast(warningMessage);
+        //This is so the call stack remains useful.
+        Debug.LogWarning(warningMessage);
+    }
 
     public static T AssetDatabase_LoadAssetAtPath<T>(string fileAssetPath) where T : UnityEngine.Object 
     {

@@ -12,7 +12,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public abstract void DeserialiseFromXml(XElement node);
 
-        protected virtual void ImportFinalise()
+        public virtual void FinaliseImport()
         {
             //Called after the deserialise is complete for all plugins.
             //Useful for additional processing after all data from all plugins is loaded.

@@ -79,8 +79,7 @@ namespace Unity.Robotics.UrdfImporter
                 RuntimeUrdf.SetRuntimeMode(true);
             }
             
-            RuntimeUrdf.urdfBuildErrors.Clear();
-            RuntimeUrdf.urdfBuildWarnings.Clear();
+            RuntimeUrdf.ClearImportWarningsAndErrors();
             UrdfLinkExtensions.ClearLinkAndJointMaps();
 
             im.robot = new UrdfRobotDescription(filename);
@@ -171,6 +170,17 @@ namespace Unity.Robotics.UrdfImporter
             { // set runtime mode back to what it was
                 RuntimeUrdf.SetRuntimeMode(im.wasRuntimeMode);
             }
+
+            foreach (string urdfBuildWarning in RuntimeUrdf.UrdfBuildWarnings)
+            {
+                //TODO - Display warnings somehow...
+                //Debug.LogWarning(urdfBuildWarning);
+            }
+
+            foreach (Exception urdfBuildError in RuntimeUrdf.urdfBuildErrors)
+            {
+                Debug.LogException(urdfBuildError);
+            }
         }
 
         /// <summary>
@@ -206,16 +216,6 @@ namespace Unity.Robotics.UrdfImporter
 
             ImportPipelinePostCreate(im);
 
-            foreach (Exception urdfBuildError in RuntimeUrdf.urdfBuildErrors)
-            {
-                Debug.LogException(urdfBuildError);
-            }
-
-            foreach (string urdfBuildWarning in RuntimeUrdf.urdfBuildWarnings)
-            {
-                Debug.LogWarning(urdfBuildWarning);
-            }
-            
             yield return im.robotGameObject;
         }
 
@@ -277,7 +277,7 @@ namespace Unity.Robotics.UrdfImporter
 
             foreach (UrdfPluginImplementation urdfPluginImplementation in loadedPlugins)
             {
-                //urdfPluginImplementation.
+                urdfPluginImplementation.FinaliseImport();
             }
             
         }

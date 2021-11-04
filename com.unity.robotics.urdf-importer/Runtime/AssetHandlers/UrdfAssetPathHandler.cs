@@ -352,16 +352,20 @@ namespace Unity.Robotics.UrdfImporter
         {
             if (urdfPath.StartsWith(_AbsoluteFilePathPrefix))
             {
-                FromAbsolutePath(urdfPath);
+                return FromAbsolutePath(urdfPath);
                 //Copy the files to the Assets directory.
-                urdfPath = AttemptToCopyFileToAssets(urdfPath);
+                //urdfPath = AttemptToCopyFileToAssets(urdfPath);
             }
             if (!urdfPath.StartsWith(@"package://"))
             {
-               Debug.LogWarning(@$"{urdfPath} is not a valid URDF package file path. Path should start with package://, and URDF file should be in the directory root.");
+                RuntimeUrdf.AddImportWarning(
+                    $"{urdfPath} is not a valid URDF package file path. Path should start with package://, and URDF file should be in the directory root.");
+               //Debug.LogWarning(@$"{urdfPath} is not a valid URDF package file path. Path should start with package://, and URDF file should be in the directory root.");
                if (urdfPath.Substring(0, 3) == "../")
                {
-                   Debug.LogWarning("Attempting to replace file path's starting instance of `../` with standard package notation `package://` to prevent manual path traversal at root of directory!");
+                   RuntimeUrdf.AddImportWarning(
+                       "Attempting to replace file path's starting instance of `../` with standard package notation `package://` to prevent manual path traversal at root of directory!");
+                   //Debug.LogWarning("Attempting to replace file path's starting instance of `../` with standard package notation `package://` to prevent manual path traversal at root of directory!");
                    urdfPath = $@"package://{urdfPath.Substring(3)}";
                }
                else
