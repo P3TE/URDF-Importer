@@ -107,5 +107,49 @@ namespace Unity.Robotics.UrdfImporter
             return wasSuccess;
         }
         
+        public static bool ReadBooleanFromXElement(XElement node, string childElementName, out bool result, 
+            bool required = true, bool defaultValue = false)
+        {
+            if (!GetXElement(node, childElementName, out XElement childXElement, required))
+            {
+                result = defaultValue;
+                return false;
+            }
+
+            string originalCaseXmlValue = childXElement.Value.Trim();
+
+            if (originalCaseXmlValue == "1")
+            {
+                result = true;
+                return true;
+            }
+            if (originalCaseXmlValue == "0")
+            {
+                result = false;
+                return true;
+            }
+            
+            string lowerCaseValue = originalCaseXmlValue.ToLower();
+            
+            if (lowerCaseValue == "true")
+            {
+                result = true;
+                return true;
+            }
+            if (lowerCaseValue == "false")
+            {
+                result = false;
+                return true;
+            }
+            
+            if (required)
+            {
+                throw new Exception($"Node {node.Name} value expected a bool, received: {originalCaseXmlValue}");
+            }
+            
+            result = defaultValue;
+            return false;
+        }
+        
     }
 }
