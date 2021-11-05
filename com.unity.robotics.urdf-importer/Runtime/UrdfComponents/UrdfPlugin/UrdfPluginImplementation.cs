@@ -12,12 +12,37 @@ namespace Unity.Robotics.UrdfImporter
 
         public abstract void DeserialiseFromXml(XElement node);
 
-        public virtual void FinaliseImport()
+        public virtual void FinaliseImport(UrdfPlugins urdfPlugins)
         {
             //Called after the deserialise is complete for all plugins.
             //Useful for additional processing after all data from all plugins is loaded.
         }
 
+        public UrdfLink FindRootMostLink()
+        {
+            UrdfLink currentLink = null;
+            Transform currentCheckTransform = transform;
+            while (currentCheckTransform != null)
+            {
+                UrdfLink nextCheckOption = currentCheckTransform.GetComponent<UrdfLink>();
+                if (nextCheckOption != null)
+                {
+                    currentLink = nextCheckOption;
+                }
+                
+                UrdfRobot urdfRobot = currentCheckTransform.GetComponent<UrdfRobot>();
+                if (urdfRobot != null)
+                {
+                    //We can stop searching now, we aren't choosing anything outside the robot.
+                    break;
+                }
+                
+                currentCheckTransform = currentCheckTransform.parent;
+                
+            }
+            return currentLink;
+        }
+        
         public static bool AttemptToFindLink(XElement node, [CanBeNull] out UrdfLink urdfLink)
         {
             if (ReadStringFromXElement(node, _DefaultLinkName, out string linkName, false))

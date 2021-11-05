@@ -61,6 +61,7 @@ namespace Unity.Robotics.UrdfImporter
             public bool loadStatus;
             public bool forceRuntimeMode;
             public UrdfRobotDescription robot;
+            public UrdfPlugins urdfPlugins;
             public GameObject robotGameObject;
             public Stack<Tuple<UrdfLinkDescription, Transform, UrdfJointDescription>> importStack;
         }
@@ -119,7 +120,7 @@ namespace Unity.Robotics.UrdfImporter
 
             UrdfAssetPathHandler.SetPackageRoot(Path.GetDirectoryName(im.robot.filename));
             UrdfMaterial.InitializeRobotMaterials(im.robot);
-            UrdfPlugins.Create(im.robotGameObject.transform, im.robot.plugins);
+            im.urdfPlugins = UrdfPlugins.Create(im.robotGameObject.transform, im.robot.plugins);
         }
 
         // Creates the stack of robot joints. Should be called iteratively until false is returned.
@@ -165,6 +166,21 @@ namespace Unity.Robotics.UrdfImporter
 
             CorrectAxis(im.robotGameObject);
             CreateCollisionExceptions(im.robot, im.robotGameObject);
+
+            //Add a verification check.
+            IVerifiesValidPluginImport[] verification =
+                im.robotGameObject.GetComponentsInChildren<IVerifiesValidPluginImport>();
+            foreach (IVerifiesValidPluginImport verifiesValidPluginImport in verification)
+            {
+                try
+                {
+                    verifiesValidPluginImport.VerifyPluginImport();
+                }
+                catch (Exception e)
+                {
+                    RuntimeUrdf.urdfBuildErrors.AddLast(e);
+                }
+            }
 
             if (im.forceRuntimeMode) 
             { // set runtime mode back to what it was
@@ -240,14 +256,14 @@ namespace Unity.Robotics.UrdfImporter
             {// process the stack until finished.
             }
             
-            LoadPlugins(im);
+            ImportPipelineLoadPlugins(im);
 
             ImportPipelinePostCreate(im);
 
             return im.robotGameObject;
         }
 
-        private static void LoadPlugins(ImportPipelineData im)
+        private static void ImportPipelineLoadPlugins(ImportPipelineData im)
         {
 
             PluginManagerBase pluginManager = PluginManagerBase.Instance;
@@ -277,7 +293,7 @@ namespace Unity.Robotics.UrdfImporter
 
             foreach (UrdfPluginImplementation urdfPluginImplementation in loadedPlugins)
             {
-                urdfPluginImplementation.FinaliseImport();
+                urdfPluginImplementation.FinaliseImport(im.urdfPlugins);
             }
             
         }
