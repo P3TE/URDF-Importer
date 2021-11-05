@@ -439,33 +439,46 @@ namespace Unity.Robotics.UrdfImporter
             if (!CompareOrigin( source.origin,  exported.origin, indent))
                 return false;
 
-            linkLog.AppendLine(String.Format("{0}Geometry Checks", Indent(indent)));
+            linkLog.AppendLine($"{Indent(indent)}Geometry Checks");
             if (!CompareGeometry( source.geometry,  exported.geometry, indent+1))
                 return false;
 
-            linkLog.AppendLine(String.Format("{0}Material Checks", Indent(indent)));
-            if (source.material == null && exported.material == null)
+            linkLog.AppendLine($"{Indent(indent)}Materials Checks");
+            if (source.materials == null && exported.materials == null)
             {
-                linkLog.AppendLine(String.Format("{0}Material Nullity Check: {1,6}", Indent(indent), "True"));
+                linkLog.AppendLine($"{Indent(indent)}Materials Nullity Check: {"True",6}");
                 return true;
             }
-            else if (source.material != null && exported.material != null)
+            else if (source.materials == null && exported.materials != null || source.materials != null && exported.materials == null)
             {
-                linkLog.AppendLine(String.Format("{0}Material Nullity Check: {1,6}", Indent(indent), "True"));
-                if (!CompareMaterial(source.material, exported.material, indent + 1))
-                {
-                    return false;
-                }
-            }
-            else if ((source.material == null && exported.material.name == "Default-Material")|| (exported.material == null && source.material?.name == "Default-Material"))
+                linkLog.AppendLine($"{Indent(indent)}Materials Nullity Check: {"False",6}");
+                return false;
+            } else if (source.materials.Count != exported.materials.Count)
             {
-                linkLog.AppendLine(String.Format("{0}Material Nullity Check: {1,6}", Indent(indent), "True"));
-                return true;
+                linkLog.AppendLine($"{Indent(indent)}Materials Nullity Check: {"False",6}");
+                return false;
             }
             else
             {
-                linkLog.AppendLine(String.Format("{0}Material Nullity Check: {1,6}", Indent(indent), "False"));
-                return false;
+                for (int i = 0; i < source.materials.Count; i++)
+                {
+                    UrdfMaterialDescription sourceMaterial = source.materials[i];
+                    UrdfMaterialDescription exportMaterial = exported.materials[i];
+                    if ((sourceMaterial == null && exportMaterial.name == "Default-Material") ||
+                        (exportMaterial == null && sourceMaterial?.name == "Default-Material"))
+                    {
+                        linkLog.AppendLine($"{Indent(indent)}Materials Nullity Check: {"True",6}");
+                        return true;
+                    }
+                    else
+                    {
+                        linkLog.AppendLine($"{Indent(indent)}Materials Nullity Check: {"True",6}");
+                        if (!CompareMaterial(sourceMaterial, exportMaterial, indent + 1))
+                        {
+                            return false;
+                        }
+                    }
+                }
             }
 
             return true;

@@ -195,7 +195,7 @@ namespace Unity.Robotics.UrdfImporter
             public string name;
             public UrdfOriginDescription origin;
             public Geometry geometry;
-            public UrdfMaterialDescription material;
+            public List<UrdfMaterialDescription> materials;
             public List<UrdfUnityMaterial.ExportMaterial> exportedMaterials;
 
             public Visual(XElement node)
@@ -203,7 +203,12 @@ namespace Unity.Robotics.UrdfImporter
                 name = (string)node.Attribute("name"); // optional
                 origin = (node.Element("origin") != null) ? new UrdfOriginDescription(node.Element("origin")) : null; // optional
                 geometry = new Geometry(node.Element("geometry")); // required
-                material = (node.Element("material") != null) ? new UrdfMaterialDescription(node.Element("material")) : null; // optional
+                materials = new List<UrdfMaterialDescription>();
+                IEnumerable<XElement> materialElements = node.Elements("material");
+                foreach (XElement materialElement in materialElements)
+                {
+                    materials.Add(new UrdfMaterialDescription(materialElement));
+                }
             }
 
             public Visual(Geometry geometry, string name = null, UrdfOriginDescription origin = null, UrdfMaterialDescription material = null,
@@ -212,7 +217,7 @@ namespace Unity.Robotics.UrdfImporter
                 this.name = name;
                 this.origin = origin;
                 this.geometry = geometry;
-                this.material = material;
+                this.materials = new List<UrdfMaterialDescription>() {material}; //TODO - Add support for multiple materials.
                 this.exportedMaterials = exportedMaterials;
             }
 
@@ -225,7 +230,10 @@ namespace Unity.Robotics.UrdfImporter
 
                 origin?.WriteToUrdf(writer);
                 geometry?.WriteToUrdf(writer);
-                material?.WriteToUrdf(writer);
+                foreach (UrdfMaterialDescription urdfMaterialDescription in materials)
+                {
+                    urdfMaterialDescription?.WriteToUrdf(writer);
+                }
                 if(exportedMaterials != null && exportedMaterials.Count > 0)
                 {
                     foreach (UrdfUnityMaterial.ExportMaterial exportedMaterial in exportedMaterials)

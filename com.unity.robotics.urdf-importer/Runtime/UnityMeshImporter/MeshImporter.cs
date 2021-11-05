@@ -43,19 +43,40 @@ namespace UnityMeshImporter
         private string meshName;
         private UnityEngine.Mesh mesh;
         private UnityEngine.Material material;
+        private AdditionalMeshImportData additionalMeshImportData;
         
         private MeshMaterialBinding() {}    // Do not allow default constructor
 
-        public MeshMaterialBinding(string meshName, Mesh mesh, Material material)
+        public MeshMaterialBinding(string meshName, Mesh mesh, Material material, AdditionalMeshImportData additionalMeshImportData)
         {
             this.meshName = meshName;
             this.mesh = mesh;
             this.material = material;
+            this.additionalMeshImportData = additionalMeshImportData;
         }
 
         public Mesh Mesh { get => mesh; }
         public Material Material { get => material; }
         public string MeshName { get => meshName; }
+
+        public AdditionalMeshImportData GetAdditionalMeshImportData => additionalMeshImportData;
+    }
+
+    [System.Serializable]
+    public class AdditionalMeshImportData
+    {
+        public string materialName = "";
+    }
+
+    public class AdditionalMeshImportGameObject : MonoBehaviour
+    {
+        public AdditionalMeshImportData additionalMeshImportData = null;
+
+        private void Start()
+        {
+            //Remove the game object, not needed any more.
+            Destroy(this);
+        }
     }
     
     public class MeshImporter
@@ -78,12 +99,15 @@ namespace UnityMeshImporter
             string parentDir = Directory.GetParent(meshPath).FullName;
 
             // Materials
-            List<UnityEngine.Material> uMaterials = new List<Material>();
+            //List<UnityEngine.Material> uMaterials = new List<Material>();
+            List<Tuple<UnityEngine.Material, AdditionalMeshImportData>> uMaterials = new List<Tuple<UnityEngine.Material, AdditionalMeshImportData>>();
+            //AdditionalMeshImportData
             if (scene.HasMaterials)
             {
                 foreach (var m in scene.Materials)
                 {
                     UnityEngine.Material uMaterial = MaterialExtensions.CreateBasicMaterial();
+                    Debug.Log($"m.Name = {m.Name}");
 
                     // Albedo
                     if (m.HasColorDiffuse)
@@ -127,11 +151,16 @@ namespace UnityMeshImporter
                         {
                             throw new Exception("Cannot find texture file: " + texturePath);
                         }
-                        
-                        uMaterial.SetTexture("_MainTex", uTexture);
+
+                        //uMaterial.mainTexture = uTexture;
+                        //uMaterial.SetTexture("_MainTex", uTexture);
                     }
 
-                    uMaterials.Add(uMaterial);
+                    AdditionalMeshImportData additionalMeshImportData = new AdditionalMeshImportData()
+                    {
+                        materialName = m.Name
+                    };
+                    uMaterials.Add(new Tuple<Material, AdditionalMeshImportData>(uMaterial, additionalMeshImportData));
                 }
             }
 
@@ -197,7 +226,7 @@ namespace UnityMeshImporter
                     uMesh.triangles = uIndices.ToArray();
                     uMesh.uv = uUv.ToArray();
 
-                    uMeshAndMats.Add(new MeshMaterialBinding(m.Name, uMesh, uMaterials[m.MaterialIndex]));
+                    uMeshAndMats.Add(new MeshMaterialBinding(m.Name, uMesh, uMaterials[m.MaterialIndex].Item1, uMaterials[m.MaterialIndex].Item2));
                 }
             }
             
@@ -217,6 +246,9 @@ namespace UnityMeshImporter
                         uSubOb.AddComponent<MeshFilter>();
                         uSubOb.AddComponent<MeshRenderer>();
                         uSubOb.AddComponent<MeshCollider>();
+                        AdditionalMeshImportGameObject additionalMeshImportData =
+                            uSubOb.AddComponent<AdditionalMeshImportGameObject>();
+                        additionalMeshImportData.additionalMeshImportData = uMeshAndMat.GetAdditionalMeshImportData;
                     
                         uSubOb.GetComponent<MeshFilter>().mesh = uMeshAndMat.Mesh;
                         uSubOb.GetComponent<MeshRenderer>().material = uMeshAndMat.Material;

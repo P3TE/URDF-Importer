@@ -187,10 +187,11 @@ namespace Unity.Robotics.UrdfImporter
                 RuntimeUrdf.SetRuntimeMode(im.wasRuntimeMode);
             }
 
-            foreach (string urdfBuildWarning in RuntimeUrdf.UrdfBuildWarnings)
+            IEnumerator<string> urdfBuildWarnings = RuntimeUrdf.UrdfBuildWarnings;
+            while (urdfBuildWarnings.MoveNext())
             {
-                //TODO - Display warnings somehow...
-                //Debug.LogWarning(urdfBuildWarning);
+                string warning = urdfBuildWarnings.Current;
+                //TODO - Display warnings somehow during a build (IE not using Debug.LogWarning(...)).
             }
 
             foreach (Exception urdfBuildError in RuntimeUrdf.urdfBuildErrors)

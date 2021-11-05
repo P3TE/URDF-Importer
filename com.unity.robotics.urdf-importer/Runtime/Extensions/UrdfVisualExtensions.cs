@@ -13,8 +13,10 @@ limitations under the License.
 */
 
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Robotics.UrdfImporter.Urdf.Extensions;
 using UnityEngine;
+using UnityMeshImporter;
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -42,8 +44,51 @@ namespace Unity.Robotics.UrdfImporter
             urdfVisual.geometryType = UrdfGeometry.GetGeometryType(visual.geometry);
             UrdfGeometryVisual.Create(visualObject.transform, urdfVisual.geometryType, visual.geometry);
 
-            UrdfMaterial.SetUrdfMaterial(visualObject, visual.material);
+            //UrdfMaterial.SetUrdfMaterial(visualObject, visual.material);
+            SetupMaterials(visualObject, visual);
             UrdfOrigin.ImportOriginData(visualObject.transform, visual.origin);
+        }
+
+        private static void SetupMaterials(GameObject visualObject, UrdfLinkDescription.Visual visual)
+        {
+
+            Renderer[] renderers = visualObject.GetComponentsInChildren<Renderer>();
+            foreach (Renderer renderer in renderers)
+            {
+                string rendererName = renderer.name;
+                bool matchingMaterialFound = false;
+
+                AdditionalMeshImportGameObject additionalMeshImportData = renderer.GetComponent<AdditionalMeshImportGameObject>();
+
+                if (additionalMeshImportData != null)
+                {
+                    foreach (UrdfMaterialDescription urdfMaterialDescription in visual.materials)
+                    {
+                        string materialName = urdfMaterialDescription.name;
+                        if (additionalMeshImportData.additionalMeshImportData.materialName == materialName)
+                        {
+                            matchingMaterialFound = true;
+                            renderer.sharedMaterial = urdfMaterialDescription.CreateMaterial();
+                            break;
+                        }
+                    }
+                }
+
+                if (!matchingMaterialFound)
+                {
+                    if (visual.materials.Count > 0)
+                    {
+                        UrdfMaterialDescription fallbackMaterial = visual.materials[0];
+                        RuntimeUrdf.AddImportWarning($"No material found for mesh with name {rendererName}, falling back to {fallbackMaterial.name}");
+                        //renderer.sharedMaterial = fallbackMaterial.CreateMaterial();
+                    }
+                    else
+                    {
+                        RuntimeUrdf.AddImportWarning($"No material found for mesh with name {rendererName}, and no materials specified for this visual component, falling back to default shader");
+                        //renderer.sharedMaterial = UrdfMaterial.GetDefaultMaterial();
+                    }
+                }
+            }
         }
 
         public static void AddCorrespondingCollision(this UrdfVisual urdfVisual)

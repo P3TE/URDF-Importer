@@ -37,7 +37,7 @@ public static class RuntimeUrdf
         urdfBuildWarnings.Clear();
     }
 
-    public static IEnumerable<string> UrdfBuildWarnings => urdfBuildWarnings;
+    public static IEnumerator<string> UrdfBuildWarnings => urdfBuildWarnings.GetEnumerator();
 
     public static void AddImportWarning(string warningMessage)
     {

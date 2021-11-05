@@ -30,7 +30,7 @@ namespace Unity.Robotics.UrdfImporter
             new Dictionary<string, UrdfMaterialDescription>();
         
         #region Import
-        private static Material CreateMaterial(this UrdfMaterialDescription urdfMaterial)
+        public static Material CreateMaterial(this UrdfMaterialDescription urdfMaterial)
         {
             if (urdfMaterial.name == "")
             {
@@ -140,16 +140,21 @@ namespace Unity.Robotics.UrdfImporter
                 Renderer renderer = gameObject.GetComponentInChildren<Renderer>();
                 if (renderer != null && renderer.sharedMaterial == null)
                 {
-                    Material material = defaultMaterial;
-#if UNITY_EDITOR
-                    if (!RuntimeUrdf.IsRuntimeMode())
-                    {
-                        material = RuntimeUrdf.AssetDatabase_LoadAssetAtPath<Material>(UrdfAssetPathHandler.GetMaterialAssetPath(DefaultMaterialName));
-                    }
-#endif
-                    SetMaterial(gameObject, material);
+                    SetMaterial(gameObject, GetDefaultMaterial());
                 }
             }
+        }
+
+        public static Material GetDefaultMaterial()
+        {
+            Material material = defaultMaterial;
+#if UNITY_EDITOR
+            if (!RuntimeUrdf.IsRuntimeMode())
+            {
+                material = RuntimeUrdf.AssetDatabase_LoadAssetAtPath<Material>(UrdfAssetPathHandler.GetMaterialAssetPath(DefaultMaterialName));
+            }
+#endif
+            return material;
         }
 
         private static void SetMaterial(GameObject gameObject, Material material)
