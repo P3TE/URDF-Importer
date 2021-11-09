@@ -12,19 +12,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 using MeshProcess;
 using System.IO;
+using Mesh = UnityEngine.Mesh;
+using Object = UnityEngine.Object;
+using Quaternion = UnityEngine.Quaternion;
 
 namespace Unity.Robotics.UrdfImporter
 {
     public class UrdfGeometryCollision : UrdfGeometry
     {
-        public static void Create(Transform parent, GeometryTypes geometryType, UrdfLinkDescription.Geometry geometry = null)
+        public static void Create(Transform parent, GeometryTypes geometryType,
+            UrdfLinkDescription.Geometry geometry = null)
         {
             GameObject geometryGameObject = null;
-            
+
             switch (geometryType)
             {
                 case GeometryTypes.Box:
@@ -48,6 +53,7 @@ namespace Unity.Robotics.UrdfImporter
                         geometryGameObject = new GameObject(geometryType.ToString());
                         geometryGameObject.AddComponent<MeshCollider>();
                     }
+
                     break;
             }
 
@@ -73,10 +79,11 @@ namespace Unity.Robotics.UrdfImporter
                 }
 
                 GameObject meshObject = (GameObject)RuntimeUrdf.PrefabUtility_InstantiatePrefab(prefabObject);
-                ConvertMeshToColliders(meshObject, location:mesh.filename);
+                ConvertMeshToColliders(meshObject, location: mesh.filename);
 
                 return meshObject;
             }
+
             return CreateMeshColliderRuntime(mesh);
         }
 
@@ -87,17 +94,93 @@ namespace Unity.Robotics.UrdfImporter
             if (meshFilePath.ToLower().EndsWith(".stl"))
             {
                 meshObject = StlAssetPostProcessor.CreateStlGameObjectRuntime(meshFilePath);
+
+                if (meshObject != null)
+                {
+                    ConvertMeshToColliders(meshObject);
+                }
             }
             else
             {
-                Debug.LogError("Unable to create mesh collider for the mesh: " + mesh.filename);
+                //Debug.LogError("Unable to create mesh collider for the mesh: " + mesh.filename);
+                meshObject = TryLoadCollidersWithAssimp(meshFilePath);
+            }
+
+            return meshObject;
+        }
+
+        private static GameObject TryLoadCollidersWithAssimp(string meshFilePath)
+        {
+            if (!File.Exists(meshFilePath))
+            {
+                return null;
+            }
+
+            Assimp.AssimpContext importer = new Assimp.AssimpContext();
+            Assimp.Scene scene = importer.ImportFile(meshFilePath);
+
+            if (scene == null || !scene.HasMeshes)
+            {
+                return null;
+            }
+
+            GameObject baseObject = new GameObject(scene.RootNode.Name);
+
+            Assimp.Vector3D aScale = new Assimp.Vector3D();
+            Assimp.Quaternion aQuat = new Assimp.Quaternion();
+            Assimp.Vector3D aTranslation = new Assimp.Vector3D();
+            scene.RootNode.Transform.Decompose(out aScale, out aQuat, out aTranslation);
+
+            Quaternion uQuat = new Quaternion(aQuat.X, aQuat.Y, aQuat.Z, aQuat.W);
+            Vector3 euler = uQuat.eulerAngles;
+            baseObject.transform.localScale = new Vector3(aScale.X, aScale.Y, aScale.Z);
+            baseObject.transform.localPosition = new Vector3(aTranslation.X, aTranslation.Y, aTranslation.Z);
+            baseObject.transform.localRotation = Quaternion.Euler(euler.x, -euler.y, euler.z);
+
+            foreach (var m in scene.Meshes)
+            {
+                if (!m.HasVertices || !m.HasFaces)
+                {
+                    continue;
+                }
+
+                List<Vector3> uVertices = new List<Vector3>(m.VertexCount);
+                List<int> uIndices = new List<int>(m.FaceCount); //Not 100% on how this will behave if faces aren't triangulated.
+
+                foreach (var v in m.Vertices)
+                {
+                    uVertices.Add(new Vector3(-v.X, v.Y, v.Z));
+                }
+
+                foreach (var f in m.Faces)
+                {
+                    if (f.IndexCount < 3)
+                    {
+                        continue;
+                    }
+
+                    for (int i = 0; i < (f.IndexCount - 2); i++)
+                    {
+                        uIndices.Add(f.Indices[i + 2]);
+                        uIndices.Add(f.Indices[i + 1]);
+                        uIndices.Add(f.Indices[0]);
+                    }
+                }
+
+                Mesh uMesh = new Mesh
+                {
+                    vertices = uVertices.ToArray(),
+                    triangles = uIndices.ToArray()
+                };
+
+                GameObject colliderChild = new GameObject(m.Name);
+                colliderChild.transform.SetParent(baseObject.transform);
+                MeshCollider collider = colliderChild.AddComponent<MeshCollider>();
+                collider.sharedMesh = uMesh;
+                collider.convex = true;
             }
             
-            if (meshObject != null)
-            {
-                ConvertMeshToColliders(meshObject);
-            }
-            return meshObject;
+            return baseObject;
         }
 
         private static GameObject CreateCylinderCollider()
@@ -105,7 +188,8 @@ namespace Unity.Robotics.UrdfImporter
             GameObject gameObject = new GameObject("Cylinder");
             MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
 
-            UrdfLinkDescription.Geometry.Cylinder cylinder = new UrdfLinkDescription.Geometry.Cylinder(0.5, 2); //Default unity cylinder sizes
+            UrdfLinkDescription.Geometry.Cylinder
+                cylinder = new UrdfLinkDescription.Geometry.Cylinder(0.5, 2); //Default unity cylinder sizes
 
             meshFilter.sharedMesh = CreateCylinderMesh(cylinder);
             ConvertCylinderToCollider(meshFilter);
@@ -121,12 +205,15 @@ namespace Unity.Robotics.UrdfImporter
             if (!RuntimeUrdf.IsRuntimeMode())
             {
                 var packageRoot = UrdfAssetPathHandler.GetPackageRoot();
-                var filePath = RuntimeUrdf.AssetDatabase_GUIDToAssetPath(RuntimeUrdf.AssetDatabase_CreateFolder($"{packageRoot}", "meshes"));
-                var name =$"{filePath}/Cylinder.asset";
+                var filePath =
+                    RuntimeUrdf.AssetDatabase_GUIDToAssetPath(
+                        RuntimeUrdf.AssetDatabase_CreateFolder($"{packageRoot}", "meshes"));
+                var name = $"{filePath}/Cylinder.asset";
                 Debug.Log($"Creating new cylinder file: {name}");
-                RuntimeUrdf.AssetDatabase_CreateAsset(collider, name, uniquePath:true);
-                RuntimeUrdf.AssetDatabase_SaveAssets();    
+                RuntimeUrdf.AssetDatabase_CreateAsset(collider, name, uniquePath: true);
+                RuntimeUrdf.AssetDatabase_SaveAssets();
             }
+
             MeshCollider current = go.AddComponent<MeshCollider>();
             current.sharedMesh = collider;
             current.convex = true;
@@ -142,7 +229,8 @@ namespace Unity.Robotics.UrdfImporter
             }
 
             GameObject objectToCopy = visualToCopy.GetChild(0).gameObject;
-            GameObject prefabObject = (GameObject)RuntimeUrdf.PrefabUtility_GetCorrespondingObjectFromSource(objectToCopy);
+            GameObject prefabObject =
+                (GameObject)RuntimeUrdf.PrefabUtility_GetCorrespondingObjectFromSource(objectToCopy);
 
             GameObject collisionObject;
             if (prefabObject != null)
@@ -190,7 +278,7 @@ namespace Unity.Robotics.UrdfImporter
                 }
 
                 foreach (MeshFilter meshFilter in meshFilters)
-                {                  
+                {
                     GameObject child = meshFilter.gameObject;
                     VHACD decomposer = child.AddComponent<VHACD>();
                     List<Mesh> colliderMeshes = decomposer.GenerateConvexMeshes(meshFilter.sharedMesh);
@@ -204,16 +292,17 @@ namespace Unity.Robotics.UrdfImporter
                             RuntimeUrdf.AssetDatabase_CreateAsset(collider, name);
                             RuntimeUrdf.AssetDatabase_SaveAssets();
                         }
+
                         MeshCollider current = child.AddComponent<MeshCollider>();
                         current.sharedMesh = collider;
                         current.convex = setConvex;
                     }
+
                     Component.DestroyImmediate(child.GetComponent<VHACD>());
                     Object.DestroyImmediate(child.GetComponent<MeshRenderer>());
                     Object.DestroyImmediate(meshFilter);
                 }
             }
         }
-
     }
 }
