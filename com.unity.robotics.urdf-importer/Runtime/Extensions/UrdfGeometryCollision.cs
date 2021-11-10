@@ -90,23 +90,48 @@ namespace Unity.Robotics.UrdfImporter
         private static GameObject CreateMeshColliderRuntime(UrdfLinkDescription.Geometry.Mesh mesh)
         {
             string meshFilePath = UrdfAssetPathHandler.GetRelativeAssetPathFromUrdfPath(mesh.filename, false);
-            GameObject meshObject = null;
-            if (meshFilePath.ToLower().EndsWith(".stl"))
-            {
-                meshObject = StlAssetPostProcessor.CreateStlGameObjectRuntime(meshFilePath);
-
-                if (meshObject != null)
-                {
-                    ConvertMeshToColliders(meshObject);
-                }
-            }
-            else
-            {
-                //Debug.LogError("Unable to create mesh collider for the mesh: " + mesh.filename);
-                meshObject = TryLoadCollidersWithAssimp(meshFilePath);
-            }
+            
+            FileInfo meshFileInfo = new FileInfo(meshFilePath);
+            Debug.Log($"Loading a {meshFileInfo.Extension}! {meshFilePath}");
+            GameObject meshObject = TryLoadCollidersWithAssimp(meshFilePath);
 
             return meshObject;
+        }
+
+        private static void SetupTransforms(Assimp.Node node, Transform transform)
+        {
+            Assimp.Vector3D aScale = new Assimp.Vector3D();
+            Assimp.Quaternion aQuat = new Assimp.Quaternion();
+            Assimp.Vector3D aTranslation = new Assimp.Vector3D();
+            node.Transform.Decompose(out aScale, out aQuat, out aTranslation);
+
+            Quaternion uQuat = new Quaternion(aQuat.X, aQuat.Y, aQuat.Z, aQuat.W);
+            Vector3 euler = uQuat.eulerAngles;
+            transform.localScale = new Vector3(aScale.X, aScale.Y, aScale.Z);
+            transform.localPosition = new Vector3(aTranslation.X, aTranslation.Y, aTranslation.Z);
+            transform.localRotation = Quaternion.Euler(euler.x, euler.y, euler.z);
+        }
+
+        private static void PrepareNode(ref List<Mesh> meshes, Assimp.Node node, GameObject nodeGO, Transform parent = null)
+        {
+            if (parent != null)
+            {
+                nodeGO.transform.SetParentAndAlign(parent, false);   
+            }
+                
+            SetupTransforms(node, nodeGO.transform);
+                
+            foreach (int meshIndex in node.MeshIndices)
+            {
+                MeshCollider collider = nodeGO.AddComponent<MeshCollider>();
+                collider.sharedMesh = meshes[meshIndex];
+                collider.convex = true;
+            }
+
+            foreach (Assimp.Node child in node.Children)
+            {
+                PrepareNode(ref meshes, child, new GameObject(child.Name), nodeGO.transform);
+            }
         }
 
         private static GameObject TryLoadCollidersWithAssimp(string meshFilePath)
@@ -126,16 +151,7 @@ namespace Unity.Robotics.UrdfImporter
 
             GameObject baseObject = new GameObject(scene.RootNode.Name);
 
-            Assimp.Vector3D aScale = new Assimp.Vector3D();
-            Assimp.Quaternion aQuat = new Assimp.Quaternion();
-            Assimp.Vector3D aTranslation = new Assimp.Vector3D();
-            scene.RootNode.Transform.Decompose(out aScale, out aQuat, out aTranslation);
-
-            Quaternion uQuat = new Quaternion(aQuat.X, aQuat.Y, aQuat.Z, aQuat.W);
-            Vector3 euler = uQuat.eulerAngles;
-            baseObject.transform.localScale = new Vector3(aScale.X, aScale.Y, aScale.Z);
-            baseObject.transform.localPosition = new Vector3(aTranslation.X, aTranslation.Y, aTranslation.Z);
-            baseObject.transform.localRotation = Quaternion.Euler(euler.x, -euler.y, euler.z);
+            List<Mesh> meshes = new List<Mesh>(scene.MeshCount);
 
             foreach (var m in scene.Meshes)
             {
@@ -143,28 +159,33 @@ namespace Unity.Robotics.UrdfImporter
                 {
                     continue;
                 }
+                
+                bool degenerateFacesWarning = false;
 
                 List<Vector3> uVertices = new List<Vector3>(m.VertexCount);
                 List<int> uIndices = new List<int>(m.FaceCount); //Not 100% on how this will behave if faces aren't triangulated.
 
                 foreach (var v in m.Vertices)
                 {
-                    uVertices.Add(new Vector3(-v.X, v.Y, v.Z));
+                    uVertices.Add(new Vector3(v.X, v.Y, v.Z));
                 }
 
                 foreach (var f in m.Faces)
                 {
-                    if (f.IndexCount < 3)
+                    if (f.IndexCount != 3)
                     {
+                        degenerateFacesWarning = true;
                         continue;
                     }
+                    
+                    uIndices.Add(f.Indices[2]);
+                    uIndices.Add(f.Indices[1]);
+                    uIndices.Add(f.Indices[0]);
+                }
 
-                    for (int i = 0; i < (f.IndexCount - 2); i++)
-                    {
-                        uIndices.Add(f.Indices[i + 2]);
-                        uIndices.Add(f.Indices[i + 1]);
-                        uIndices.Add(f.Indices[0]);
-                    }
+                if (degenerateFacesWarning)
+                {
+                    Debug.LogWarning($"{m.Name} contains non-triangular faces!");
                 }
 
                 Mesh uMesh = new Mesh
@@ -173,12 +194,11 @@ namespace Unity.Robotics.UrdfImporter
                     triangles = uIndices.ToArray()
                 };
 
-                GameObject colliderChild = new GameObject(m.Name);
-                colliderChild.transform.SetParent(baseObject.transform);
-                MeshCollider collider = colliderChild.AddComponent<MeshCollider>();
-                collider.sharedMesh = uMesh;
-                collider.convex = true;
+                meshes.Add(uMesh);
             }
+            
+            PrepareNode(ref meshes, scene.RootNode, baseObject);
+            baseObject.transform.localRotation *= Quaternion.Euler(0.0f,0.0f, 90.0f); //Unverified: Rotation to match the output of the visual import.
             
             return baseObject;
         }
