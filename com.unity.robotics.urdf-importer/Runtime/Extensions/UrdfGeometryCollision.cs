@@ -167,7 +167,7 @@ namespace Unity.Robotics.UrdfImporter
 
                 foreach (var v in m.Vertices)
                 {
-                    uVertices.Add(new Vector3(v.X, v.Y, v.Z));
+                    uVertices.Add(new Vector3(-v.X, v.Y, v.Z));
                 }
 
                 foreach (var f in m.Faces)
@@ -185,7 +185,7 @@ namespace Unity.Robotics.UrdfImporter
 
                 if (degenerateFacesWarning)
                 {
-                    Debug.LogWarning($"{m.Name} contains non-triangular faces!");
+                    RuntimeUrdf.AddImportWarning($"{m.Name} contains non-triangular faces!");
                 }
 
                 Mesh uMesh = new Mesh

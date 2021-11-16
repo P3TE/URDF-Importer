@@ -18,6 +18,7 @@ using System.IO;
 using Unity.Robotics;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Object = UnityEngine.Object;
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -41,8 +42,12 @@ namespace Unity.Robotics.UrdfImporter
             if (material == null)
             {   
                 //material doesn't already exist, create a new one.
-                material = MaterialExtensions.CreateBasicMaterial();
-                urdfMaterial.PopulateMaterialProperties(material);
+                var newMaterial = MaterialExtensions.CreateBasicMaterial();
+                urdfMaterial.PopulateMaterialProperties(newMaterial);
+                
+                //Fix issue with material's not properly being instantiated
+                material = Object.Instantiate(newMaterial);
+                Object.Destroy(newMaterial);
             }
             
             return material;

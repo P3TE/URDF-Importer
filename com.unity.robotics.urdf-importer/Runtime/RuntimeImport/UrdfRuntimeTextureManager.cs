@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using Object = UnityEngine.Object;
 
 namespace Unity.Robotics.UrdfImporter.Urdf.RuntimeImport
@@ -38,7 +39,7 @@ namespace Unity.Robotics.UrdfImporter.Urdf.RuntimeImport
             CleanupAndDestroyAllTextures();
         }
         
-        public Texture2D LoadTextureFromFile(string absoluteFilePath)
+        public Texture2D LoadTextureFromFile(string absoluteFilePath, bool isNormal = false)
         {
 
             if (loadedTextures.TryGetValue(absoluteFilePath, out Texture2D texture2D))
@@ -46,15 +47,38 @@ namespace Unity.Robotics.UrdfImporter.Urdf.RuntimeImport
                 //We already have loaded this texture, return it.
                 return texture2D;
             }
+
+            
             
             //TODO - Load the texture.
             if (!File.Exists(absoluteFilePath))
             {
                 throw new Exception($"No image found at path {absoluteFilePath}");
             }
+
+
+            Texture2D result;
+            if (isNormal)
+            {
+                result = new Texture2D(2, 2, TextureFormat.RGB24, true, true);
+            }
+            else
+            {
+                result = new Texture2D(2, 2);
+            }
+            
+            if (absoluteFilePath.Contains("Normal"))
+            {
+                Debug.LogWarning("TODO - Read this as a parameter from the URDF");
+                
+            }
+            else
+            {
+                result = new Texture2D(2, 2);
+            }
             
             byte[] fileData = File.ReadAllBytes(absoluteFilePath);
-            Texture2D result = new Texture2D(2, 2);
+            
             result.LoadImage(fileData); //..this will auto-resize the texture dimensions.
             
             loadedTextures.Add(absoluteFilePath, result);

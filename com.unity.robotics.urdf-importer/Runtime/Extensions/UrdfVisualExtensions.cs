@@ -80,12 +80,12 @@ namespace Unity.Robotics.UrdfImporter
                     {
                         UrdfMaterialDescription fallbackMaterial = visual.materials[0];
                         RuntimeUrdf.AddImportWarning($"No material found for mesh with name {rendererName}, falling back to {fallbackMaterial.name}");
-                        //renderer.sharedMaterial = fallbackMaterial.CreateMaterial();
+                        renderer.sharedMaterial = fallbackMaterial.CreateMaterial();
                     }
                     else
                     {
                         RuntimeUrdf.AddImportWarning($"No material found for mesh with name {rendererName}, and no materials specified for this visual component, falling back to default shader");
-                        //renderer.sharedMaterial = UrdfMaterial.GetDefaultMaterial();
+                        renderer.sharedMaterial = UrdfMaterial.GetDefaultMaterial();
                     }
                 }
             }

@@ -164,12 +164,14 @@ namespace Unity.Robotics.UrdfImporter
             //TODO - How to get a texture from a filename and vice versa
             this.filename = @"${PATH}/" + texture.name + ".png";
         }
-        
+
+        public bool IsNormalTexture => propertyName.ToLower().Contains("normal");
+
         public override void ApplyPropertyToMaterial(Material material)
         {
             if (RuntimeUrdf.IsRuntimeMode())
             {
-                texture = UrdfRuntimeTextureManager.Instance.LoadTextureFromFile(AbsoluteFilePath);
+                texture = UrdfRuntimeTextureManager.Instance.LoadTextureFromFile(AbsoluteFilePath, IsNormalTexture);
             }
             else
             {
