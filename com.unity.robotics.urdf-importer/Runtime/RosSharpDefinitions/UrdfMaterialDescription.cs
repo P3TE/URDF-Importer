@@ -64,7 +64,7 @@ namespace Unity.Robotics.UrdfImporter
     public class UrdfColorDescription : UrdfMaterialPropertyDescription
     {
         
-        public new const string PropertyId = "color";
+        public const string PropertyId = "color";
         
         public double[] rgba;
 
@@ -106,7 +106,7 @@ namespace Unity.Robotics.UrdfImporter
     public class UrdfFloatDescription : UrdfMaterialPropertyDescription
     {
         
-        public new const string PropertyId = "float";
+        public const string PropertyId = "float";
         private const string ValueNameId = "value";
         
         public float value;
@@ -140,7 +140,7 @@ namespace Unity.Robotics.UrdfImporter
     public class UrdfTextureDescription : UrdfMaterialPropertyDescription
     {
         
-        public new const string PropertyId = "texture";
+        public const string PropertyId = "texture";
         
         public string filename;
 
@@ -193,7 +193,7 @@ namespace Unity.Robotics.UrdfImporter
     public class UrdfUnityMaterialExtensionDescription : UrdfMaterialPropertyDescription
     {
         
-        public new const string PropertyId = "unity";
+        public const string PropertyId = "unity";
         
         private List<UrdfMaterialPropertyDescription> propertyDescriptions = new List<UrdfMaterialPropertyDescription>();
 
