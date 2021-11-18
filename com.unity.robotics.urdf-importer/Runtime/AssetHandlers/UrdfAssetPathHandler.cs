@@ -185,12 +185,14 @@ namespace Unity.Robotics.UrdfImporter
             //imported URDF.
             //This doesn't work if you don't know what that was (urdf was a ros parameter).
             throw new NotImplementedException("Needs work, see above.");
+            /*
             Debug.LogError("TODO...");
             
             Assert.IsTrue(urdfPath.StartsWith(_PackageFilePathPrefix),
                 $"path {urdfPath} should start with {_PackageFilePathPrefix}");
             
             string relativePath = urdfPath.Substring(_PackageFilePathPrefix.Length);
+            */
             //_PackageFilePathPrefix
             
             //TODO...

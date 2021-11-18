@@ -49,12 +49,14 @@ namespace Unity.Robotics.UrdfImporter
                 material = Object.Instantiate(newMaterial);
                 Object.Destroy(newMaterial);
             }
-            
-            return material;
-            
-            
 
-            RuntimeUrdf.AssetDatabase_CreateAsset(material, UrdfAssetPathHandler.GetMaterialAssetPath(urdfMaterial.name));
+            if (!RuntimeUrdf.IsRuntimeMode())
+            {
+                string materialAssetPath = UrdfAssetPathHandler.GetMaterialAssetPath(urdfMaterial.name);
+                Debug.Log($"Creating material asset at {materialAssetPath}");
+                RuntimeUrdf.AssetDatabase_CreateAsset(material, materialAssetPath);
+            }
+            
             return material;
         }
 
