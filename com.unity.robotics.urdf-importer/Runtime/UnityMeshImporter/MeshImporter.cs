@@ -107,7 +107,6 @@ namespace UnityMeshImporter
                 foreach (var m in scene.Materials)
                 {
                     UnityEngine.Material uMaterial = MaterialExtensions.CreateBasicMaterial();
-                    Debug.Log($"m.Name = {m.Name}");
 
                     // Albedo
                     if (m.HasColorDiffuse)
