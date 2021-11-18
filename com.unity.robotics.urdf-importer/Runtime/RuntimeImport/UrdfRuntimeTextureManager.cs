@@ -67,16 +67,6 @@ namespace Unity.Robotics.UrdfImporter.Urdf.RuntimeImport
                 result = new Texture2D(2, 2);
             }
             
-            if (absoluteFilePath.Contains("Normal"))
-            {
-                Debug.LogWarning("TODO - Read this as a parameter from the URDF");
-                
-            }
-            else
-            {
-                result = new Texture2D(2, 2);
-            }
-            
             byte[] fileData = File.ReadAllBytes(absoluteFilePath);
             
             result.LoadImage(fileData); //..this will auto-resize the texture dimensions.
