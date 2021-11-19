@@ -20,7 +20,7 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
     [RequireComponent(typeof(ArticulationBody))]
 #else
-    [RequireComponent(typeof(Rigidbody))]
+    //[RequireComponent(typeof(Rigidbody))]
 #endif
     public class UrdfInertial : MonoBehaviour
     {
@@ -43,7 +43,7 @@ namespace Unity.Robotics.UrdfImporter
 #if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = urdfInertial.GetComponent<ArticulationBody>();
 #else
-            Rigidbody robotLink = urdfInertial.GetComponent<Rigidbody>();
+            Rigidbody robotLink = linkObject.AddComponent<Rigidbody>();
 #endif
             if (inertial != null)
             {
@@ -78,7 +78,12 @@ namespace Unity.Robotics.UrdfImporter
             ArticulationBody robotLink = GetComponent<ArticulationBody>();
 
 #else
-              Rigidbody robotLink = GetComponent<Rigidbody>();  
+              Rigidbody robotLink = GetComponent<Rigidbody>();
+              if (robotLink == null)
+              {
+                  //Can be null when FixedJoint optimisations are applied.
+                  return;
+              }
 #endif
 
             if (useUrdfData)

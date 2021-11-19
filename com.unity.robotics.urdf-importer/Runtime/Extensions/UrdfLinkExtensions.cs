@@ -78,15 +78,9 @@ namespace Unity.Robotics.UrdfImporter
             if (link.inertial != null)
             {
                 UrdfInertial.Create(urdfLink.gameObject, link.inertial);
-
-                if (joint != null)
-                {
-                    UrdfJoint newJoint = UrdfJoint.Create(urdfLink.gameObject, UrdfJoint.GetJointType(joint.type), joint);
-                    jointMap.Add(joint.name, newJoint);
-                }
-                    
             }
-            else if (joint != null)
+            
+            if (joint != null)
             {
                 UrdfJoint newJoint = UrdfJoint.Create(urdfLink.gameObject, UrdfJoint.GetJointType(joint.type), joint);
                 jointMap.Add(joint.name, newJoint);

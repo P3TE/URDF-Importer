@@ -20,7 +20,7 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
     [RequireComponent(typeof(ArticulationBody))]
 #else
-    [RequireComponent(typeof(Joint))]
+    //[RequireComponent(typeof(Joint))]
 #endif
     public abstract class UrdfJoint : MonoBehaviour
     {
@@ -101,13 +101,51 @@ namespace Unity.Robotics.UrdfImporter
 
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
 #else
-            UnityEngine.Joint unityJoint = linkObject.GetComponent<UnityEngine.Joint>();
-            unityJoint.connectedBody = linkObject.transform.parent.gameObject.GetComponent<Rigidbody>();
-            unityJoint.autoConfigureConnectedAnchor = true;
+            SetupConnectedBody(linkObject);
 #endif
 
             return urdfJoint;
         }
+        
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#else
+
+        
+
+        public static Rigidbody FindFixedParent(GameObject linkObject)
+        {
+            Transform currentTransform = linkObject.transform.parent;
+            while (currentTransform != null)
+            {
+                
+                Rigidbody connectedBody = currentTransform.GetComponent<Rigidbody>();
+                if (connectedBody != null)
+                {
+                    UrdfJointFixed urdfJointFixed = connectedBody.GetComponent<UrdfJointFixed>();
+                    if (urdfJointFixed == null)
+                    {
+                        return connectedBody;
+                    }
+                }
+                
+                currentTransform = currentTransform.parent;
+            }
+
+            throw new Exception("No connectedBody found!");
+        }
+
+        private static void SetupConnectedBody(GameObject linkObject)
+        {
+            UnityEngine.Joint unityJoint = linkObject.GetComponent<UnityEngine.Joint>();
+            if (unityJoint != null)
+            {
+                //Go up the hierarchy until you find the first rigidbody to connect to:
+                Rigidbody connectedBody = FindFixedParent(linkObject);
+                unityJoint.connectedBody = connectedBody;
+                unityJoint.autoConfigureConnectedAnchor = true;
+            }
+        }
+#endif
 
         /// <summary>
         /// Changes the type of the joint

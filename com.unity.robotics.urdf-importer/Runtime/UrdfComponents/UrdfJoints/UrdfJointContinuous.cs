@@ -150,8 +150,8 @@ namespace Unity.Robotics.UrdfImporter
             }
 #else
             
-            Rigidbody rigidbody = unityJoint.GetComponent<Rigidbody>();
-            rigidbody.constraints = RigidbodyConstraints.FreezePosition;
+            //Rigidbody rigidbody = unityJoint.GetComponent<Rigidbody>();
+            //rigidbody.constraints = RigidbodyConstraints.FreezePosition; - I think this is a bad idea.
             ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
 
             Vector3 axisOfMotionUnity = joint.axis.AxisUnity;

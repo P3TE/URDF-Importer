@@ -26,10 +26,11 @@ namespace Unity.Robotics.UrdfImporter
             UrdfJointFixed urdfJoint = linkObject.AddComponent<UrdfJointFixed>();
             urdfJoint.unityJoint = linkObject.GetComponent<ArticulationBody>();
 #else
-            FixedJoint unityFixedJoint = linkObject.AddComponent<FixedJoint>();
+            //FixedJoint unityFixedJoint = linkObject.AddComponent<FixedJoint>();
+            OptimizeFixedJoint(linkObject);
             UrdfJointFixed urdfJoint = linkObject.AddComponent<UrdfJointFixed>();
-            urdfJoint.unityJoint = unityFixedJoint;
-            urdfJoint.unityJoint.autoConfigureConnectedAnchor = true;
+            //urdfJoint.unityJoint = unityFixedJoint;
+            //urdfJoint.unityJoint.autoConfigureConnectedAnchor = true;
 #endif
 
             return urdfJoint;
@@ -39,6 +40,66 @@ namespace Unity.Robotics.UrdfImporter
         {
             return true; //Axis isn't used
         }
+        
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#else
+        
+        /**
+         * The goal here is to have no 'FixedJoints' and instead merge the components together.
+         */
+        private static void OptimizeFixedJoint(GameObject fixedJointToOptimize)
+        {
+
+            Rigidbody rigidbody = fixedJointToOptimize.GetComponent<Rigidbody>();
+
+            PreviousRigidbodyConstants previousRigidbodyConstants = fixedJointToOptimize.AddComponent<PreviousRigidbodyConstants>();
+            previousRigidbodyConstants.mass = rigidbody.mass;
+            previousRigidbodyConstants.drag = rigidbody.drag;
+            previousRigidbodyConstants.angularDrag = rigidbody.angularDrag;
+            previousRigidbodyConstants.centerOfMass = rigidbody.centerOfMass;
+
+            Rigidbody fixedParent = FindFixedParent(fixedJointToOptimize);
+
+            float totalMass = fixedParent.mass + rigidbody.mass;
+
+            float rigidbodyWeighting = rigidbody.mass / totalMass;
+            float fixedParentWeighting = fixedParent.mass / totalMass;
+            
+            float newDrag = rigidbodyWeighting * rigidbody.drag + fixedParentWeighting * fixedParent.drag;
+            float newAngularDrag = rigidbodyWeighting * rigidbody.angularDrag + fixedParentWeighting * fixedParent.angularDrag;
+
+            Vector3 fixedParentPreviousLocalCenterOfMass = fixedParent.centerOfMass;
+            
+            Vector3 rigidbodyPreviousLocalCenterOfMass = rigidbody.centerOfMass;
+            Vector3 rigidbodyPreviousWorldCenterOfMass = rigidbody.transform.TransformPoint(rigidbodyPreviousLocalCenterOfMass);
+            Vector3 rigidbodyPreviousCenterOfMassParentFrame = fixedParent.transform.InverseTransformPoint(rigidbodyPreviousWorldCenterOfMass);
+
+            Vector3 newFixedParentCenterOfMass = rigidbodyWeighting * rigidbodyPreviousCenterOfMassParentFrame +
+                                                 fixedParentWeighting * fixedParentPreviousLocalCenterOfMass;
+
+            Debug.Log($"{fixedJointToOptimize.name} -> {fixedParent.gameObject.name}");
+            
+            Debug.Log($"Before");
+            Debug.Log($"fixedParent.mass = {fixedParent.mass}");
+            Debug.Log($"fixedParent.drag = {fixedParent.drag}");
+            Debug.Log($"fixedParent.angularDrag = {fixedParent.angularDrag}");
+            Debug.Log($"fixedParent.centerOfMass = {fixedParent.centerOfMass}");
+            fixedParent.mass = totalMass;
+            fixedParent.drag = newDrag;
+            fixedParent.angularDrag = newAngularDrag;
+            fixedParent.centerOfMass = newFixedParentCenterOfMass;
+            Debug.Log($"After");
+            Debug.Log($"fixedParent.mass = {fixedParent.mass}");
+            Debug.Log($"fixedParent.drag = {fixedParent.drag}");
+            Debug.Log($"fixedParent.angularDrag = {fixedParent.angularDrag}");
+            Debug.Log($"fixedParent.centerOfMass = {fixedParent.centerOfMass}");
+            
+            //Remove the rigidbody, we don't do that anymore.
+            Destroy(rigidbody);
+
+        }
+        
+#endif
     }
 }
 
