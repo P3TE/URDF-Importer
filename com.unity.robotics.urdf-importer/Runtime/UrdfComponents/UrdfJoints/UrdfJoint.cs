@@ -17,10 +17,10 @@ using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
 {
-#if UNITY_2020_1_OR_NEWER
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
     [RequireComponent(typeof(ArticulationBody))]
 #else
-        [RequireComponent(typeof(Joint))]
+    [RequireComponent(typeof(Joint))]
 #endif
     public abstract class UrdfJoint : MonoBehaviour
     {
@@ -36,7 +36,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public int xAxis = 0;
 
-#if UNITY_2020_1_OR_NEWER
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
         protected ArticulationBody unityJoint;
         protected Vector3 axisofMotion;
 #else
@@ -57,10 +57,10 @@ namespace Unity.Robotics.UrdfImporter
 
         public static UrdfJoint Create(GameObject linkObject, JointTypes jointType, UrdfJointDescription joint = null)
         {
-#if UNITY_2020_1_OR_NEWER
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
 #else
             Rigidbody parentRigidbody = linkObject.transform.parent.gameObject.GetComponent<Rigidbody>();
-            if (parentRigidbody == null) return;
+            if (parentRigidbody == null) throw new Exception($"No attached Rigidbody on {linkObject.transform.parent.gameObject.name}");
 #endif
             UrdfJoint urdfJoint = AddCorrectJointType(linkObject, jointType);
 
@@ -99,7 +99,7 @@ namespace Unity.Robotics.UrdfImporter
             }
 
 
-#if UNITY_2020_1_OR_NEWER
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
 #else
             UnityEngine.Joint unityJoint = linkObject.GetComponent<UnityEngine.Joint>();
             unityJoint.connectedBody = linkObject.transform.parent.gameObject.GetComponent<Rigidbody>();
@@ -119,7 +119,7 @@ namespace Unity.Robotics.UrdfImporter
             linkObject.transform.DestroyImmediateIfExists<UrdfJoint>();
             linkObject.transform.DestroyImmediateIfExists<HingeJointLimitsManager>();
             linkObject.transform.DestroyImmediateIfExists<PrismaticJointLimitsManager>();
-#if UNITY_2020_1_OR_NEWER
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             linkObject.transform.DestroyImmediateIfExists<UnityEngine.ArticulationBody>();
 #else
                         linkObject.transform.DestroyImmediateIfExists<UnityEngine.Joint>();
@@ -131,7 +131,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public void Start()
         {
-#if UNITY_2020_1_OR_NEWER
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             unityJoint = GetComponent<ArticulationBody>();
 #else
                         unityJoint = GetComponent<Joint>();
@@ -200,6 +200,7 @@ namespace Unity.Robotics.UrdfImporter
 
         protected void SetDynamics(UrdfJointDescription.Dynamics dynamics)
         {
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             if (unityJoint == null)
             {
                 unityJoint = GetComponent<ArticulationBody>();
@@ -218,6 +219,10 @@ namespace Unity.Robotics.UrdfImporter
                 unityJoint.angularDamping = defaultDamping;
                 unityJoint.jointFriction = defaultFriction;
             }
+#else
+            //TODO - Implement
+            Debug.LogError("TODO - Implement.");
+#endif
         }
 
         #endregion
@@ -244,7 +249,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public UrdfJointDescription ExportJointData()
         {
-#if UNITY_2020_1_OR_NEWER
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             unityJoint = GetComponent<UnityEngine.ArticulationBody>();
 #else
                         unityJoint = GetComponent<UnityEngine.Joint>();
@@ -292,7 +297,7 @@ namespace Unity.Robotics.UrdfImporter
 
         protected virtual bool IsJointAxisDefined()
         {
-#if UNITY_2020_1_OR_NEWER
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             if (axisofMotion == null)
                 return false;
             else
@@ -336,7 +341,7 @@ namespace Unity.Robotics.UrdfImporter
                 Debug.LogWarning("Axis for joint " + jointName + " is undefined. Axis will not be written to URDF, " +
                                  "and the default axis will be used instead.",
                                  gameObject);
-#if UNITY_2020_1_OR_NEWER
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
 
 #else
             if (IsAnchorTransformed())

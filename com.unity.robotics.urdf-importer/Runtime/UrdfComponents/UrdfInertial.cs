@@ -17,7 +17,7 @@ using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
 {
-#if UNITY_2020_1_OR_NEWER
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
     [RequireComponent(typeof(ArticulationBody))]
 #else
     [RequireComponent(typeof(Rigidbody))]
@@ -40,7 +40,7 @@ namespace Unity.Robotics.UrdfImporter
         {
             UrdfInertial urdfInertial = linkObject.AddComponent<UrdfInertial>();
 
-#if UNITY_2020_1_OR_NEWER
+#if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = urdfInertial.GetComponent<ArticulationBody>();
 #else
             Rigidbody robotLink = urdfInertial.GetComponent<Rigidbody>();
@@ -74,7 +74,7 @@ namespace Unity.Robotics.UrdfImporter
         public void UpdateLinkData()
         {
 
-#if UNITY_2020_1_OR_NEWER
+#if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = GetComponent<ArticulationBody>();
 
 #else
@@ -98,7 +98,7 @@ namespace Unity.Robotics.UrdfImporter
         {
             if (displayInertiaGizmo)
             {
-                #if UNITY_2020_1_OR_NEWER
+                #if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
                     Debug.Log("'ArticulationBody' does not contain a definition for 'inertiaTensorRotation' and no accessible extension method 'inertiaTensorRotation'");
                /* Gizmos.color = Color.blue;
                 Gizmos.DrawRay(transform.position, GetComponent<ArticulationBody>().inertiaTensorRotation * Vector3.forward * GetComponent<ArticulationBody>().inertiaTensor.z);
@@ -127,7 +127,7 @@ namespace Unity.Robotics.UrdfImporter
             Vector3[] eigenvectors;
             Matrix3x3 rotationMatrix = ToMatrix3x3(inertial.inertia);
             rotationMatrix.DiagonalizeRealSymmetric(out eigenvalues, out eigenvectors);
-#if UNITY_2020_1_OR_NEWER
+#if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = GetComponent<ArticulationBody>();
 
 #else
@@ -225,7 +225,7 @@ namespace Unity.Robotics.UrdfImporter
 #region Export
         public UrdfLinkDescription.Inertial ExportInertialData() 
         {
-#if UNITY_2020_1_OR_NEWER
+#if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = GetComponent<ArticulationBody>();
 
 #else
@@ -245,7 +245,7 @@ namespace Unity.Robotics.UrdfImporter
 
         private UrdfLinkDescription.Inertial.Inertia ExportInertiaData()
         {
-#if UNITY_2020_1_OR_NEWER
+#if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = GetComponent<ArticulationBody>();
 
 #else

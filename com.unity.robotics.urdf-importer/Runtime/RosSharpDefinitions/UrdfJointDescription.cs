@@ -14,6 +14,7 @@ limitations under the License.
 
 using System.Xml;
 using System.Xml.Linq;
+using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -40,10 +41,10 @@ namespace Unity.Robotics.UrdfImporter
             origin = (node.Element("origin") != null) ? new UrdfOriginDescription(node.Element("origin")) : null; // optional  
             parent = (string)node.Element("parent").Attribute("link"); // required
             child = (string)node.Element("child").Attribute("link"); // required
-            axis = (node.Element("axis") != null) ? new Axis(node.Element("axis")) : null;  // optional 
+            axis = (node.Element("axis") != null) ? new Axis(node.Element("axis")) : Axis.DefaultAxis;  // optional 
             calibration = (node.Element("calibration") != null) ? new Calibration(node.Element("calibration")) : null;  // optional 
             dynamics = (node.Element("dynamics") != null) ? new Dynamics(node.Element("dynamics")) : null;  // optional 
-            limit = (node.Element("limit") != null) ? new Limit(node.Element("limit")) : null;  // required only for revolute and prismatic joints
+            limit = (node.Element("limit") != null) ? new Limit(node.Element("limit")) : Limit.DefaultLimit;  // required only for revolute and prismatic joints
             mimic = (node.Element("mimic") != null) ? new Mimic(node.Element("mimic")) : null;  // optional
             safetyController = (node.Element("safety_controller") != null) ? new SafetyController(node.Element("safety_controller")) : null;  // optional
         }
@@ -96,6 +97,8 @@ namespace Unity.Robotics.UrdfImporter
         {
             public double[] xyz;
 
+            public static Axis DefaultAxis => new Axis(new double[] {1, 0, 0});
+
             public Axis(XElement node)
             {
                 xyz = node.Attribute("xyz") != null ? node.Attribute("xyz").ReadDoubleArray() : null;
@@ -126,6 +129,69 @@ namespace Unity.Robotics.UrdfImporter
                     }
                 }
                 return -1;
+            }
+            
+            public Vector3 AxisROS => new Vector3((float) xyz[0], (float) xyz[1], (float) xyz[2]);
+
+            public Vector3 AxisUnity => AxisROS.Ros2Unity();
+
+            public Vector3 SecondaryAxisEstimateUnity
+            {
+                get
+                {
+                    //We know the dot product of 2 vectors is 0 when they are perpendicular.
+                    Vector3 axis = AxisUnity;
+                    float absAxisX = Mathf.Abs(axis.x);
+                    float absAxisY = Mathf.Abs(axis.y);
+                    float absAxisZ = Mathf.Abs(axis.z);
+
+                    //Dot(axis, secondaryAxis) = 0
+                    //axis.x * secondaryAxis.x + axis.y * secondaryAxis.y + axis.z * secondaryAxis.z = 0
+                    Vector3 secondaryAxis = new Vector3(0, 1, 0); //Set a default value.
+
+                    if (absAxisX > absAxisY && absAxisX < absAxisZ)
+                    {
+                        //use axisX
+                        if (absAxisX > 0.0001)
+                        {
+                            //Let secondaryAxis.y = 1, secondaryAxis.z = 1
+                            //axis.x * secondaryAxis.x + axis.y * 1 + axis.z * 1 = 0
+                            //axis.x * secondaryAxis.x + axis.y + axis.z = 0
+                            //axis.x * secondaryAxis.x = -axis.y - axis.z
+                            //secondaryAxis.x = (- axis.y - axis.z) / axis.x
+                            float secondaryAxisX = (-axis.y - axis.z) / axis.x;
+                            secondaryAxis = new Vector3(secondaryAxisX, 1, 1);
+                        }
+                    } else if (absAxisY > absAxisZ)
+                    {
+                       //use axisY
+                       if (absAxisY > 0.0001)
+                       {
+                           //Let secondaryAxis.x = 1, secondaryAxis.z = 1
+                           //axis.x * 1 + axis.y * secondaryAxis.y + axis.z * 1 = 0
+                           //axis.y * secondaryAxis.y + axis.x + axis.z = 0
+                           //axis.y * secondaryAxis.y = -axis.x - axis.z
+                           //secondaryAxis.y = (- axis.x - axis.z) / axis.y
+                           float secondaryAxisY = (-axis.x - axis.z) / axis.y;
+                           secondaryAxis = new Vector3(1, secondaryAxisY, 1);
+                       }
+                    }
+                    else
+                    {
+                        //Use axisZ
+                        if (absAxisZ > 0.0001)
+                        {
+                            //Let secondaryAxis.x = 1, secondaryAxis.y = 1
+                            //axis.x * 1 + axis.y * 1 + axis.z * secondaryAxis.z = 0
+                            //axis.z * secondaryAxis.z + axis.x + axis.y = 0
+                            //axis.z * secondaryAxis.z = -axis.x - axis.y
+                            //secondaryAxis.z = (- axis.x - axis.y) / axis.z
+                            float secondaryAxisZ = (-axis.x - axis.y) / axis.z;
+                            secondaryAxis = new Vector3(1, 1, secondaryAxisZ);
+                        }
+                    }
+                    return secondaryAxis;
+                }
             }
         }
 
@@ -203,7 +269,9 @@ namespace Unity.Robotics.UrdfImporter
             public double velocity;
 
             private const string _LowerAttributeName = "lower";
-            private const string _UpperAttributeName = "lower";
+            private const string _UpperAttributeName = "upper";
+
+            public static Limit DefaultLimit => new Limit(0f, 0f, float.PositiveInfinity, 0f);
 
             public Limit(XElement node)
             {
