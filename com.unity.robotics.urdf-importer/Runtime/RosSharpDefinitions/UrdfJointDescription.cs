@@ -390,4 +390,39 @@ namespace Unity.Robotics.UrdfImporter
         }
     }
 
+    public static class UrdfJointDescriptionHelper
+    {
+        
+        public const int defaultDamping = 0;
+        public const int defaultFriction = 0;
+        
+        public static float Damping(this UrdfJointDescription.Dynamics dynamics)
+        {
+            if (dynamics == null)
+            {
+                return defaultDamping;
+            }
+
+            if (double.IsNaN(dynamics.damping))
+            {
+                return defaultDamping;
+            }
+            return (float) dynamics.damping;
+        }
+        
+        public static float Friction(this UrdfJointDescription.Dynamics dynamics)
+        {
+            if (dynamics == null)
+            {
+                return defaultFriction;
+            }
+
+            if (double.IsNaN(dynamics.friction))
+            {
+                return defaultFriction;
+            }
+            return (float) dynamics.friction;
+        }
+    }
+
 }

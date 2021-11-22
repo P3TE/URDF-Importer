@@ -52,9 +52,6 @@ namespace Unity.Robotics.UrdfImporter
         protected const int RoundDigits = 6;
         protected const float Tolerance = 0.0000001f;
 
-        protected int defaultDamping = 0;
-        protected int defaultFriction = 0;
-
         public static UrdfJoint Create(GameObject linkObject, JointTypes jointType, UrdfJointDescription joint = null)
         {
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
@@ -238,25 +235,15 @@ namespace Unity.Robotics.UrdfImporter
 
         protected void SetDynamics(UrdfJointDescription.Dynamics dynamics)
         {
+            
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             if (unityJoint == null)
             {
                 unityJoint = GetComponent<ArticulationBody>();
             }
-
-            if (dynamics != null)
-            {
-                float damping = (double.IsNaN(dynamics.damping)) ? defaultDamping : (float)dynamics.damping;
-                unityJoint.linearDamping = damping;
-                unityJoint.angularDamping = damping;
-                unityJoint.jointFriction = (double.IsNaN(dynamics.friction)) ? defaultFriction : (float)dynamics.friction;
-            }
-            else
-            {
-                unityJoint.linearDamping = defaultDamping;
-                unityJoint.angularDamping = defaultDamping;
-                unityJoint.jointFriction = defaultFriction;
-            }
+            unityJoint.linearDamping = dynamics.Damping();
+            unityJoint.angularDamping = dynamics.Damping();
+            unityJoint.jointFriction = dynamics.Friction();
 #else
             //TODO - Implement
             Debug.LogError("TODO - Implement.");

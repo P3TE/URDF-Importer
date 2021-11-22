@@ -59,6 +59,7 @@ namespace Unity.Robotics.UrdfImporter
             previousRigidbodyConstants.centerOfMass = rigidbody.centerOfMass;
 
             Rigidbody fixedParent = FindFixedParent(fixedJointToOptimize);
+            UrdfInertial fixedParentUrdfInertial = fixedParent.GetComponent<UrdfInertial>();
 
             float totalMass = fixedParent.mass + rigidbody.mass;
 
@@ -77,24 +78,15 @@ namespace Unity.Robotics.UrdfImporter
             Vector3 newFixedParentCenterOfMass = rigidbodyWeighting * rigidbodyPreviousCenterOfMassParentFrame +
                                                  fixedParentWeighting * fixedParentPreviousLocalCenterOfMass;
 
-            Debug.Log($"{fixedJointToOptimize.name} -> {fixedParent.gameObject.name}");
-            
-            Debug.Log($"Before");
-            Debug.Log($"fixedParent.mass = {fixedParent.mass}");
-            Debug.Log($"fixedParent.drag = {fixedParent.drag}");
-            Debug.Log($"fixedParent.angularDrag = {fixedParent.angularDrag}");
-            Debug.Log($"fixedParent.centerOfMass = {fixedParent.centerOfMass}");
             fixedParent.mass = totalMass;
             fixedParent.drag = newDrag;
             fixedParent.angularDrag = newAngularDrag;
             fixedParent.centerOfMass = newFixedParentCenterOfMass;
-            Debug.Log($"After");
-            Debug.Log($"fixedParent.mass = {fixedParent.mass}");
-            Debug.Log($"fixedParent.drag = {fixedParent.drag}");
-            Debug.Log($"fixedParent.angularDrag = {fixedParent.angularDrag}");
-            Debug.Log($"fixedParent.centerOfMass = {fixedParent.centerOfMass}");
+            //NOTE - Although we set the center of mass, on Start the center of mass is overriden by the 
+            //       center of mass in the UrdfInertial, so we have to set that value to be correct as well.
+            fixedParentUrdfInertial.AdjustedCenterOfMass = newFixedParentCenterOfMass;
             
-            //Remove the rigidbody, we don't do that anymore.
+            //Remove the rigidbody for the FixedJoint that is being removed.
             Destroy(rigidbody);
 
         }

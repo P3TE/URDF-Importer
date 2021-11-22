@@ -28,6 +28,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public bool useUrdfData;
         public Vector3 centerOfMass;
+        public Vector3? _adjustedCenterOfMass = null;
         public Vector3 inertiaTensor;
         public Quaternion inertiaTensorRotation;
         public Quaternion inertialAxisRotation;
@@ -35,6 +36,12 @@ namespace Unity.Robotics.UrdfImporter
         private const int RoundDigits = 10;
         private const float MinInertia = 1e-6f;
         private const float minMass = 0.1f;
+
+        public Vector3 AdjustedCenterOfMass
+        {
+            get => _adjustedCenterOfMass.GetValueOrDefault(centerOfMass);
+            set => _adjustedCenterOfMass = value;
+        }
 
         public static void Create(GameObject linkObject, UrdfLinkDescription.Inertial inertial = null)
         {
@@ -48,14 +55,7 @@ namespace Unity.Robotics.UrdfImporter
             if (inertial != null)
             {
                 robotLink.mass = ((float)inertial.mass > 0)?((float)inertial.mass):minMass;
-                if (inertial.origin != null) {
-                    
-                    robotLink.centerOfMass = UrdfOrigin.GetPositionFromUrdf(inertial.origin);
-                }
-                else
-                {
-                    robotLink.centerOfMass = Vector3.zero;
-                }
+                robotLink.centerOfMass = inertial.origin != null ? UrdfOrigin.GetPositionFromUrdf(inertial.origin) : Vector3.zero;
                 urdfInertial.ImportInertiaData(inertial);
                  
                 urdfInertial.useUrdfData = true;
@@ -88,7 +88,7 @@ namespace Unity.Robotics.UrdfImporter
 
             if (useUrdfData)
             {
-                robotLink.centerOfMass = centerOfMass;
+                robotLink.centerOfMass = AdjustedCenterOfMass;
                 robotLink.inertiaTensor = inertiaTensor;
                 robotLink.inertiaTensorRotation = inertiaTensorRotation * inertialAxisRotation;
             }

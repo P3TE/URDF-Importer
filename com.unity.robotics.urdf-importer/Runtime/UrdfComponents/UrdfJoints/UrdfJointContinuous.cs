@@ -102,7 +102,18 @@ namespace Unity.Robotics.UrdfImporter
         protected override void ImportJointData(UrdfJointDescription joint)
         {
             AdjustMovement(joint);
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             SetDynamics(joint.dynamics);
+#else
+            ConfigurableJoint configurableJoint = AsUnityJoint;
+            configurableJoint.angularXDrive = new JointDrive()
+            {
+                maximumForce = configurableJoint.angularXDrive.maximumForce,
+                positionDamper = joint.dynamics.Damping(),
+                positionSpring = configurableJoint.angularXDrive.positionSpring
+            };
+            Debug.LogWarning("Dynamics friction not implemented.");
+#endif
         }
 
         protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
@@ -119,6 +130,8 @@ namespace Unity.Robotics.UrdfImporter
 #endif
             return joint;
         }
+        
+        ConfigurableJoint AsUnityJoint => (ConfigurableJoint) unityJoint;
 
 
         /// <summary>
