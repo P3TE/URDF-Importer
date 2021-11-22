@@ -41,7 +41,6 @@ namespace Unity.Robotics.UrdfImporter
             }
         }
 
-        public const string _GazeboTag = "gazebo";
         public const string _PluginTag = "plugin";
         public const string _FilenameAttribute = "filename";
         public const string _NameAttribute = "name";
