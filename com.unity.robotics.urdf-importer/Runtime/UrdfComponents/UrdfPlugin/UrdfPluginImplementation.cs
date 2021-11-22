@@ -7,8 +7,8 @@ namespace Unity.Robotics.UrdfImporter
 {
     public abstract class UrdfPluginImplementation : MonoBehaviour
     {
-
-        public const string _DefaultLinkName = "linkName";
+        
+        public string LinkName { get; set; }
 
         public abstract void DeserialiseFromXml(XElement node);
 
@@ -43,16 +43,6 @@ namespace Unity.Robotics.UrdfImporter
             return currentLink;
         }
         
-        public static bool AttemptToFindLink(XElement node, [CanBeNull] out UrdfLink urdfLink)
-        {
-            if (ReadStringFromXElement(node, _DefaultLinkName, out string linkName, false))
-            {
-                return UrdfLinkExtensions.TryFindLink(linkName, out urdfLink);
-            }
-            urdfLink = null;
-            return false;
-        }
-
         public static bool GetXElement(XElement node, string childElementName, out XElement result, bool required = true)
         {
             result = node.Element(childElementName);

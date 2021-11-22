@@ -45,7 +45,7 @@ namespace Unity.Robotics.UrdfImporter
         public const string _PluginTag = "plugin";
         public const string _FilenameAttribute = "filename";
         public const string _NameAttribute = "name";
-        public const string _LinkNameElement = "linkName";
+        public const string _LinkNameElement = "link_name";
 
         public class PluginData
         {
@@ -114,6 +114,8 @@ namespace Unity.Robotics.UrdfImporter
                 {
                     throw new Exception($"Failed to generate plugin with filename {pluginData.filename}");
                 }
+
+                result.LinkName = pluginData.urdfLinkName;
                 result.DeserialiseFromXml(pluginData.innerPluginXml);
                 return result;
             }
