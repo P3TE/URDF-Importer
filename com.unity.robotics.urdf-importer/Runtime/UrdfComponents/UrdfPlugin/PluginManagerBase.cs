@@ -59,7 +59,17 @@ namespace Unity.Robotics.UrdfImporter
             //To neaten the layout, the following parameters are used to define what game object the plugin is added to. 
             public string urdfLinkName = "";
             public UrdfLink urdfLink = null;
-            public GameObject fallbackGameObjectParent = null;
+            public UrdfPlugins urdfPlugins;
+
+            public UrdfPluginDescription pluginDescription;
+            public XElement xmlElement;
+
+            public PluginData(UrdfPlugins urdfPlugins, UrdfPluginDescription pluginDescription)
+            {
+                this.urdfPlugins = urdfPlugins;
+                this.pluginDescription = pluginDescription;
+                xmlElement = XElement.Parse(pluginDescription.text);
+            }
 
             //Used when creating the new Component.
             public GameObject ObjectToAttachTo
@@ -70,26 +80,25 @@ namespace Unity.Robotics.UrdfImporter
                     {
                         return urdfLink.gameObject;
                     }
-                    return fallbackGameObjectParent;
+                    return urdfPlugins.gameObject;
                 }
             }
         }
 
-        public UrdfPluginImplementation GeneratePlugin(UrdfPluginDescription pluginDescription)
+        public UrdfPluginImplementation GeneratePlugin(PluginData pluginData)
         {
-            PluginData pluginData = new PluginData();
-            XElement xmlElement = XElement.Parse(pluginDescription.text);
-            pluginData.innerPluginXml = xmlElement.Element(_PluginTag);
+            
+            pluginData.innerPluginXml = pluginData.xmlElement.Element(_PluginTag);
             if (pluginData.innerPluginXml == null)
             {
-                RuntimeUrdf.AddImportWarning($"Plugin of type {xmlElement.Name} lacks a child of type {_PluginTag} and was ignored!");
+                RuntimeUrdf.AddImportWarning($"Plugin of type {pluginData.xmlElement.Name} lacks a child of type {_PluginTag} and was ignored!");
                 return null;
             }
             
             XAttribute filenameAttribute = pluginData.innerPluginXml.Attribute(_FilenameAttribute);
             if (filenameAttribute == null)
             {
-                RuntimeUrdf.AddImportWarning($"Plugin of type {xmlElement.Name}:{_PluginTag} is missing attribute {_FilenameAttribute} and will be ignored!");
+                RuntimeUrdf.AddImportWarning($"Plugin of type {pluginData.xmlElement.Name}:{_PluginTag} is missing attribute {_FilenameAttribute} and will be ignored!");
                 return null;
             }
             pluginData.filename = filenameAttribute.Value;

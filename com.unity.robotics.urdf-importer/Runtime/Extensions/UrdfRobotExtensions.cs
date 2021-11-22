@@ -273,14 +273,16 @@ namespace Unity.Robotics.UrdfImporter
                 RuntimeUrdf.urdfBuildErrors.AddLast(new Exception("No PluginManagerBase Instance set!"));
                 return;
             }
-            
+
             LinkedList<UrdfPluginImplementation> loadedPlugins = new LinkedList<UrdfPluginImplementation>();
             
             foreach (UrdfPluginDescription urdfPluginDescription in im.robot.plugins)
             {
                 try
                 {
-                    UrdfPluginImplementation urdfPluginImplementation = pluginManager.GeneratePlugin(urdfPluginDescription);
+                    PluginManagerBase.PluginData pluginData =
+                        new PluginManagerBase.PluginData(im.urdfPlugins, urdfPluginDescription);
+                    UrdfPluginImplementation urdfPluginImplementation = pluginManager.GeneratePlugin(pluginData);
                     if (urdfPluginImplementation != null)
                     {
                         loadedPlugins.AddLast(urdfPluginImplementation);
