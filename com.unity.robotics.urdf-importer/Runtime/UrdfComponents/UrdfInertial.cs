@@ -89,8 +89,15 @@ namespace Unity.Robotics.UrdfImporter
             if (useUrdfData)
             {
                 robotLink.centerOfMass = AdjustedCenterOfMass;
-                robotLink.inertiaTensor = inertiaTensor;
-                robotLink.inertiaTensorRotation = inertiaTensorRotation * inertialAxisRotation;
+                if (false)
+                {
+                    robotLink.inertiaTensor = inertiaTensor;
+                    robotLink.inertiaTensorRotation = inertiaTensorRotation * inertialAxisRotation;   
+                }
+                else
+                {
+                    robotLink.ResetInertiaTensor();
+                }
             }
             else
             {
