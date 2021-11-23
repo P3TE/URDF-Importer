@@ -159,9 +159,12 @@ namespace Unity.Robotics.UrdfImporter
         private static void ImportPipelinePostCreate(ImportPipelineData im)
         {
 #if UNITY_EDITOR
-            GameObjectUtility.SetParentAndAlign(im.robotGameObject, Selection.activeObject as GameObject);
-            Undo.RegisterCreatedObjectUndo(im.robotGameObject, "Create " + im.robotGameObject.name);
-            Selection.activeObject = im.robotGameObject;
+            if (!RuntimeUrdf.IsRuntimeMode())
+            {
+                GameObjectUtility.SetParentAndAlign(im.robotGameObject, Selection.activeObject as GameObject);
+                Undo.RegisterCreatedObjectUndo(im.robotGameObject, "Create " + im.robotGameObject.name);
+                Selection.activeObject = im.robotGameObject;
+            }
 #endif
 
             CorrectAxis(im.robotGameObject);
