@@ -29,6 +29,7 @@ namespace Unity.Robotics.UrdfImporter
         public bool useUrdfData;
         public Vector3 centerOfMass;
         public Vector3? _adjustedCenterOfMass = null;
+        public bool automaticInertia = false;
         public Vector3 inertiaTensor;
         public Quaternion inertiaTensorRotation;
         public Quaternion inertialAxisRotation;
@@ -89,14 +90,14 @@ namespace Unity.Robotics.UrdfImporter
             if (useUrdfData)
             {
                 robotLink.centerOfMass = AdjustedCenterOfMass;
-                if (false)
+                if (automaticInertia)
                 {
-                    robotLink.inertiaTensor = inertiaTensor;
-                    robotLink.inertiaTensorRotation = inertiaTensorRotation * inertialAxisRotation;   
+                    robotLink.ResetInertiaTensor();
                 }
                 else
                 {
-                    robotLink.ResetInertiaTensor();
+                    robotLink.inertiaTensor = inertiaTensor;
+                    robotLink.inertiaTensorRotation = inertiaTensorRotation * inertialAxisRotation;
                 }
             }
             else
@@ -164,6 +165,7 @@ namespace Unity.Robotics.UrdfImporter
             robotLink.inertiaTensorRotation = ToQuaternion(eigenvectors[0], eigenvectors[1], eigenvectors[2]).Ros2Unity() * this.inertialAxisRotation;
 
             this.centerOfMass = robotLink.centerOfMass;
+            this.automaticInertia = inertial.inertia.automaticInertia;
             this.inertiaTensor = robotLink.inertiaTensor;
             this.inertiaTensorRotation = robotLink.inertiaTensorRotation;
 

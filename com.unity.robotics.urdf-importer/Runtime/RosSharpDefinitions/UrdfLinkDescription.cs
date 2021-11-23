@@ -114,6 +114,7 @@ namespace Unity.Robotics.UrdfImporter
 
             public class Inertia
             {
+                public bool automaticInertia = false;
                 public double ixx;
                 public double ixy;
                 public double ixz;
@@ -123,6 +124,11 @@ namespace Unity.Robotics.UrdfImporter
 
                 public Inertia(XElement node)
                 {
+                    XAttribute automaticInertiaAttribute = node.Attribute("unity_automatic_inertia");
+                    if (automaticInertiaAttribute != null)
+                    {
+                        automaticInertia = (bool)automaticInertiaAttribute;
+                    }
                     ixx = (double)node.Attribute("ixx");
                     ixy = (double)node.Attribute("ixy");
                     ixz = (double)node.Attribute("ixz");
