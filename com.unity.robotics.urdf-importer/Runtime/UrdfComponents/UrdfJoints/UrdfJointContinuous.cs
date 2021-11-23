@@ -49,7 +49,28 @@ namespace Unity.Robotics.UrdfImporter
             return unityJoint.jointPosition[xAxis];
 #else
             //return ((HingeJoint) unityJoint).angle;
-            throw new NotImplementedException("Not implemented...");
+            ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
+            Rigidbody rigidbody = configurableJoint.GetComponent<Rigidbody>();
+            
+            Quaternion currentLocalRotation = rigidbody.transform.localRotation;
+            
+            //Useful for verifying the result:
+            //float unsignedResult = Quaternion.Angle(currentLocalRotation, originalLocalRotation);
+
+            Vector3 localUpAxis = configurableJoint.axis.normalized;
+            Vector3 localForwardAxis = configurableJoint.secondaryAxis.normalized;
+            Vector3 localRightAxis = Vector3.Cross(localUpAxis, localForwardAxis);
+            
+            Quaternion offsetRotation = currentLocalRotation * Quaternion.Inverse(originalLocalRotation);
+
+            Vector3 offsetRightVector = offsetRotation * localRightAxis;
+            
+            float adjacent = Vector3.Dot(localRightAxis, offsetRightVector);
+            float opposite = Vector3.Dot(localForwardAxis, offsetRightVector);
+            
+            float currentAngleRad = Mathf.Atan2(opposite, adjacent);
+            return currentAngleRad;
+            
 #endif
         }
 
@@ -62,7 +83,15 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             return unityJoint.jointVelocity[xAxis];
 #else
-            return -((HingeJoint)unityJoint).velocity;
+            ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
+            Rigidbody rigidbody = configurableJoint.GetComponent<Rigidbody>();
+
+            Vector3 angularVelocityWorld = rigidbody.angularVelocity;
+            Vector3 angularVelocityLocal = Quaternion.Inverse(rigidbody.rotation) * angularVelocityWorld;
+
+            float angularVelocityUnity = Vector3.Dot(configurableJoint.axis, angularVelocityLocal);
+            
+            return angularVelocityUnity;
 #endif
         }
 
@@ -75,7 +104,9 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             return unityJoint.jointForce[xAxis];
 #else
-                return -((HingeJoint)unityJoint).motor.force;
+            //TODO - Implement.
+            return 0f;
+            //return -((HingeJoint)unityJoint).motor.force;
 #endif
 
         }

@@ -51,6 +51,8 @@ namespace Unity.Robotics.UrdfImporter
 
         protected const int RoundDigits = 6;
         protected const float Tolerance = 0.0000001f;
+        
+        protected Quaternion originalLocalRotation = Quaternion.identity;
 
         public static UrdfJoint Create(GameObject linkObject, JointTypes jointType, UrdfJointDescription joint = null)
         {
@@ -60,6 +62,7 @@ namespace Unity.Robotics.UrdfImporter
             if (parentRigidbody == null) throw new Exception($"No attached Rigidbody on {linkObject.transform.parent.gameObject.name}");
 #endif
             UrdfJoint urdfJoint = AddCorrectJointType(linkObject, jointType);
+            urdfJoint.originalLocalRotation = linkObject.transform.localRotation;
 
             if (joint != null)
             {
