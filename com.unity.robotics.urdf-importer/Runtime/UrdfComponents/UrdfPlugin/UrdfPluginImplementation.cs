@@ -1,6 +1,5 @@
 using System;
 using System.Xml.Linq;
-using JetBrains.Annotations;
 using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
