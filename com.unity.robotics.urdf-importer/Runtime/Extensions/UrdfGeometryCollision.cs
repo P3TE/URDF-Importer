@@ -120,6 +120,11 @@ namespace Unity.Robotics.UrdfImporter
             }
                 
             SetupTransforms(node, nodeGO.transform);
+
+            if (parent == null) //Some formats are imported with a 90 degree twist relative to others. Removing this twist.
+            {
+                nodeGO.transform.rotation = Quaternion.identity;
+            }
                 
             foreach (int meshIndex in node.MeshIndices)
             {
@@ -164,10 +169,12 @@ namespace Unity.Robotics.UrdfImporter
 
                 List<Vector3> uVertices = new List<Vector3>(m.VertexCount);
                 List<int> uIndices = new List<int>(m.FaceCount); //Not 100% on how this will behave if faces aren't triangulated.
+                
+                Quaternion rotation = Quaternion.Euler(-90.0f, 0.0f, 90.0f);
 
                 foreach (var v in m.Vertices)
                 {
-                    uVertices.Add(new Vector3(-v.X, v.Y, v.Z));
+                    uVertices.Add(rotation * new Vector3(-v.X, v.Y, v.Z));
                 }
 
                 foreach (var f in m.Faces)
@@ -198,7 +205,6 @@ namespace Unity.Robotics.UrdfImporter
             }
             
             PrepareNode(ref meshes, scene.RootNode, baseObject);
-            baseObject.transform.localRotation *= Quaternion.Euler(0.0f,0.0f, 90.0f); //Unverified: Rotation to match the output of the visual import.
             
             return baseObject;
         }
