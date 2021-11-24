@@ -267,7 +267,7 @@ namespace UnityMeshImporter
                 UnityEngine.Quaternion uQuat = new UnityEngine.Quaternion(aQuat.X, aQuat.Y, aQuat.Z, aQuat.W);
                 var euler = uQuat.eulerAngles;
                 uOb.transform.localScale = new UnityEngine.Vector3(aScale.X, aScale.Y, aScale.Z);
-                uOb.transform.localPosition = new UnityEngine.Vector3(aTranslation.X, aTranslation.Y, aTranslation.Z);
+                uOb.transform.localPosition = new UnityEngine.Vector3(-aTranslation.X, aTranslation.Y, aTranslation.Z);
                 uOb.transform.localRotation = UnityEngine.Quaternion.Euler(euler.x, -euler.y, euler.z);
             
                 if (node.HasChildren)
