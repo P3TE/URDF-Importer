@@ -176,7 +176,35 @@ namespace Unity.Robotics.UrdfImporter
                 unityJoint.xDrive = drive;
             }
 #else
+
+            HingeJoint hingeJoint = (HingeJoint) unityJoint;
+            
+            Vector3 axisOfMotionUnity = joint.axis.AxisUnity;
+            Vector3 secondaryAxisOfMotionUnity = joint.axis.SecondaryAxisEstimateUnity;
+
+            hingeJoint.axis = axisOfMotionUnity;
+
+            HingeJointLimitsManager hingeJointLimitsManager = GetComponent<HingeJointLimitsManager>();
+            
+            Debug.LogError("TODO - Hinge joint limits.");
+            Debug.LogError("TODO - Review 'HingeJointLimitsManager', I don't think we need it.");
+            /*
+            configurableJoint.xMotion = ConfigurableJointMotion.Locked;
+            configurableJoint.yMotion = ConfigurableJointMotion.Locked;
+            configurableJoint.zMotion = ConfigurableJointMotion.Locked;
+
+            configurableJoint.angularXMotion = ConfigurableJointMotion.Free;
+            configurableJoint.angularYMotion = ConfigurableJointMotion.Locked;
+            configurableJoint.angularZMotion = ConfigurableJointMotion.Locked;
+
+            configurableJoint.angularXDrive = new JointDrive()
+            {
+                maximumForce = (float) joint.limit.effort
+            };
+            configurableJoint.targetAngularVelocity = new Vector3(1.0f, 0.0f, 0.0f) * (float) joint.limit.velocity;
+            
             throw new NotImplementedException("TODO - Implement");
+            */
 #endif
         }
     }

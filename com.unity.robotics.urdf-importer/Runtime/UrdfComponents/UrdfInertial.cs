@@ -160,12 +160,16 @@ namespace Unity.Robotics.UrdfImporter
 
             this.inertialAxisRotation.eulerAngles = inertiaEulerAngles;
             
+            this.automaticInertia = inertial.inertia.automaticInertia;
 
-            robotLink.inertiaTensor = ToUnityInertiaTensor(FixMinInertia(eigenvalues));
-            robotLink.inertiaTensorRotation = ToQuaternion(eigenvectors[0], eigenvectors[1], eigenvectors[2]).Ros2Unity() * this.inertialAxisRotation;
+            if (!this.automaticInertia)
+            {
+                robotLink.inertiaTensor = ToUnityInertiaTensor(FixMinInertia(eigenvalues));
+                robotLink.inertiaTensorRotation = ToQuaternion(eigenvectors[0], eigenvectors[1], eigenvectors[2]).Ros2Unity() * this.inertialAxisRotation;
+            }
 
             this.centerOfMass = robotLink.centerOfMass;
-            this.automaticInertia = inertial.inertia.automaticInertia;
+            
             this.inertiaTensor = robotLink.inertiaTensor;
             this.inertiaTensorRotation = robotLink.inertiaTensorRotation;
 

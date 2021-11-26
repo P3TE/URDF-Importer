@@ -31,6 +31,10 @@ namespace Unity.Robotics.UrdfImporter
     {
         static string collisionObjectName = "Collisions";
         public static ImportSettings importsettings;
+        
+        public delegate void OnPostImport(GameObject importedRobotGameObject);
+
+        public static OnPostImport postImportDelegate = null;
 
         public static void Create()
         {
@@ -184,6 +188,8 @@ namespace Unity.Robotics.UrdfImporter
                     RuntimeUrdf.urdfBuildErrors.AddLast(e);
                 }
             }
+            
+            postImportDelegate?.Invoke(im.robotGameObject);
 
             if (im.forceRuntimeMode) 
             { // set runtime mode back to what it was
