@@ -108,7 +108,7 @@ namespace Unity.Robotics.UrdfImporter
             }
             
             //Find the link if applicable.
-            if (UrdfPluginImplementation.ReadStringFromXElement(pluginData.innerPluginXml, _LinkNameElement,
+            if (UrdfPluginImplementation.ReadStringFromChildXElement(pluginData.innerPluginXml, _LinkNameElement,
                 out pluginData.urdfLinkName, false))
             {
                 //A valid link name exists.
