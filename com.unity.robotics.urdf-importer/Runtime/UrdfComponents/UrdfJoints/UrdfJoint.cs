@@ -59,7 +59,12 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
 #else
             Rigidbody parentRigidbody = linkObject.transform.parent.gameObject.GetComponent<Rigidbody>();
-            if (parentRigidbody == null) throw new Exception($"No attached Rigidbody on {linkObject.transform.parent.gameObject.name}");
+            if (parentRigidbody == null)
+            {
+                UrdfLink link = linkObject.transform.parent.gameObject.GetComponent<UrdfLink>();
+                
+                throw new Exception($"No attached Rigidbody on {linkObject.transform.parent.gameObject.name}");
+            }
 #endif
             UrdfJoint urdfJoint = AddCorrectJointType(linkObject, jointType);
             urdfJoint.originalLocalRotation = linkObject.transform.localRotation;

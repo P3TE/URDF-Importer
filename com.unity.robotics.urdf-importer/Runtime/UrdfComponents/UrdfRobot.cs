@@ -154,5 +154,36 @@ namespace Unity.Robotics.UrdfImporter
             }
         }
         #endregion
+
+        public UrdfLink FindBaseLink()
+        {
+            //Go for a breadth first search.
+            LinkedList<Transform> queue = new LinkedList<Transform>();
+            queue.AddLast(transform);
+
+            while (queue.Count > 0)
+            {
+                Transform current = queue.First.Value;
+                queue.RemoveFirst();
+                UrdfLink currentLink = current.GetComponent<UrdfLink>();
+                if (currentLink != null)
+                {
+                    if (currentLink.IsBaseLink)
+                    {
+                        return currentLink;
+                    }
+                }
+
+                int childCount = current.childCount;
+                for (int i = 0; i < childCount; i++)
+                {
+                    queue.AddLast(current.GetChild(i));
+                }
+            }
+            
+            //Couldn't find the base_link!
+            return null;
+        }
+        
     }
 }
