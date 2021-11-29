@@ -43,7 +43,7 @@ namespace Unity.Robotics.UrdfImporter
             child = (string)node.Element("child").Attribute("link"); // required
             axis = (node.Element("axis") != null) ? new Axis(node.Element("axis")) : Axis.DefaultAxis;  // optional 
             calibration = (node.Element("calibration") != null) ? new Calibration(node.Element("calibration")) : null;  // optional 
-            dynamics = (node.Element("dynamics") != null) ? new Dynamics(node.Element("dynamics")) : null;  // optional 
+            dynamics = (node.Element("dynamics") != null) ? new Dynamics(node.Element("dynamics")) : Dynamics.DefaultDynamics;  // optional 
             limit = (node.Element("limit") != null) ? new Limit(node.Element("limit")) : Limit.DefaultLimit;  // required only for revolute and prismatic joints
             mimic = (node.Element("mimic") != null) ? new Mimic(node.Element("mimic")) : null;  // optional
             safetyController = (node.Element("safety_controller") != null) ? new SafetyController(node.Element("safety_controller")) : null;  // optional
@@ -226,9 +226,9 @@ namespace Unity.Robotics.UrdfImporter
 
         public class Dynamics
         {
-            public double spring;
-            public double damping;
-            public double friction;
+            public double spring = 1000.0;
+            public double damping = 10.0;
+            public double friction = 0.0;
 
             public Dynamics(XElement node)
             {
@@ -236,23 +236,28 @@ namespace Unity.Robotics.UrdfImporter
                 damping = node.Attribute("damping").ReadOptionalDouble(10.0); // optional
                 friction = node.Attribute("friction").ReadOptionalDouble(0.0); // optional
             }
+            
+            private Dynamics()
+            {
+            }
+
+            public static Dynamics DefaultDynamics => new Dynamics();
 
             public Dynamics(double spring, double damping, double friction)
             {
+                this.spring = spring;
                 this.damping = damping;
                 this.friction = friction;
             }
 
             public void WriteToUrdf(XmlWriter writer)
             {
-                if (damping == 0 & friction == 0)
-                    return;
 
                 writer.WriteStartElement("dynamics");
 
                 if (spring != 0)
                 {
-                    writer.WriteAttributeString("spring", damping + "");
+                    writer.WriteAttributeString("spring", spring + "");
                 }
                 if (damping != 0)
                 {
