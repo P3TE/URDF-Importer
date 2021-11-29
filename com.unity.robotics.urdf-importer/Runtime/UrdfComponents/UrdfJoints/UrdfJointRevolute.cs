@@ -29,10 +29,9 @@ namespace Unity.Robotics.UrdfImporter
             urdfJoint.unityJoint.jointType = ArticulationJointType.RevoluteJoint;
 
 #else
-                        urdfJoint.unityJoint = linkObject.AddComponent<HingeJoint>();
-                        urdfJoint.unityJoint.autoConfigureConnectedAnchor = true;
-                        ((HingeJoint)urdfJoint.unityJoint).useLimits = true;
-                        //linkObject.AddComponent<HingeJointLimitsManager>();
+            ConfigurableJoint configurableJoint = linkObject.AddComponent<ConfigurableJoint>();
+            urdfJoint.unityJoint = configurableJoint;
+            urdfJoint.unityJoint.autoConfigureConnectedAnchor = true;
 #endif
 
             return urdfJoint;
@@ -49,7 +48,10 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             return ((ArticulationBody)unityJoint).jointPosition[xAxis];
 #else
-                        return -((HingeJoint)unityJoint).angle * Mathf.Deg2Rad;
+            //return -((HingeJoint)unityJoint).angle * Mathf.Deg2Rad;
+            ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
+            Rigidbody rigidbody = configurableJoint.GetComponent<Rigidbody>();
+            return UrdfJointContinuous.GetCurrentAngleRad(rigidbody, configurableJoint, originalLocalRotation);
 #endif
         }
 
@@ -62,7 +64,8 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             return ((ArticulationBody)unityJoint).jointVelocity[xAxis];
 #else
-                        return -((HingeJoint)unityJoint).velocity * Mathf.Deg2Rad;
+            //return -((HingeJoint)unityJoint).velocity * Mathf.Deg2Rad;
+            return UrdfJointContinuous.GetCurrentLocalVelocity((ConfigurableJoint) unityJoint);
 #endif
         }
 
@@ -75,7 +78,8 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             return unityJoint.jointForce[xAxis];
 #else
-                        return -((HingeJoint)unityJoint).motor.force;
+            //return -((HingeJoint)unityJoint).motor.force;
+            return UrdfJointContinuous.GetEffort((ConfigurableJoint) unityJoint);
 #endif
         }
 
@@ -112,7 +116,11 @@ namespace Unity.Robotics.UrdfImporter
             joint.limit = ExportLimitData();
 #else
             joint.axis = GetAxisData(unityJoint.axis);
-            joint.dynamics = new UrdfJointDescription.Dynamics(((HingeJoint)unityJoint).spring.damper, ((HingeJoint)unityJoint).spring.spring);
+            //joint.dynamics = new UrdfJointDescription.Dynamics(((HingeJoint)unityJoint).spring.damper, ((HingeJoint)unityJoint).spring.spring);
+            ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
+            //Note: Note 100% Sure on this, it could also be the Angular X Limit Spring
+            //IE: SoftJointLimitSpring - configurableJoint.angularXLimitSpring.damper
+            joint.dynamics = new UrdfJointDescription.Dynamics(configurableJoint.angularXDrive.positionDamper, configurableJoint.angularXDrive.positionSpring);
 
             joint.limit = ExportLimitData();
 #endif
@@ -145,10 +153,17 @@ namespace Unity.Robotics.UrdfImporter
             //    EffortLimit,
             //    VelocityLimit);
 
-            HingeJoint hingeJoint = (HingeJoint) unityJoint;
+            //HingeJoint hingeJoint = (HingeJoint) unityJoint;
+            //return new UrdfJointDescription.Limit(
+            //    System.Math.Round(hingeJoint.limits.min * Mathf.Deg2Rad, RoundDigits),
+            //    System.Math.Round(hingeJoint.limits.max * Mathf.Deg2Rad, RoundDigits),
+            //    EffortLimit,
+            //    VelocityLimit);
+            
+            ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
             return new UrdfJointDescription.Limit(
-                System.Math.Round(hingeJoint.limits.min * Mathf.Deg2Rad, RoundDigits),
-                System.Math.Round(hingeJoint.limits.max * Mathf.Deg2Rad, RoundDigits),
+                System.Math.Round(configurableJoint.lowAngularXLimit.limit * Mathf.Deg2Rad, RoundDigits),
+                System.Math.Round(configurableJoint.highAngularXLimit.limit * Mathf.Deg2Rad, RoundDigits),
                 EffortLimit,
                 VelocityLimit);
 #endif
@@ -184,47 +199,25 @@ namespace Unity.Robotics.UrdfImporter
                 unityJoint.xDrive = drive;
             }
 #else
-
-            HingeJoint hingeJoint = (HingeJoint) unityJoint;
             
-            Vector3 axisOfMotionUnity = joint.axis.AxisUnity;
-            //Vector3 secondaryAxisOfMotionUnity = joint.axis.SecondaryAxisEstimateUnity;
-
-            hingeJoint.axis = axisOfMotionUnity;
-
-            hingeJoint.limits = new JointLimits()
+            ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
+            UrdfJointContinuous.AdjustMovementShared(configurableJoint, joint);
+            configurableJoint.angularXMotion = ConfigurableJointMotion.Limited;
+            configurableJoint.lowAngularXLimit = new SoftJointLimit()
             {
-                min = Mathf.Rad2Deg * (float) joint.limit.lowerRadians,
-                max = Mathf.Rad2Deg * (float) joint.limit.upperRadians,
+                limit = Mathf.Rad2Deg * (float) joint.limit.lowerRadians
+            };
+            configurableJoint.highAngularXLimit = new SoftJointLimit()
+            {
+                limit = Mathf.Rad2Deg * (float) joint.limit.upperRadians
             };
 
-            hingeJoint.motor = new JointMotor()
+            //TODO - Spring.
+            configurableJoint.angularXLimitSpring = new SoftJointLimitSpring()
             {
-                force = (float) joint.limit.effort,
-                targetVelocity = (float) joint.limit.velocity,
+                damper = (float) joint.dynamics.damping,
             };
-
-            //HingeJointLimitsManager hingeJointLimitsManager = GetComponent<HingeJointLimitsManager>();
             
-            Debug.LogError("TODO - Hinge joint limits.");
-            //Debug.LogError("TODO - Review 'HingeJointLimitsManager', I don't think we need it.");
-            /*
-            configurableJoint.xMotion = ConfigurableJointMotion.Locked;
-            configurableJoint.yMotion = ConfigurableJointMotion.Locked;
-            configurableJoint.zMotion = ConfigurableJointMotion.Locked;
-
-            configurableJoint.angularXMotion = ConfigurableJointMotion.Free;
-            configurableJoint.angularYMotion = ConfigurableJointMotion.Locked;
-            configurableJoint.angularZMotion = ConfigurableJointMotion.Locked;
-
-            configurableJoint.angularXDrive = new JointDrive()
-            {
-                maximumForce = (float) joint.limit.effort
-            };
-            configurableJoint.targetAngularVelocity = new Vector3(1.0f, 0.0f, 0.0f) * (float) joint.limit.velocity;
-            
-            throw new NotImplementedException("TODO - Implement");
-            */
 #endif
         }
     }
