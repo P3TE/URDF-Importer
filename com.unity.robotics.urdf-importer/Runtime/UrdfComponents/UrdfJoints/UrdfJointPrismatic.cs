@@ -170,7 +170,7 @@ namespace Unity.Robotics.UrdfImporter
             ConfigurableJoint configurableJoint = (ConfigurableJoint)unityJoint;
 
             joint.axis = GetAxisData(configurableJoint.axis);
-            joint.dynamics = new UrdfJointDescription.Dynamics(configurableJoint.xDrive.positionDamper, configurableJoint.xDrive.positionSpring);
+            joint.dynamics = new UrdfJointDescription.Dynamics(configurableJoint.xDrive.positionSpring, configurableJoint.xDrive.positionDamper, configurableJoint.xDrive.positionSpring);
             joint.limit = ExportLimitData();
 #endif
             return joint;

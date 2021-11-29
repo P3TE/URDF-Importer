@@ -173,7 +173,9 @@ namespace Unity.Robotics.UrdfImporter
             joint.limit = ExportLimitData();
 #else
             joint.axis = GetAxisData(unityJoint.axis);
+            Debug.LogError("TODO - Broken!");
             joint.dynamics = new UrdfJointDescription.Dynamics(
+                ((HingeJoint)unityJoint).spring.spring,
                 ((HingeJoint)unityJoint).spring.damper, 
                 ((HingeJoint)unityJoint).spring.spring);
 #endif
@@ -240,7 +242,7 @@ namespace Unity.Robotics.UrdfImporter
             {
                 maximumForce = (float) joint.limit.effort,
                 positionDamper = (float) joint.dynamics.damping,
-                //TODO - Spring
+                positionSpring = (float) joint.dynamics.spring,
             };
             configurableJoint.targetAngularVelocity = new Vector3(1.0f, 0.0f, 0.0f) * (float) joint.limit.velocity;  
         }

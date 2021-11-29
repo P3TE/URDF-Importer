@@ -120,7 +120,7 @@ namespace Unity.Robotics.UrdfImporter
             ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
             //Note: Note 100% Sure on this, it could also be the Angular X Limit Spring
             //IE: SoftJointLimitSpring - configurableJoint.angularXLimitSpring.damper
-            joint.dynamics = new UrdfJointDescription.Dynamics(configurableJoint.angularXDrive.positionDamper, configurableJoint.angularXDrive.positionSpring);
+            joint.dynamics = new UrdfJointDescription.Dynamics(configurableJoint.angularXDrive.positionSpring, configurableJoint.angularXDrive.positionDamper, configurableJoint.angularXDrive.positionSpring);
 
             joint.limit = ExportLimitData();
 #endif
@@ -203,6 +203,13 @@ namespace Unity.Robotics.UrdfImporter
             ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
             UrdfJointContinuous.AdjustMovementShared(configurableJoint, joint);
             configurableJoint.angularXMotion = ConfigurableJointMotion.Limited;
+            if (Math.Abs(joint.limit.lowerRadians - joint.limit.upperRadians) < 0.0001f)
+            {
+                string warningMessage = $"For Revolute Joint with name {joint.name}, " +
+                                        $"joint.limit.lowerRadians == joint.limit.upperRadians should be distinct!" +
+                                        $"Consider using a Continuous Joint or a Fixed Joint Instead.";
+                RuntimeUrdf.AddImportWarning(warningMessage);
+            }
             configurableJoint.lowAngularXLimit = new SoftJointLimit()
             {
                 limit = Mathf.Rad2Deg * (float) joint.limit.lowerRadians

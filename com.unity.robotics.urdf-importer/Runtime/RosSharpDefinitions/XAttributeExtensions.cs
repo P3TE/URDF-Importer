@@ -29,7 +29,7 @@ namespace Unity.Robotics.UrdfImporter
                 i => Convert.ToDouble(i, CultureInfo.InvariantCulture));
         }
 
-        public static double ReadOptionalDouble(this XAttribute attribute)
+        public static double ReadOptionalDouble(this XAttribute attribute, double fallbackDefaultValue = Double.NaN)
         {
             return (attribute != null) ? (double)attribute : double.NaN;
         }

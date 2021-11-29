@@ -226,16 +226,18 @@ namespace Unity.Robotics.UrdfImporter
 
         public class Dynamics
         {
+            public double spring;
             public double damping;
             public double friction;
 
             public Dynamics(XElement node)
             {
-                damping = node.Attribute("damping").ReadOptionalDouble(); // optional
-                friction = node.Attribute("friction").ReadOptionalDouble(); // optional
+                spring = node.Attribute("spring").ReadOptionalDouble(1000.0); // optional
+                damping = node.Attribute("damping").ReadOptionalDouble(10.0); // optional
+                friction = node.Attribute("friction").ReadOptionalDouble(0.0); // optional
             }
 
-            public Dynamics(double damping, double friction)
+            public Dynamics(double spring, double damping, double friction)
             {
                 this.damping = damping;
                 this.friction = friction;
@@ -248,6 +250,10 @@ namespace Unity.Robotics.UrdfImporter
 
                 writer.WriteStartElement("dynamics");
 
+                if (spring != 0)
+                {
+                    writer.WriteAttributeString("spring", damping + "");
+                }
                 if (damping != 0)
                 {
                     writer.WriteAttributeString("damping", damping + "");
