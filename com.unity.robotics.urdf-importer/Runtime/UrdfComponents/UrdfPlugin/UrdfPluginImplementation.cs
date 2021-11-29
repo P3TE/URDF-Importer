@@ -72,7 +72,7 @@ namespace Unity.Robotics.UrdfImporter
             return true;
         }
         
-        public static bool ReadStringFromXElement(XElement node, string childElementName, out string result, 
+        public static bool ReadStringFromChildXElement(XElement node, string childElementName, out string result, 
             bool required = true, string defaultValue = "")
         {
             if (!GetXElement(node, childElementName, out XElement childXElement, required))
@@ -98,7 +98,7 @@ namespace Unity.Robotics.UrdfImporter
             return true;
         }
         
-        public static bool ReadIntegerFromXElement(XElement node, string childElementName, out int result, 
+        public static bool ReadIntegerFromChildXElement(XElement node, string childElementName, out int result, 
             bool required = true, int defaultValue = 0)
         {
             if (!GetXElement(node, childElementName, out XElement childXElement, required))
@@ -114,8 +114,25 @@ namespace Unity.Robotics.UrdfImporter
             }
             return true;
         }
+
+        public static bool ReadIntegerFromXElementAttribute(XElement node, string attributeName, out int result,
+            bool required = true, int defaultValue = 0)
+        {
+            if (!GetXAttribute(node, attributeName, out XAttribute xAttribute, required))
+            {
+                result = defaultValue;
+                return false;
+            }
+
+            bool parseSuccess = int.TryParse(xAttribute.Value, out result);
+            if (!parseSuccess)
+            {
+                throw new Exception($"Attribute {node.Name}/{xAttribute.Name.LocalName} expected an integer, received: {xAttribute.Value}");
+            }
+            return true;
+        }
         
-        public static bool ReadDoubleFromXElement(XElement node, string childElementName, out double result, 
+        public static bool ReadDoubleFromChildXElement(XElement node, string childElementName, out double result, 
             bool required = true, float defaultValue = 0.0f)
         {
             if (!GetXElement(node, childElementName, out XElement childXElement, required))
@@ -149,10 +166,10 @@ namespace Unity.Robotics.UrdfImporter
             return true;
         }
 
-        public static bool ReadFloatFromXElement(XElement node, string childElementName, out float result, 
+        public static bool ReadFloatFromChildXElement(XElement node, string childElementName, out float result, 
             bool required = true, float defaultValue = 0.0f)
         {
-            bool wasSuccess = ReadDoubleFromXElement(node, childElementName, out double resultAsDouble, required, defaultValue);
+            bool wasSuccess = ReadDoubleFromChildXElement(node, childElementName, out double resultAsDouble, required, defaultValue);
             result = (float) resultAsDouble;
             return wasSuccess;
         }
@@ -165,7 +182,7 @@ namespace Unity.Robotics.UrdfImporter
             return wasSuccess;
         }
         
-        public static bool ReadBooleanFromXElement(XElement node, string childElementName, out bool result, 
+        public static bool ReadBooleanFromChildXElement(XElement node, string childElementName, out bool result, 
             bool required = true, bool defaultValue = false)
         {
             if (!GetXElement(node, childElementName, out XElement childXElement, required))
@@ -174,40 +191,61 @@ namespace Unity.Robotics.UrdfImporter
                 return false;
             }
 
-            string originalCaseXmlValue = childXElement.Value.Trim();
+            if (!ParseBoolean(childXElement.Value, out result))
+            {
+                throw new Exception($"Node {node.Name} value expected a bool, received: {childXElement.Value}");
+            }
+            
+            return true;
+        }
 
-            if (originalCaseXmlValue == "1")
+        public static bool ReadBooleanFromXElementAttribute(XElement node, string attributeName, out bool result,
+            bool required = true, bool defaultValue = false)
+        {
+            if (!GetXAttribute(node, attributeName, out XAttribute xAttribute, required))
+            {
+                result = defaultValue;
+                return false;
+            }
+
+            if (!ParseBoolean(xAttribute.Value, out result))
+            {
+                throw new Exception($"Attribute {node.Name}/{xAttribute.Name.LocalName} expected a bool, received: {xAttribute.Value}");
+            }
+            
+            return true;
+        }
+
+        private static bool ParseBoolean(string value, out bool result)
+        {
+            value = value.Trim();
+            
+            if (value == "1")
             {
                 result = true;
                 return true;
             }
-            if (originalCaseXmlValue == "0")
+            if (value == "0")
             {
                 result = false;
                 return true;
             }
+
+            value = value.ToLower();
             
-            string lowerCaseValue = originalCaseXmlValue.ToLower();
-            
-            if (lowerCaseValue == "true")
+            if (value == "true")
             {
                 result = true;
                 return true;
             }
-            if (lowerCaseValue == "false")
+            if (value == "false")
             {
                 result = false;
                 return true;
             }
-            
-            if (required)
-            {
-                throw new Exception($"Node {node.Name} value expected a bool, received: {originalCaseXmlValue}");
-            }
-            
-            result = defaultValue;
+
+            result = false;
             return false;
         }
-        
     }
 }
