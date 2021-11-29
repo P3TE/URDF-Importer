@@ -71,8 +71,8 @@ namespace Unity.Robotics.UrdfImporter
 
         public void InitializeLimits(UrdfJointDescription.Limit limit)
         {
-            PositionLimitMax = (float)limit.upper;
-            PositionLimitMin = (float)limit.lower;
+            PositionLimitMax = (float)limit.upperRadians;
+            PositionLimitMin = (float)limit.lowerRadians;
         }
 
     }

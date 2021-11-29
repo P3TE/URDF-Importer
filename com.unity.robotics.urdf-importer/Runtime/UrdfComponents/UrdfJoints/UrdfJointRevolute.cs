@@ -188,14 +188,14 @@ namespace Unity.Robotics.UrdfImporter
             HingeJoint hingeJoint = (HingeJoint) unityJoint;
             
             Vector3 axisOfMotionUnity = joint.axis.AxisUnity;
-            Vector3 secondaryAxisOfMotionUnity = joint.axis.SecondaryAxisEstimateUnity;
+            //Vector3 secondaryAxisOfMotionUnity = joint.axis.SecondaryAxisEstimateUnity;
 
             hingeJoint.axis = axisOfMotionUnity;
 
             hingeJoint.limits = new JointLimits()
             {
-                min = (float) joint.limit.lower,
-                max = (float) joint.limit.upper,
+                min = Mathf.Rad2Deg * (float) joint.limit.lowerRadians,
+                max = Mathf.Rad2Deg * (float) joint.limit.upperRadians,
             };
 
             hingeJoint.motor = new JointMotor()

@@ -103,7 +103,7 @@ namespace Unity.Robotics.UrdfImporter
 
         private static SoftJointLimit GetLinearLimit(UrdfJointDescription.Limit limit)
         {
-            return new SoftJointLimit { limit = (float)limit.upper };
+            return new SoftJointLimit { limit = (float)limit.upperRadians };
         }
 
         #region Export

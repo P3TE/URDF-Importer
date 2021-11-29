@@ -263,8 +263,8 @@ namespace Unity.Robotics.UrdfImporter
 
         public class Limit
         {
-            public double lower;
-            public double upper;
+            public double lowerRadians;
+            public double upperRadians;
             public double effort;
             public double velocity;
 
@@ -275,16 +275,16 @@ namespace Unity.Robotics.UrdfImporter
 
             public Limit(XElement node)
             {
-                lower = node.Attribute(_LowerAttributeName).ReadOptionalDouble(); // optional
-                upper = node.Attribute(_UpperAttributeName).ReadOptionalDouble(); // optional
+                lowerRadians = node.Attribute(_LowerAttributeName).ReadOptionalDouble(); // optional
+                upperRadians = node.Attribute(_UpperAttributeName).ReadOptionalDouble(); // optional
                 effort = (double)node.Attribute("effort"); // required
                 velocity = (double)node.Attribute("velocity"); // required
             }
             
-            public Limit(double lower, double upper, double effort, double velocity)
+            public Limit(double lowerRadians, double upperRadians, double effort, double velocity)
             {
-                this.lower = lower;
-                this.upper = upper;
+                this.lowerRadians = lowerRadians;
+                this.upperRadians = upperRadians;
                 this.effort = effort;
                 this.velocity = velocity;
             }
@@ -293,8 +293,8 @@ namespace Unity.Robotics.UrdfImporter
             {
                 writer.WriteStartElement("limit");
 
-                writer.WriteAttributeString("lower", lower + "");
-                writer.WriteAttributeString("upper", upper + "");
+                writer.WriteAttributeString("lower", lowerRadians + "");
+                writer.WriteAttributeString("upper", upperRadians + "");
 
                 writer.WriteAttributeString("effort", effort + "");
                 writer.WriteAttributeString("velocity", velocity + "");

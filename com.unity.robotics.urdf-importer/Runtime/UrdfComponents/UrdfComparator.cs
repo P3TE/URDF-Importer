@@ -828,57 +828,57 @@ namespace Unity.Robotics.UrdfImporter
         private bool CompareLimit(UrdfJointDescription.Limit source, UrdfJointDescription.Limit exported, int indent)
         {
             //Lower
-            if ((source.lower == double.NaN && exported.lower == 0) || (source.lower == 0 && exported.lower == double.NaN))
+            if ((source.lowerRadians == double.NaN && exported.lowerRadians == 0) || (source.lowerRadians == 0 && exported.lowerRadians == double.NaN))
             {
                 linkLog.AppendLine(String.Format("{0}Lower Limit:", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "True"));
                 linkLog.AppendLine(String.Format("{0}Lower Limit Value: 0", Indent(indent)));
             }
-            else if ((source.lower == double.NaN && exported.lower != 0) || (source.lower != 0 && exported.lower == double.NaN))
+            else if ((source.lowerRadians == double.NaN && exported.lowerRadians != 0) || (source.lowerRadians != 0 && exported.lowerRadians == double.NaN))
             {
                 linkLog.AppendLine(String.Format("{0}Lower Limit: {1,6}", Indent(indent), "False"));
                 return false;
             }
-            else if (!source.lower.EqualsDelta(exported.lower, .05))
+            else if (!source.lowerRadians.EqualsDelta(exported.lowerRadians, .05))
             {
                 linkLog.AppendLine(String.Format("{0}Lower Limit:", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "False"));
-                linkLog.AppendLine(String.Format("{0}Lower Limit Value: Source: {1,12}", Indent(indent), source.lower));
-                linkLog.AppendLine(String.Format("{0}Lower Limit Value: Exported: {1,12}", Indent(indent), exported.lower));
+                linkLog.AppendLine(String.Format("{0}Lower Limit Value: Source: {1,12}", Indent(indent), source.lowerRadians));
+                linkLog.AppendLine(String.Format("{0}Lower Limit Value: Exported: {1,12}", Indent(indent), exported.lowerRadians));
                 return false;
             }
             else
             {
                 linkLog.AppendLine(String.Format("{0}Lower Limit:", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "True"));
-                linkLog.AppendLine(String.Format("{0}Lower Limit Value: {1,12}", Indent(indent), source?.lower));
+                linkLog.AppendLine(String.Format("{0}Lower Limit Value: {1,12}", Indent(indent), source?.lowerRadians));
             }
 
             //Upper
-            if ((source.upper == double.NaN && exported.upper == 0) || (source.upper == 0 && exported.upper == double.NaN))
+            if ((source.upperRadians == double.NaN && exported.upperRadians == 0) || (source.upperRadians == 0 && exported.upperRadians == double.NaN))
             {
                 linkLog.AppendLine(String.Format("{0}Upper Limit:", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "True"));
                 linkLog.AppendLine(String.Format("{0}Upper Limit Value: 0", Indent(indent)));
             }
-            else if ((source.upper == double.NaN && exported.upper != 0) || (source.upper != 0 && exported.upper == double.NaN))
+            else if ((source.upperRadians == double.NaN && exported.upperRadians != 0) || (source.upperRadians != 0 && exported.upperRadians == double.NaN))
             {
                 linkLog.AppendLine(String.Format("{0}Upper Limit: {1,6}", Indent(indent), "False"));
                 return false;
             }
-            else if (!source.upper.EqualsDelta(exported.upper, .05))
+            else if (!source.upperRadians.EqualsDelta(exported.upperRadians, .05))
             {
                 linkLog.AppendLine(String.Format("{0}Upper Limit:", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "False"));
-                linkLog.AppendLine(String.Format("{0}Upper Limit Value: Source: {1,12}", Indent(indent), source.upper));
-                linkLog.AppendLine(String.Format("{0}Upper Limit Value: Exported: {1,12}", Indent(indent), exported.upper));
+                linkLog.AppendLine(String.Format("{0}Upper Limit Value: Source: {1,12}", Indent(indent), source.upperRadians));
+                linkLog.AppendLine(String.Format("{0}Upper Limit Value: Exported: {1,12}", Indent(indent), exported.upperRadians));
                 return false;
             }
             else
             {
                 linkLog.AppendLine(String.Format("{0}Upper Limit:", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "True"));
-                linkLog.AppendLine(String.Format("{0}Upper Limit Value: {1,12}", Indent(indent), source?.upper));
+                linkLog.AppendLine(String.Format("{0}Upper Limit Value: {1,12}", Indent(indent), source?.upperRadians));
             }
 
             if (!source.effort.EqualsDelta(exported.effort,.05))
