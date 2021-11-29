@@ -99,7 +99,7 @@ namespace Unity.Robotics.UrdfImporter
                 return;
             }
 
-            Rigidbody fixedParent = FindFixedParent(fixedJointToOptimize);
+            Rigidbody fixedParent = FindCrucialParent(fixedJointToOptimize);
             UrdfInertial fixedParentUrdfInertial = fixedParent.GetComponent<UrdfInertial>();
 
             float totalMass = fixedParent.mass + previousRigidbodyConstants.mass;

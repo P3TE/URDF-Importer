@@ -58,7 +58,7 @@ namespace Unity.Robotics.UrdfImporter
         {
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
 #else
-            Rigidbody parentRigidbody = linkObject.transform.parent.gameObject.GetComponent<Rigidbody>();
+            Rigidbody parentRigidbody = FindCrucialParent(linkObject);
             if (parentRigidbody == null)
             {
                 UrdfLink link = linkObject.transform.parent.gameObject.GetComponent<UrdfLink>();
@@ -117,7 +117,7 @@ namespace Unity.Robotics.UrdfImporter
 
         
 
-        public static Rigidbody FindFixedParent(GameObject linkObject)
+        public static Rigidbody FindCrucialParent(GameObject linkObject)
         {
             Transform currentTransform = linkObject.transform.parent;
             while (currentTransform != null)
@@ -145,7 +145,7 @@ namespace Unity.Robotics.UrdfImporter
             if (unityJoint != null)
             {
                 //Go up the hierarchy until you find the first rigidbody to connect to:
-                Rigidbody connectedBody = FindFixedParent(linkObject);
+                Rigidbody connectedBody = FindCrucialParent(linkObject);
                 unityJoint.connectedBody = connectedBody;
                 unityJoint.autoConfigureConnectedAnchor = true;
             }
