@@ -27,7 +27,8 @@ namespace Unity.Robotics.UrdfImporter
             urdfJoint.unityJoint = linkObject.GetComponent<ArticulationBody>();
 #else
             //FixedJoint unityFixedJoint = linkObject.AddComponent<FixedJoint>();
-            OptimizeFixedJoint(linkObject);
+            PreviousRigidbodyConstants previousRigidbodyConstants = AddPreviousRigidbodyConstantsUsingRigidBody(linkObject);
+            OptimizeFixedJoint(linkObject, previousRigidbodyConstants);
             UrdfJointFixed urdfJoint = linkObject.AddComponent<UrdfJointFixed>();
             //urdfJoint.unityJoint = unityFixedJoint;
             //urdfJoint.unityJoint.autoConfigureConnectedAnchor = true;
@@ -43,13 +44,35 @@ namespace Unity.Robotics.UrdfImporter
         
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
 #else
-        
-        /**
-         * The goal here is to have no 'FixedJoints' and instead merge the components together.
-         */
-        private static void OptimizeFixedJoint(GameObject fixedJointToOptimize)
-        {
 
+        public static UrdfJointFixed CreateOptimizeFixedJoint(GameObject fixedJointToOptimize, UrdfLinkDescription link)
+        {
+            UrdfInertial.Create(fixedJointToOptimize, link.inertial, false);
+            PreviousRigidbodyConstants previousRigidbodyConstants =
+                AddPreviousRigidbodyConstantsUsingUrdfLinkDescription(fixedJointToOptimize, link);
+            UrdfJointFixed result = fixedJointToOptimize.AddComponent<UrdfJointFixed>();
+            OptimizeFixedJoint(fixedJointToOptimize, previousRigidbodyConstants);
+            return result;
+        }
+        
+        private static PreviousRigidbodyConstants AddPreviousRigidbodyConstantsUsingUrdfLinkDescription(GameObject fixedJointToOptimize, UrdfLinkDescription link)
+        {
+            if (link.inertial == null)
+            {
+                return null;
+            }
+            PreviousRigidbodyConstants previousRigidbodyConstants = fixedJointToOptimize.AddComponent<PreviousRigidbodyConstants>();
+            previousRigidbodyConstants.mass = (float) link.inertial.mass;
+            //TODO - Find the drag & angularDrag...
+            //previousRigidbodyConstants.drag = link.inertial.;
+            //previousRigidbodyConstants.angularDrag = rigidbody.angularDrag;
+            previousRigidbodyConstants.centerOfMass = link.inertial.origin.Xyz.ToVector3().Ros2Unity();
+
+            return previousRigidbodyConstants;
+        }
+
+        private static PreviousRigidbodyConstants AddPreviousRigidbodyConstantsUsingRigidBody(GameObject fixedJointToOptimize)
+        {
             Rigidbody rigidbody = fixedJointToOptimize.GetComponent<Rigidbody>();
 
             PreviousRigidbodyConstants previousRigidbodyConstants = fixedJointToOptimize.AddComponent<PreviousRigidbodyConstants>();
@@ -57,22 +80,40 @@ namespace Unity.Robotics.UrdfImporter
             previousRigidbodyConstants.drag = rigidbody.drag;
             previousRigidbodyConstants.angularDrag = rigidbody.angularDrag;
             previousRigidbodyConstants.centerOfMass = rigidbody.centerOfMass;
+            
+            Debug.LogWarning("This method shouldn't be used anymore, use AddPreviousRigidbodyConstantsUsingUrdfLinkDescription instead.");
+            //Remove the rigidbody for the FixedJoint that is being removed.
+            Destroy(rigidbody);
+
+            return previousRigidbodyConstants;
+        }
+
+        /**
+         * The goal here is to have no 'FixedJoints' and instead merge the components together.
+         */
+        private static void OptimizeFixedJoint(GameObject fixedJointToOptimize, PreviousRigidbodyConstants previousRigidbodyConstants)
+        {
+
+            if (previousRigidbodyConstants == null)
+            {
+                return;
+            }
 
             Rigidbody fixedParent = FindFixedParent(fixedJointToOptimize);
             UrdfInertial fixedParentUrdfInertial = fixedParent.GetComponent<UrdfInertial>();
 
-            float totalMass = fixedParent.mass + rigidbody.mass;
+            float totalMass = fixedParent.mass + previousRigidbodyConstants.mass;
 
-            float rigidbodyWeighting = rigidbody.mass / totalMass;
+            float rigidbodyWeighting = previousRigidbodyConstants.mass / totalMass;
             float fixedParentWeighting = fixedParent.mass / totalMass;
             
-            float newDrag = rigidbodyWeighting * rigidbody.drag + fixedParentWeighting * fixedParent.drag;
-            float newAngularDrag = rigidbodyWeighting * rigidbody.angularDrag + fixedParentWeighting * fixedParent.angularDrag;
+            float newDrag = rigidbodyWeighting * previousRigidbodyConstants.drag + fixedParentWeighting * fixedParent.drag;
+            float newAngularDrag = rigidbodyWeighting * previousRigidbodyConstants.angularDrag + fixedParentWeighting * fixedParent.angularDrag;
 
             Vector3 fixedParentPreviousLocalCenterOfMass = fixedParent.centerOfMass;
             
-            Vector3 rigidbodyPreviousLocalCenterOfMass = rigidbody.centerOfMass;
-            Vector3 rigidbodyPreviousWorldCenterOfMass = rigidbody.transform.TransformPoint(rigidbodyPreviousLocalCenterOfMass);
+            Vector3 rigidbodyPreviousLocalCenterOfMass = previousRigidbodyConstants.centerOfMass;
+            Vector3 rigidbodyPreviousWorldCenterOfMass = previousRigidbodyConstants.transform.TransformPoint(rigidbodyPreviousLocalCenterOfMass);
             Vector3 rigidbodyPreviousCenterOfMassParentFrame = fixedParent.transform.InverseTransformPoint(rigidbodyPreviousWorldCenterOfMass);
 
             Vector3 newFixedParentCenterOfMass = rigidbodyWeighting * rigidbodyPreviousCenterOfMassParentFrame +
@@ -85,9 +126,6 @@ namespace Unity.Robotics.UrdfImporter
             //NOTE - Although we set the center of mass, on Start the center of mass is overriden by the 
             //       center of mass in the UrdfInertial, so we have to set that value to be correct as well.
             fixedParentUrdfInertial.AdjustedCenterOfMass = newFixedParentCenterOfMass;
-            
-            //Remove the rigidbody for the FixedJoint that is being removed.
-            Destroy(rigidbody);
 
         }
         

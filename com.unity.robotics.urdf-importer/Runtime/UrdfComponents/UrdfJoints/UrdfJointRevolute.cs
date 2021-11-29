@@ -32,7 +32,7 @@ namespace Unity.Robotics.UrdfImporter
                         urdfJoint.unityJoint = linkObject.AddComponent<HingeJoint>();
                         urdfJoint.unityJoint.autoConfigureConnectedAnchor = true;
                         ((HingeJoint)urdfJoint.unityJoint).useLimits = true;
-                        linkObject.AddComponent<HingeJointLimitsManager>();
+                        //linkObject.AddComponent<HingeJointLimitsManager>();
 #endif
 
             return urdfJoint;
@@ -126,8 +126,9 @@ namespace Unity.Robotics.UrdfImporter
             ArticulationBody drive = GetComponent<ArticulationBody>();
             return drive.linearLockX == ArticulationDofLock.LimitedMotion && drive.xDrive.lowerLimit < drive.xDrive.upperLimit;
 #else
-            HingeJointLimitsManager limits = GetComponent<HingeJointLimitsManager>();
-            return limits != null && limits.LargeAngleLimitMin < limits.LargeAngleLimitMax;
+            //HingeJointLimitsManager limits = GetComponent<HingeJointLimitsManager>();
+            //return limits != null && limits.LargeAngleLimitMin < limits.LargeAngleLimitMax;
+            return true; //TODO - Verify
 #endif
         }
 
@@ -137,10 +138,17 @@ namespace Unity.Robotics.UrdfImporter
             ArticulationDrive drive = unityJoint.xDrive;
             return new UrdfJointDescription.Limit(drive.lowerLimit * Mathf.Deg2Rad, drive.upperLimit * Mathf.Deg2Rad, drive.forceLimit, unityJoint.maxAngularVelocity);
 #else
-            HingeJointLimitsManager hingeJointLimits = GetComponent<HingeJointLimitsManager>();
+            //HingeJointLimitsManager hingeJointLimits = GetComponent<HingeJointLimitsManager>();
+            //return new UrdfJointDescription.Limit(
+            //    System.Math.Round(hingeJointLimits.LargeAngleLimitMin * Mathf.Deg2Rad, RoundDigits),
+            //    System.Math.Round(hingeJointLimits.LargeAngleLimitMax * Mathf.Deg2Rad, RoundDigits),
+            //    EffortLimit,
+            //    VelocityLimit);
+
+            HingeJoint hingeJoint = (HingeJoint) unityJoint;
             return new UrdfJointDescription.Limit(
-                System.Math.Round(hingeJointLimits.LargeAngleLimitMin * Mathf.Deg2Rad, RoundDigits),
-                System.Math.Round(hingeJointLimits.LargeAngleLimitMax * Mathf.Deg2Rad, RoundDigits),
+                System.Math.Round(hingeJoint.limits.min * Mathf.Deg2Rad, RoundDigits),
+                System.Math.Round(hingeJoint.limits.max * Mathf.Deg2Rad, RoundDigits),
                 EffortLimit,
                 VelocityLimit);
 #endif
@@ -184,10 +192,22 @@ namespace Unity.Robotics.UrdfImporter
 
             hingeJoint.axis = axisOfMotionUnity;
 
-            HingeJointLimitsManager hingeJointLimitsManager = GetComponent<HingeJointLimitsManager>();
+            hingeJoint.limits = new JointLimits()
+            {
+                min = (float) joint.limit.lower,
+                max = (float) joint.limit.upper,
+            };
+
+            hingeJoint.motor = new JointMotor()
+            {
+                force = (float) joint.limit.effort,
+                targetVelocity = (float) joint.limit.velocity,
+            };
+
+            //HingeJointLimitsManager hingeJointLimitsManager = GetComponent<HingeJointLimitsManager>();
             
             Debug.LogError("TODO - Hinge joint limits.");
-            Debug.LogError("TODO - Review 'HingeJointLimitsManager', I don't think we need it.");
+            //Debug.LogError("TODO - Review 'HingeJointLimitsManager', I don't think we need it.");
             /*
             configurableJoint.xMotion = ConfigurableJointMotion.Locked;
             configurableJoint.yMotion = ConfigurableJointMotion.Locked;

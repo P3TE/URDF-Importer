@@ -76,17 +76,25 @@ namespace Unity.Robotics.UrdfImporter
             if (joint?.origin != null)
                 UrdfOrigin.ImportOriginData(urdfLink.transform, joint.origin);
 
-            if (link.inertial != null)
+
+            if (joint != null && UrdfJoint.GetJointType(joint.type) == UrdfJoint.JointTypes.Fixed)
             {
-                UrdfInertial.Create(urdfLink.gameObject, link.inertial);
-            }
-            
-            if (joint != null)
-            {
-                UrdfJoint newJoint = UrdfJoint.Create(urdfLink.gameObject, UrdfJoint.GetJointType(joint.type), joint);
+                UrdfJoint newJoint = UrdfJointFixed.CreateOptimizeFixedJoint(urdfLink.gameObject, link);
                 jointMap.Add(joint.name, newJoint);
             }
-
+            else
+            {
+                if (link.inertial != null)
+                {
+                    UrdfInertial.Create(urdfLink.gameObject, link.inertial);
+                }
+            
+                if (joint != null)
+                {
+                    UrdfJoint newJoint = UrdfJoint.Create(urdfLink.gameObject, UrdfJoint.GetJointType(joint.type), joint);
+                    jointMap.Add(joint.name, newJoint);
+                }
+            }
         } 
         
         public static UrdfLinkDescription ExportLinkData(this UrdfLink urdfLink)

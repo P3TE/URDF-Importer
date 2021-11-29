@@ -44,14 +44,22 @@ namespace Unity.Robotics.UrdfImporter
             set => _adjustedCenterOfMass = value;
         }
 
-        public static void Create(GameObject linkObject, UrdfLinkDescription.Inertial inertial = null)
+        public static void Create(GameObject linkObject, UrdfLinkDescription.Inertial inertial = null, bool addRigidBody = true)
         {
             UrdfInertial urdfInertial = linkObject.AddComponent<UrdfInertial>();
 
 #if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = urdfInertial.GetComponent<ArticulationBody>();
 #else
-            Rigidbody robotLink = linkObject.AddComponent<Rigidbody>();
+            Rigidbody robotLink = null;
+            if (addRigidBody)
+            {
+                robotLink = linkObject.AddComponent<Rigidbody>();
+            }
+            else
+            {
+                inertial = null;
+            }
 #endif
             if (inertial != null)
             {
