@@ -277,23 +277,29 @@ namespace Unity.Robotics.UrdfImporter
 #else
             Rigidbody robotLink = GetComponent<Rigidbody>();
 #endif
-            Matrix3x3 lamdaMatrix = new Matrix3x3(new[] {
-                robotLink.inertiaTensor[0],
-                robotLink.inertiaTensor[1],
-                robotLink.inertiaTensor[2] });
-
-            Matrix3x3 qMatrix = Quaternion2Matrix(robotLink.inertiaTensorRotation * Quaternion.Inverse(inertialAxisRotation));
-
-            Matrix3x3 qMatrixTransposed = qMatrix.Transpose();
-
-            Matrix3x3 inertiaMatrix = qMatrix * lamdaMatrix * qMatrixTransposed;
-
+            
+            Matrix3x3 inertiaMatrix = CalculateInertiaTensorMatrix(robotLink.inertiaTensor, robotLink.inertiaTensorRotation, inertialAxisRotation);
 
             return ToRosCoordinates(ToInertia(inertiaMatrix));
         }
 
+        public static Matrix3x3 CalculateInertiaTensorMatrix(Vector3 inertiaTensor, Quaternion inertiaTensorRotation, 
+            Quaternion inertialAxisRotation)
+        {
+            
+            Matrix3x3 lamdaMatrix = new Matrix3x3(new[] {
+                inertiaTensor[0],
+                inertiaTensor[1],
+                inertiaTensor[2] });
+            
+            Matrix3x3 qMatrix = Quaternion2Matrix(inertiaTensorRotation * Quaternion.Inverse(inertialAxisRotation));
 
+            Matrix3x3 qMatrixTransposed = qMatrix.Transpose();
 
+            Matrix3x3 inertiaMatrix = qMatrix * lamdaMatrix * qMatrixTransposed;
+            return inertiaMatrix;
+        }
+        
         private static Matrix3x3 Quaternion2Matrix(Quaternion quaternion)
         {
             Quaternion rosQuaternion = Quaternion.Normalize(quaternion);
