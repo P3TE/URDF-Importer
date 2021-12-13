@@ -34,7 +34,9 @@ using Assimp;
 using Unity.Robotics;
 using UnityEngine;
 using Material = UnityEngine.Material;
+using Matrix4x4 = UnityEngine.Matrix4x4;
 using Mesh = UnityEngine.Mesh;
+using Quaternion = UnityEngine.Quaternion;
 
 namespace UnityMeshImporter
 {
@@ -173,13 +175,13 @@ namespace UnityMeshImporter
                     List<Vector3> uNormals = new List<Vector3>();
                     List<Vector2> uUv = new List<Vector2>();
                     List<int> uIndices = new List<int>();
-                
+                    
                     // Vertices
                     if (m.HasVertices)
                     {
                         foreach (var v in m.Vertices)
                         {
-                            uVertices.Add(new Vector3(-v.X, v.Y, v.Z));
+                            uVertices.Add(new Vector3(v.X, v.Y, v.Z));
                         }
                     }
 
@@ -188,7 +190,7 @@ namespace UnityMeshImporter
                     {
                         foreach (var n in m.Normals)
                         {
-                            uNormals.Add(new Vector3(-n.X, n.Y, n.Z));
+                            uNormals.Add(new Vector3(n.X, n.Y, n.Z));
                         }
                     }
 
@@ -230,10 +232,30 @@ namespace UnityMeshImporter
             }
             
             // Create GameObjects from nodes
-            GameObject NodeToGameObject(Node node)
+            //
+            // Originally this was done by decomposing the transform; however, when there are off-axis rotations, non-uniform scales,
+            // and skews present, decompose will not recover the the correct rotation and scale values.
+            //
+            // Fixing this by multiplying the transformation matrix into each vertex instead.
+            //
+            // Additionally: there seems to be an error in the transform decompose in Assimp.
+            // The scaling and rotation should be column-wise, not row-wise (tested using the output of Blender's Collada exporter).
+            GameObject NodeToGameObject(Node node, Matrix4x4 parentTransform)
             {
                 GameObject uOb = new GameObject(node.Name);
-            
+
+                Assimp.Matrix4x4 aTransform = node.Transform;
+                UnityEngine.Matrix4x4 uTransform = new UnityEngine.Matrix4x4(
+                    new Vector4(aTransform.A1, aTransform.A2, aTransform.A3, 0.0f),
+                    new Vector4(aTransform.B1, aTransform.B2, aTransform.B3, 0.0f),
+                    new Vector4(aTransform.C1, aTransform.C2, aTransform.C3, 0.0f),
+                    new Vector4(aTransform.D1, aTransform.D2, aTransform.D3, aTransform.D4));
+                
+                uTransform = parentTransform * uTransform.transpose;
+               
+                Vector3 translation = parentTransform * new Vector3(aTransform.A4, aTransform.B4, aTransform.C4);
+                translation.x *= -1.0f;
+
                 // Set Mesh
                 if (node.HasMeshes)
                 {
@@ -242,46 +264,58 @@ namespace UnityMeshImporter
                         var uMeshAndMat = uMeshAndMats[mIdx];
                         
                         GameObject uSubOb = new GameObject(uMeshAndMat.MeshName);
-                        uSubOb.AddComponent<MeshFilter>();
-                        uSubOb.AddComponent<MeshRenderer>();
+                        MeshFilter meshFilter = uSubOb.AddComponent<MeshFilter>();
+                        MeshRenderer meshRenderer = uSubOb.AddComponent<MeshRenderer>();
                         uSubOb.AddComponent<MeshCollider>();
                         AdditionalMeshImportGameObject additionalMeshImportData =
                             uSubOb.AddComponent<AdditionalMeshImportGameObject>();
                         additionalMeshImportData.additionalMeshImportData = uMeshAndMat.GetAdditionalMeshImportData;
                     
-                        uSubOb.GetComponent<MeshFilter>().mesh = uMeshAndMat.Mesh;
-                        uSubOb.GetComponent<MeshRenderer>().material = uMeshAndMat.Material;
+                        Mesh mesh = uMeshAndMat.Mesh;
+                        meshRenderer.material = uMeshAndMat.Material;
                         uSubOb.transform.SetParent(uOb.transform, true);
                         uSubOb.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
+
+                        Vector3[] vertices = mesh.vertices;
+                        for (int i = 0; i < vertices.Length; i++)
+                        {
+                            Vector3 v = vertices[i];
+                            v = uTransform * new Vector4(v.x, v.y, v.z, 1.0f);
+                            v.x *= -1.0f;
+                            vertices[i] = v;
+                        }
+
+                        Vector3[] normals = mesh.normals;
+                        for (int i = 0; i < vertices.Length; i++)
+                        {
+                            Vector3 n = normals[i];
+                            n = uTransform * new Vector4(n.x, n.y, n.z, 0.0f);
+                            n.x *= -1.0f;
+                            normals[i] = n.normalized;
+                        }
+
+                        mesh.vertices = vertices;
+                        mesh.normals = normals;
+                        mesh.RecalculateBounds();
+
+                        meshFilter.mesh = mesh;
                     }
                 }
-            
-                // Transform
-                // Decompose Assimp transform into scale, rot and translaction 
-                Assimp.Vector3D aScale = new Assimp.Vector3D();
-                Assimp.Quaternion aQuat = new Assimp.Quaternion();
-                Assimp.Vector3D aTranslation = new Assimp.Vector3D();
-                node.Transform.Decompose(out aScale, out aQuat, out aTranslation);
-
-                // Convert Assimp transfrom into Unity transform and set transformation of game object 
-                UnityEngine.Quaternion uQuat = new UnityEngine.Quaternion(aQuat.X, aQuat.Y, aQuat.Z, aQuat.W);
-                var euler = uQuat.eulerAngles;
-                uOb.transform.localScale = new UnityEngine.Vector3(aScale.X, aScale.Y, aScale.Z);
-                uOb.transform.localPosition = new UnityEngine.Vector3(-aTranslation.X, aTranslation.Y, aTranslation.Z);
-                uOb.transform.localRotation = UnityEngine.Quaternion.Euler(euler.x, euler.y, -euler.z);
+                
+                uOb.transform.localPosition = translation;
             
                 if (node.HasChildren)
                 {
                     foreach (var cn in node.Children)
                     {
-                        var uObChild = NodeToGameObject(cn);
+                        GameObject uObChild = NodeToGameObject(cn, uTransform);
                         uObChild.transform.SetParent(uOb.transform, false);
                     }
                 }
                 return uOb;
             }
             
-            return NodeToGameObject(scene.RootNode);
+            return NodeToGameObject(scene.RootNode, Matrix4x4.identity);
 #else
             Debug.LogError("Runtime import of collada files is not currently supported in builds created with 'IL2CPP' scripting backend." + 
                            "\nEither create a build with the scripting backend set as 'Mono' in 'Player Settings' or use STL meshes instead of Collada (dae) meshes.");

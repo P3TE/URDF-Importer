@@ -85,14 +85,27 @@ namespace Unity.Robotics.UrdfImporter
                     {
                         float globalScale = ColladaAssetPostProcessor.ReadGlobalScale(meshFilePath);
                         meshObject = MeshImporter.Load(meshFilePath, globalScale, globalScale, globalScale);
+                        
+                        Quaternion rotation = Quaternion.Euler(0.0f, 90.0f, 0.0f);
+                        meshObject.transform.rotation = rotation * meshObject.transform.rotation;
+                        
+                        /* TODO - Review
+                        // I understand why this has been made; however, this means that different mesh formats with the same export settings behave differently.
+                        // Blender appears to not actually change this value when selecting other up axes, it is always Z_UP.
+                        // RVIZ and Gazebo appear to ignore this value. Changing it does not cause the mesh to rotate.
+                        // In order to have a standard FLU coordinate frame, always export all meshes X Forward, Z Up out of Blender (left and right should align with the named views when editing).
                         if (meshObject != null) 
                         {
                             ColladaAssetPostProcessor.ApplyColladaOrientation(meshObject, meshFilePath);
                         }
+                        */
                     }
                     else if (meshFilePath.ToLower().EndsWith(".obj"))
                     {
                         meshObject = MeshImporter.Load(meshFilePath);
+                        
+                        Quaternion rotation = Quaternion.Euler(0.0f, 90.0f, 0.0f);
+                        meshObject.transform.rotation = rotation * meshObject.transform.rotation;
                     }
                 }
                 catch (Exception ex) 
