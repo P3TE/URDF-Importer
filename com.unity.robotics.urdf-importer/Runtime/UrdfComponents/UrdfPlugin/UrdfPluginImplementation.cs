@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Xml.Linq;
 using UnityEngine;
 
@@ -16,20 +17,53 @@ namespace Unity.Robotics.UrdfImporter
             //Called after the deserialise is complete for all plugins.
             //Useful for additional processing after all data from all plugins is loaded.
         }
+        
+        private bool rootMostLinkFound = false;
+        private UrdfLink rootMostLink = null;
+        private UrdfRobot urdfRobot = null;
 
-        public UrdfLink FindRootMostLink()
+        public UrdfLink RootMostLink
         {
-            UrdfLink currentLink = null;
+            get
+            {
+                FindRobotComponentsIfApplicable();
+                return rootMostLink;
+            }
+        }
+        
+        public UrdfRobot CorrespondingRobot
+        {
+            get
+            {
+                FindRobotComponentsIfApplicable();
+                return urdfRobot;
+            }
+        }
+        
+        private void FindRobotComponentsIfApplicable()
+        {
+            if (rootMostLinkFound)
+            {
+                return;
+            }
+            rootMostLinkFound = true;
+            
+            FindRootMostLink();
+            FindUrdfRobot();
+        }
+
+        private void FindRootMostLink()
+        {
             Transform currentCheckTransform = transform;
             while (currentCheckTransform != null)
             {
                 UrdfLink nextCheckOption = currentCheckTransform.GetComponent<UrdfLink>();
                 if (nextCheckOption != null)
                 {
-                    currentLink = nextCheckOption;
+                    rootMostLink = nextCheckOption;
                 }
                 
-                UrdfRobot urdfRobot = currentCheckTransform.GetComponent<UrdfRobot>();
+                urdfRobot = currentCheckTransform.GetComponent<UrdfRobot>();
                 if (urdfRobot != null)
                 {
                     //We can stop searching now, we aren't choosing anything outside the robot.
@@ -39,7 +73,50 @@ namespace Unity.Robotics.UrdfImporter
                 currentCheckTransform = currentCheckTransform.parent;
                 
             }
-            return currentLink;
+        }
+
+        private void FindUrdfRobot()
+        {
+            if (urdfRobot == null)
+            {
+                Transform currentCheckTransform = transform;
+                while (currentCheckTransform != null)
+                {
+                    urdfRobot = currentCheckTransform.GetComponent<UrdfRobot>();
+                    if (urdfRobot != null)
+                    {
+                        //We can stop searching now
+                        break;
+                    }
+                    currentCheckTransform = currentCheckTransform.parent;
+                }
+            }
+
+            if (urdfRobot != null && rootMostLink == null)
+            {
+                LinkedList<Transform> searchQueue = new LinkedList<Transform>();
+                searchQueue.AddFirst(urdfRobot.transform);
+                while (searchQueue.Count > 0)
+                {
+                    LinkedListNode<Transform> currentTransformNode = searchQueue.First;
+                    Transform currentTransform = currentTransformNode.Value;
+
+                    rootMostLink = currentTransform.GetComponent<UrdfLink>();
+                    if (rootMostLink != null)
+                    {
+                        //Found it.
+                        break;
+                    }
+
+                    //Add all the children to the queue.
+                    for (int i = 0; i < currentTransform.childCount; i++)
+                    {
+                        searchQueue.AddLast(currentTransform.GetChild(i));
+                    }
+                    
+                    searchQueue.RemoveFirst();
+                }
+            }
         }
         
         public static bool GetXElement(XElement node, string childElementName, out XElement result, bool required = true)
