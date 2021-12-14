@@ -104,7 +104,7 @@ namespace Unity.Robotics.UrdfImporter
                     {
                         meshObject = MeshImporter.Load(meshFilePath);
                         
-                        Quaternion rotation = Quaternion.Euler(0.0f, 90.0f, 0.0f);
+                        Quaternion rotation = Quaternion.Euler(-90.0f, 0.0f, 90.0f);
                         meshObject.transform.rotation = rotation * meshObject.transform.rotation;
                     }
                 }
