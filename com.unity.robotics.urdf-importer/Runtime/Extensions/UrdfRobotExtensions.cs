@@ -305,7 +305,14 @@ namespace Unity.Robotics.UrdfImporter
 
             foreach (UrdfPluginImplementation urdfPluginImplementation in loadedPlugins)
             {
-                urdfPluginImplementation.FinaliseImport(im.urdfPlugins);
+                try
+                {
+                    urdfPluginImplementation.FinaliseImport(im.urdfPlugins);
+                }
+                catch (Exception e)
+                {
+                    RuntimeUrdf.urdfBuildErrors.AddLast(e);
+                }
             }
             
         }
