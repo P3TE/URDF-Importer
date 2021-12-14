@@ -143,6 +143,12 @@ namespace Unity.Robotics.UrdfImporter
 
         public static Vector3 ToVector3(this double[] array)
         {
+            if (array == null || array.Length != 3)
+            {
+                RuntimeUrdf.urdfBuildErrors.AddLast(
+                    new Exception("Found vector that array == null || array.Length != 3"));
+                return Vector3.zero;
+            }
             return new Vector3((float)array[0], (float)array[1], (float)array[2]);
         }
 

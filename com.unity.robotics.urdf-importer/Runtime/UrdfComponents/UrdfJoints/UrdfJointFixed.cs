@@ -66,7 +66,15 @@ namespace Unity.Robotics.UrdfImporter
             //TODO - Find the drag & angularDrag...
             //previousRigidbodyConstants.drag = link.inertial.;
             //previousRigidbodyConstants.angularDrag = rigidbody.angularDrag;
-            previousRigidbodyConstants.centerOfMass = link.inertial.origin.Xyz.ToVector3().Ros2Unity();
+            Vector3 centerOfMass = Vector3.zero;
+            if (link.inertial.origin == null)
+            {
+                RuntimeUrdf.AddImportWarning($"Missing link.inertial.origin for link with name {link.name}, assuming {centerOfMass}");
+            }
+            else
+            {
+                previousRigidbodyConstants.centerOfMass = link.inertial.origin.Xyz.ToVector3().Ros2Unity();
+            }
 
             return previousRigidbodyConstants;
         }
