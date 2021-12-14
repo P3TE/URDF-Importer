@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Xml.Linq;
 using UnityEngine;
 
@@ -117,6 +118,54 @@ namespace Unity.Robotics.UrdfImporter
                     searchQueue.RemoveFirst();
                 }
             }
+        }
+
+        /**
+         * This function is designed to help the user find elements in the URDF that shouldn't be there
+         * or are mistyped. It will look through all of the elements and see if their name is in a
+         * list of valid elements.
+         */
+        public static void CheckForInvalidElements(XElement element, HashSet<string> validElements)
+        {
+            foreach (XElement xElement in element.Elements())
+            {
+                string elementName = xElement.Name.LocalName;
+                if (!validElements.Contains(elementName))
+                {
+                    RuntimeUrdf.AddImportWarning($"Node with name '{GetVerboseXElementName(element)}' has element with name '{elementName}' but no implementation for a parameter with that name exists.");
+                }
+            }
+        }
+
+        private static string GetVerboseXElementName(XElement element)
+        {
+            StringBuilder result = new StringBuilder();
+            result.Append(element.Name);
+            foreach (XAttribute xAttribute in element.Attributes())
+            {
+                result.Append(" ");
+                result.Append(xAttribute.Name);
+                result.Append("=\"");
+                result.Append(xAttribute.Value);
+                result.Append("\"");
+            }
+            return result.ToString();
+        }
+
+        /**
+         * Takes a static class in the form of:
+         * static class ListOfIds{
+         *  public const string IDA = "id_a";
+         *  public const string IDB = "id_b";
+         * }
+         * and generates a HashSet<string> with the values ("id_a", "id_b") which are
+         * fed to CheckForInvalidElements.
+         * Automates the process of building the HashSet some.
+         */
+        public static void CheckForInvalidElements(XElement element, Type staticClassWithIdsType)
+        {
+            HashSet<string> validElements = PluginReflectionHelper.GetConstStringValues(staticClassWithIdsType);
+            CheckForInvalidElements(element, validElements);
         }
         
         public static bool GetXElement(XElement node, string childElementName, out XElement result, bool required = true)
