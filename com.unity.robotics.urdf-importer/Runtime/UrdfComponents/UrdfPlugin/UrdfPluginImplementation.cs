@@ -136,8 +136,25 @@ namespace Unity.Robotics.UrdfImporter
                 }
             }
         }
+        
+        /**
+         * This function is designed to help the user find attributes in the URDF that shouldn't be there
+         * or are mistyped. It will look through all of the elements and see if their name is in a
+         * list of valid elements.
+         */
+        public static void CheckForInvalidAttributes(XElement element, HashSet<string> validAttributes)
+        {
+            foreach (XAttribute xAttribute in element.Attributes())
+            {
+                string elementName = xAttribute.Name.LocalName;
+                if (!validAttributes.Contains(elementName))
+                {
+                    RuntimeUrdf.AddImportWarning($"Node with name '{GetVerboseXElementName(element)}' has attribute with name '{elementName}' but no implementation for a parameter with that name exists.");
+                }
+            }
+        }
 
-        private static string GetVerboseXElementName(XElement element)
+        public static string GetVerboseXElementName(XElement element)
         {
             StringBuilder result = new StringBuilder();
             result.Append(element.Name);
@@ -166,6 +183,12 @@ namespace Unity.Robotics.UrdfImporter
         {
             HashSet<string> validElements = PluginReflectionHelper.GetConstStringValues(staticClassWithIdsType);
             CheckForInvalidElements(element, validElements);
+        }
+        
+        public static void CheckForInvalidAttributes(XElement element, Type staticClassWithIdsType)
+        {
+            HashSet<string> validAttributes = PluginReflectionHelper.GetConstStringValues(staticClassWithIdsType);
+            CheckForInvalidAttributes(element, validAttributes);
         }
         
         public static bool GetXElement(XElement node, string childElementName, out XElement result, bool required = true)
@@ -306,6 +329,75 @@ namespace Unity.Robotics.UrdfImporter
             bool wasSuccess = ReadDoubleFromXElementAttribute(node, attributeName, out double resultAsDouble, required, defaultValue);
             result = (float) resultAsDouble;
             return wasSuccess;
+        }
+        
+        public static bool ReadMatrixNxMFromChildXElement(XElement node, string childElementName, out float[][] result,
+            out int width, out int height, bool required = true)
+        {
+            
+            width = 0;
+            height = 0;
+            
+            //First read the data as a string:
+            bool stringExists = ReadStringFromChildXElement(node, childElementName, out string matrixAsString, required);
+            if (!stringExists)
+            {
+                result = new float[0][];
+                return false;
+            }
+
+            string[] lines = matrixAsString.Split('\n');
+            List<List<string>> lineSplits = new List<List<string>>();
+            foreach (string line in lines)
+            {
+                string trimmedLine = line.Trim();
+                if (string.IsNullOrEmpty(trimmedLine))
+                {
+                    continue;
+                }
+                string[] lineSplit = trimmedLine.Split(' ');
+                List<string> lineSplitValues = new List<string>();
+                foreach (string value in lineSplit)
+                {
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        lineSplitValues.Add(value);
+                    }
+                }
+                lineSplits.Add(lineSplitValues);
+            }
+            
+            result = new float[lineSplits.Count][];
+            height = lineSplits.Count;
+            for (int row = 0; row < height; row++)
+            {
+                List<string> lineSplit = lineSplits[row];
+                int rowColumns = lineSplit.Count;
+                if (row == 0)
+                {
+                    width = rowColumns;
+                }
+                else
+                {
+                    if (width != rowColumns)
+                    {
+                        throw new Exception($"Matrix {childElementName} in node {GetVerboseXElementName(node)} has an inconsistent column count! row 0 has {width}, row {row} has {rowColumns}");
+                    }
+                }
+                
+                float[] rowElements = new float[rowColumns];
+                for (int col = 0; col < rowColumns; col++)
+                {
+                    string element = lineSplit[col];
+                    if (!float.TryParse(element, out rowElements[col]))
+                    {
+                        throw new Exception($"Matrix {childElementName} in node {GetVerboseXElementName(node)} has invalid value at ({row},{col}): {element}");
+                    }
+                }
+                result[row] = rowElements;
+            }
+            
+            return true;
         }
         
         public static bool ReadBooleanFromChildXElement(XElement node, string childElementName, out bool result, 
