@@ -37,10 +37,10 @@ namespace Unity.Robotics.UrdfImporter
         public int xAxis = 0;
 
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
-        protected ArticulationBody unityJoint;
+        public ArticulationBody unityJoint;
         protected Vector3 axisofMotion;
 #else
-        protected UnityEngine.Joint unityJoint;
+        public UnityEngine.Joint unityJoint;
 #endif
         public string jointName;
 
@@ -285,7 +285,7 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             unityJoint = GetComponent<UnityEngine.ArticulationBody>();
 #else
-                        unityJoint = GetComponent<UnityEngine.Joint>();
+            unityJoint = GetComponent<UnityEngine.Joint>();
 #endif
             CheckForUrdfCompatibility();
 
@@ -336,10 +336,10 @@ namespace Unity.Robotics.UrdfImporter
             else
                 return true;
 #else
-                        UnityEngine.Joint joint = GetComponent<UnityEngine.Joint>();
-                        return !(Math.Abs(joint.axis.x) < Tolerance &&
-                                 Math.Abs(joint.axis.y) < Tolerance &&
-                                 Math.Abs(joint.axis.z) < Tolerance);
+            UnityEngine.Joint joint = GetComponent<UnityEngine.Joint>();
+            return !(Math.Abs(joint.axis.x) < Tolerance &&
+                     Math.Abs(joint.axis.y) < Tolerance &&
+                     Math.Abs(joint.axis.z) < Tolerance);
 #endif
         }
 
