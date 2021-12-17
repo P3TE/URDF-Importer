@@ -27,8 +27,13 @@ namespace Unity.Robotics.UrdfImporter
             urdfJoint.unityJoint = linkObject.GetComponent<ArticulationBody>();
 #else
             //FixedJoint unityFixedJoint = linkObject.AddComponent<FixedJoint>();
-            PreviousRigidbodyConstants previousRigidbodyConstants = AddPreviousRigidbodyConstantsUsingRigidBody(linkObject);
-            OptimizeFixedJoint(linkObject, previousRigidbodyConstants);
+            
+            //Remove any rigidbody which does not already have any joints depending on it.
+            if (linkObject.GetComponent<Joint>() == null)
+            {
+                PreviousRigidbodyConstants previousRigidbodyConstants = AddPreviousRigidbodyConstantsUsingRigidBody(linkObject);
+                OptimizeFixedJoint(linkObject, previousRigidbodyConstants);   
+            }
             UrdfJointFixed urdfJoint = linkObject.AddComponent<UrdfJointFixed>();
             //urdfJoint.unityJoint = unityFixedJoint;
             //urdfJoint.unityJoint.autoConfigureConnectedAnchor = true;

@@ -220,10 +220,10 @@ namespace Unity.Robotics.UrdfImporter
             };
 
             //TODO - Spring.
-            configurableJoint.angularXLimitSpring = new SoftJointLimitSpring()
+            /*configurableJoint.angularXLimitSpring = new SoftJointLimitSpring()
             {
                 damper = (float) joint.dynamics.damping,
-            };
+            };*/
             
 #endif
         }
