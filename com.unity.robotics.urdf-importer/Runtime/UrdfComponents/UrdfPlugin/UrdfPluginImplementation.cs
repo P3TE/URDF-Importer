@@ -212,7 +212,7 @@ namespace Unity.Robotics.UrdfImporter
             {
                 if (required)
                 {
-                    throw new Exception($"Node with name {node.Name} missing attribute: {attributeName}");
+                    throw new Exception($"Node with name {GetVerboseXElementName(node)} missing attribute: {attributeName}");
                 }
 
                 return false;
@@ -330,21 +330,89 @@ namespace Unity.Robotics.UrdfImporter
             result = (float) resultAsDouble;
             return wasSuccess;
         }
+
+        public static bool ReadVector3FromChildXElementAttribute(XElement node, string childElementName, out Vector3 result, bool convertRosToUnity = true, bool required = true)
+        {
+            bool exists = ReadMatrixNxMFromChildXElementAttribute(node, childElementName, out float[][] vector3AsMatrix,
+                out int width, out int height, required);
+            if (!exists)
+            {
+                result = Vector3.zero;
+                if (required)
+                {
+                    throw new Exception($"Unable to find Vector3 in node {GetVerboseXElementName(node)}");
+                }
+            }
+
+            if (width != 3 || height != 1)
+            {
+                throw new Exception($"Failed to parse Vector3 in node {GetVerboseXElementName(node)} Expected elements of dimensions 1x3, found {height}x{width}");
+                //Good.
+            }
+
+            result = new Vector3(vector3AsMatrix[0][0], vector3AsMatrix[0][1], vector3AsMatrix[0][2]);
+            if (convertRosToUnity)
+            {
+                result = result.Ros2Unity();
+            }
+
+            return true;
+        }
         
+        public static bool ReadMatrixNxMFromChildXElementAttribute(XElement node, string childElementName, out float[][] result,
+            out int width, out int height, bool required = true)
+        {
+            bool stringExists = ReadStringFromXElementAttribute(node, childElementName, out string matrixAsString, required);
+            if (!stringExists)
+            {
+                width = 0;
+                height = 0;
+                result = new float[0][];
+                return false;
+            }
+
+            try
+            {
+                ReadMatrixNxMFromString(matrixAsString, out result, out width, out height);
+            }
+            catch (Exception e)
+            {
+                string improvedMessage = $"Matrix attribute {childElementName} in node {GetVerboseXElementName(node)}: {e.Message}";
+                throw new Exception(improvedMessage, e);
+            }
+            return true;
+        }
+
         public static bool ReadMatrixNxMFromChildXElement(XElement node, string childElementName, out float[][] result,
             out int width, out int height, bool required = true)
+        {
+            bool stringExists = ReadStringFromChildXElement(node, childElementName, out string matrixAsString, required);
+            if (!stringExists)
+            {
+                width = 0;
+                height = 0;
+                result = new float[0][];
+                return false;
+            }
+
+            try
+            {
+                ReadMatrixNxMFromString(matrixAsString, out result, out width, out height);
+            }
+            catch (Exception e)
+            {
+                string improvedMessage = $"Matrix {childElementName} in node {GetVerboseXElementName(node)}: - {e.Message}";
+                throw new Exception(improvedMessage, e);
+            }
+            return true;
+        }
+
+        public static bool ReadMatrixNxMFromString(string matrixAsString, out float[][] result,
+            out int width, out int height)
         {
             
             width = 0;
             height = 0;
-            
-            //First read the data as a string:
-            bool stringExists = ReadStringFromChildXElement(node, childElementName, out string matrixAsString, required);
-            if (!stringExists)
-            {
-                result = new float[0][];
-                return false;
-            }
 
             string[] lines = matrixAsString.Split('\n');
             List<List<string>> lineSplits = new List<List<string>>();
@@ -381,7 +449,7 @@ namespace Unity.Robotics.UrdfImporter
                 {
                     if (width != rowColumns)
                     {
-                        throw new Exception($"Matrix {childElementName} in node {GetVerboseXElementName(node)} has an inconsistent column count! row 0 has {width}, row {row} has {rowColumns}");
+                        throw new Exception($"Matrix has an inconsistent column count! row 0 has {width}, row {row} has {rowColumns}");
                     }
                 }
                 
@@ -391,7 +459,7 @@ namespace Unity.Robotics.UrdfImporter
                     string element = lineSplit[col];
                     if (!float.TryParse(element, out rowElements[col]))
                     {
-                        throw new Exception($"Matrix {childElementName} in node {GetVerboseXElementName(node)} has invalid value at ({row},{col}): {element}");
+                        throw new Exception($"Matrix has invalid value at ({row},{col}): {element}");
                     }
                 }
                 result[row] = rowElements;
