@@ -331,9 +331,9 @@ namespace Unity.Robotics.UrdfImporter
             return wasSuccess;
         }
 
-        public static bool ReadVector3FromChildXElementAttribute(XElement node, string childElementName, out Vector3 result, bool convertRosToUnity = true, bool required = true)
+        public static bool ReadVector3FromXElementAttribute(XElement node, string attributeName, out Vector3 result, bool convertRosToUnity = true, bool required = true)
         {
-            bool exists = ReadMatrixNxMFromChildXElementAttribute(node, childElementName, out float[][] vector3AsMatrix,
+            bool exists = ReadMatrixNxMFromXElementAttribute(node, attributeName, out float[][] vector3AsMatrix,
                 out int width, out int height, required);
             if (!exists)
             {
@@ -359,10 +359,10 @@ namespace Unity.Robotics.UrdfImporter
             return true;
         }
         
-        public static bool ReadMatrixNxMFromChildXElementAttribute(XElement node, string childElementName, out float[][] result,
+        public static bool ReadMatrixNxMFromXElementAttribute(XElement node, string attributeName, out float[][] result,
             out int width, out int height, bool required = true)
         {
-            bool stringExists = ReadStringFromXElementAttribute(node, childElementName, out string matrixAsString, required);
+            bool stringExists = ReadStringFromXElementAttribute(node, attributeName, out string matrixAsString, required);
             if (!stringExists)
             {
                 width = 0;
@@ -377,7 +377,7 @@ namespace Unity.Robotics.UrdfImporter
             }
             catch (Exception e)
             {
-                string improvedMessage = $"Matrix attribute {childElementName} in node {GetVerboseXElementName(node)}: {e.Message}";
+                string improvedMessage = $"Matrix attribute {attributeName} in node {GetVerboseXElementName(node)}: {e.Message}";
                 throw new Exception(improvedMessage, e);
             }
             return true;
