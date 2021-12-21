@@ -157,6 +157,7 @@ namespace Unity.Robotics.UrdfImporter
         public static string GetVerboseXElementName(XElement element)
         {
             StringBuilder result = new StringBuilder();
+            result.Append("<");
             result.Append(element.Name);
             foreach (XAttribute xAttribute in element.Attributes())
             {
@@ -166,6 +167,7 @@ namespace Unity.Robotics.UrdfImporter
                 result.Append(xAttribute.Value);
                 result.Append("\"");
             }
+            result.Append(">");
             return result.ToString();
         }
 
