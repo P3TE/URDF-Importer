@@ -35,9 +35,9 @@ namespace Unity.Robotics.UrdfImporter
             return linkMap.TryGetValue(linkName, out value);
         }
         
-        public static bool TryFindJoint(string linkName, out UrdfJoint value)
+        public static bool TryFindJoint(string jointName, out UrdfJoint value)
         {
-            return jointMap.TryGetValue(linkName, out value);
+            return jointMap.TryGetValue(jointName, out value);
         }
         
         public static GameObject Create(Transform parent, UrdfLinkDescription link = null, UrdfJointDescription joint = null)
