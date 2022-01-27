@@ -266,7 +266,6 @@ namespace UnityMeshImporter
                         GameObject uSubOb = new GameObject(uMeshAndMat.MeshName);
                         MeshFilter meshFilter = uSubOb.AddComponent<MeshFilter>();
                         MeshRenderer meshRenderer = uSubOb.AddComponent<MeshRenderer>();
-                        uSubOb.AddComponent<MeshCollider>();
                         AdditionalMeshImportGameObject additionalMeshImportData =
                             uSubOb.AddComponent<AdditionalMeshImportGameObject>();
                         additionalMeshImportData.additionalMeshImportData = uMeshAndMat.GetAdditionalMeshImportData;
