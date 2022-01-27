@@ -253,9 +253,57 @@ namespace Unity.Robotics.UrdfImporter
             unityJoint.angularDamping = dynamics.Damping();
             unityJoint.jointFriction = dynamics.Friction();
 #else
-            //TODO - Implement
-            Debug.LogError("TODO - Implement.");
+            //Assuming all joints are implemented as a ConfigurableJoint
+            ConfigurableJoint configurableJoint = this.unityJoint as ConfigurableJoint;
+            if (configurableJoint == null)
+            {
+                throw new Exception("Expecting joint of type ConfigurableJoint, but this was not the case, unable to continue!");
+            }
+            
+            configurableJoint.xDrive = UpdateSingleAxis(dynamics, configurableJoint.xDrive, configurableJoint.xMotion);
+            configurableJoint.yDrive = UpdateSingleAxis(dynamics, configurableJoint.yDrive, configurableJoint.yMotion);
+            configurableJoint.zDrive = UpdateSingleAxis(dynamics, configurableJoint.zDrive, configurableJoint.zMotion);
+            
+            configurableJoint.angularXDrive = UpdateSingleAxis(dynamics, configurableJoint.angularXDrive, configurableJoint.angularXMotion);
+            configurableJoint.angularYZDrive = UpdateSingleAxis(dynamics, configurableJoint.angularYZDrive, configurableJoint.angularYMotion, configurableJoint.angularZMotion);
+            
+            //Note: ConfigurableJoint doesn't have any friction component and will be ignored.
 #endif
+        }
+
+        private bool UpdatesMotion(ConfigurableJointMotion configurableJointMotion)
+        {
+            switch (configurableJointMotion)
+            {
+                case ConfigurableJointMotion.Locked:
+                    //Nothing done, return.
+                    return false;
+                case ConfigurableJointMotion.Limited:
+                case ConfigurableJointMotion.Free:
+                    //Allow the function to continue.
+                    return true;
+                default:
+                    throw new Exception($"ConfigurableJointMotion not implemented: {configurableJointMotion}");
+            }
+        }
+
+        private JointDrive UpdateSingleAxis(UrdfJointDescription.Dynamics dynamics,
+            JointDrive originalJointDrive,
+            ConfigurableJointMotion configurableJointMotionA, 
+            ConfigurableJointMotion configurableJointMotionB = ConfigurableJointMotion.Locked)
+        {
+            if (!UpdatesMotion(configurableJointMotionA) && !UpdatesMotion(configurableJointMotionB))
+            {
+                return originalJointDrive;
+            }
+
+            JointDrive result = new JointDrive()
+            {
+                maximumForce = originalJointDrive.maximumForce,
+                positionDamper = dynamics.Damping(),
+                positionSpring = dynamics.Spring()
+            };
+            return result;
         }
 
         #endregion

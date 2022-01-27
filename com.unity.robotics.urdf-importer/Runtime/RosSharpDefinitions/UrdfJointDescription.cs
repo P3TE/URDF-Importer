@@ -406,6 +406,7 @@ namespace Unity.Robotics.UrdfImporter
         
         public const int defaultDamping = 0;
         public const int defaultFriction = 0;
+        public const int defaultSpring = 0;
         
         public static float Damping(this UrdfJointDescription.Dynamics dynamics)
         {
@@ -433,6 +434,20 @@ namespace Unity.Robotics.UrdfImporter
                 return defaultFriction;
             }
             return (float) dynamics.friction;
+        }
+        
+        public static float Spring(this UrdfJointDescription.Dynamics dynamics)
+        {
+            if (dynamics == null)
+            {
+                return defaultSpring;
+            }
+
+            if (double.IsNaN(dynamics.spring))
+            {
+                return defaultSpring;
+            }
+            return (float) dynamics.spring;
         }
     }
 
