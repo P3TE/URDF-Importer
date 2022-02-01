@@ -50,8 +50,16 @@ namespace Unity.Robotics.UrdfImporter
 #else
             //return -((HingeJoint)unityJoint).angle * Mathf.Deg2Rad;
             ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
-            Rigidbody rigidbody = configurableJoint.GetComponent<Rigidbody>();
-            return UrdfJointContinuous.GetCurrentAngleRad(rigidbody, configurableJoint, originalLocalRotation);
+            if (configurableJoint == null)
+            {
+                //TODO - Handle properly!
+                return 0;
+            }
+            else
+            {
+                Rigidbody rigidbody = configurableJoint.GetComponent<Rigidbody>();
+                return UrdfJointContinuous.GetCurrentAngleRad(rigidbody, configurableJoint, originalLocalRotation);
+            }
 #endif
         }
 
@@ -65,7 +73,16 @@ namespace Unity.Robotics.UrdfImporter
             return ((ArticulationBody)unityJoint).jointVelocity[xAxis];
 #else
             //return -((HingeJoint)unityJoint).velocity * Mathf.Deg2Rad;
-            return UrdfJointContinuous.GetCurrentLocalVelocity((ConfigurableJoint) unityJoint);
+            ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
+            if (configurableJoint == null)
+            {
+                //TODO - Handle properly!
+                return 0;
+            }
+            else
+            {
+                return UrdfJointContinuous.GetCurrentLocalVelocity(configurableJoint);
+            }
 #endif
         }
 
@@ -79,7 +96,17 @@ namespace Unity.Robotics.UrdfImporter
             return unityJoint.jointForce[xAxis];
 #else
             //return -((HingeJoint)unityJoint).motor.force;
-            return UrdfJointContinuous.GetEffort((ConfigurableJoint) unityJoint);
+            ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
+            if (configurableJoint == null)
+            {
+                //TODO - Handle properly!
+                return 0;
+            }
+            else
+            {
+                return UrdfJointContinuous.GetEffort(configurableJoint);
+            }
+            
 #endif
         }
 
