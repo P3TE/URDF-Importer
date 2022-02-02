@@ -90,7 +90,8 @@ namespace Unity.Robotics.UrdfImporter
             pluginData.innerPluginXml = pluginData.xmlElement.Element(_PluginTag);
             if (pluginData.innerPluginXml == null)
             {
-                RuntimeUrdf.AddImportWarning($"Plugin of type {pluginData.xmlElement.Name} lacks a child of type {_PluginTag} and was ignored!");
+                // I'm not convinced this warning is useful.
+                //RuntimeUrdf.AddImportWarning($"Plugin of type {pluginData.xmlElement.Name} lacks a child of type {_PluginTag} and was ignored!");
                 return null;
             }
             

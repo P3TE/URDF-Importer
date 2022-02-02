@@ -67,7 +67,6 @@ namespace Unity.Robotics.UrdfImporter
         {
             if (joint == null)
             {
-                Debug.Log($"DEBUG - base_link is {link.name}");
                 urdfLink.IsBaseLink = true;
             }
             urdfLink.gameObject.name = link.name;
