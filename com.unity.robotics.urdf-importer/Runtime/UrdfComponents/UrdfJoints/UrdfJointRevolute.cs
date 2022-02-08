@@ -233,8 +233,8 @@ namespace Unity.Robotics.UrdfImporter
             if (Math.Abs(joint.limit.lowerRadians - joint.limit.upperRadians) < 0.0001f)
             {
                 string warningMessage = $"For Revolute Joint with name {joint.name}, " +
-                                        $"joint.limit.lowerRadians == joint.limit.upperRadians should be distinct!" +
-                                        $"Consider using a Continuous Joint or a Fixed Joint Instead.";
+                                        "joint.limit.lowerRadians == joint.limit.upperRadians should be distinct!" +
+                                        " Consider using a Continuous Joint or a Fixed Joint Instead.";
                 RuntimeUrdf.AddImportWarning(warningMessage);
             }
             configurableJoint.lowAngularXLimit = new SoftJointLimit()
