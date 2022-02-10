@@ -94,7 +94,24 @@ namespace Unity.Robotics.UrdfImporter
                     jointMap.Add(joint.name, newJoint);
                 }
             }
-        } 
+        }
+
+        public static void RemoveJoint(UrdfJoint urdfJoint)
+        {
+            Joint unityJoint = urdfJoint.unityJoint;
+            GameObject gameObject = unityJoint.gameObject;
+            Rigidbody bodyToRemove = gameObject.GetComponent<Rigidbody>();
+            
+            Rigidbody connectedBody = unityJoint.connectedBody;
+
+            PreviousRigidbodyConstants previousRigidbodyConstants =
+                gameObject.AddComponent<PreviousRigidbodyConstants>();
+            previousRigidbodyConstants.SetValues(bodyToRemove);
+
+            UrdfJointFixed.OptimizeFixedJoint(gameObject, previousRigidbodyConstants);
+            Object.DestroyImmediate(unityJoint);
+            Object.DestroyImmediate(bodyToRemove);
+        }
         
         public static UrdfLinkDescription ExportLinkData(this UrdfLink urdfLink)
         {
