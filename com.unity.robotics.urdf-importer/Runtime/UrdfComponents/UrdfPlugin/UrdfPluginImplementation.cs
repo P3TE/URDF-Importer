@@ -522,6 +522,38 @@ namespace Unity.Robotics.UrdfImporter
             
             return true;
         }
+
+        public static bool ReadFloatArrayFromChildXElement(XElement node, string childElementName, out float[] result)
+        {
+            if (!ReadStringFromChildXElement(node, childElementName, out string arrayString, true))
+            {
+                result = Array.Empty<float>();
+                return false;
+            }
+
+            string[] arraySplit = arrayString.Split(' ');
+            List<float> values = new List<float>();
+
+            foreach (string splitValue in arraySplit)
+            {
+                if (string.IsNullOrWhiteSpace(splitValue))
+                {
+                    continue;
+                }
+                
+                bool parseSuccess = float.TryParse(splitValue, out float value);
+                if (!parseSuccess)
+                {
+                    throw new Exception($"Node {node.Name} array element value expected a float, received: {splitValue}");
+                }
+                
+                values.Add(value);
+            }
+
+            result = values.ToArray();
+
+            return true;
+        }
         
         public static bool ReadBooleanFromChildXElement(XElement node, string childElementName, out bool result, 
             bool required = true, bool defaultValue = false)
