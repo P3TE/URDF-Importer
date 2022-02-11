@@ -19,7 +19,7 @@ using Object = UnityEngine.Object;
 
 namespace Unity.Robotics.UrdfImporter
 {
-    internal static class BuiltInExtensions
+    public static class BuiltInExtensions
     {
         private const int RoundDigits = 6;
 
@@ -98,6 +98,28 @@ namespace Unity.Robotics.UrdfImporter
                 transform.x * Mathf.Deg2Rad,
                 -transform.y * Mathf.Deg2Rad);
             return rpyVector == Vector3.zero ? null : rpyVector.ToRoundedDoubleArray();
+        }
+
+        public enum UrdfRosUnityVector3Conversion
+        {
+            None,
+            Direction,
+            Scale
+        }
+        
+        public static Vector3 Ros2Unity(this Vector3 vector3, UrdfRosUnityVector3Conversion conversion)
+        {
+            switch (conversion)
+            {
+                case UrdfRosUnityVector3Conversion.None:
+                    return vector3;
+                case UrdfRosUnityVector3Conversion.Direction:
+                    return new Vector3(-vector3.y, vector3.z, vector3.x);
+                case UrdfRosUnityVector3Conversion.Scale:
+                    return new Vector3(vector3.y, vector3.z, vector3.x);
+            }
+
+            throw new ArgumentException($"No conversion for {conversion}");
         }
 
         public static Vector3 Ros2Unity(this Vector3 vector3)
