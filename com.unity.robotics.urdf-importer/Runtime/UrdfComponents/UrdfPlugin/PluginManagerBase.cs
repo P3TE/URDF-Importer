@@ -44,7 +44,6 @@ namespace Unity.Robotics.UrdfImporter
         public const string _PluginTag = "plugin";
         public const string _FilenameAttribute = "filename";
         public const string _NameAttribute = "name";
-        public const string _LinkNameElement = "link_name";
 
         public class PluginData
         {
@@ -55,9 +54,6 @@ namespace Unity.Robotics.UrdfImporter
             //Used for deserialising the xml.
             public XElement innerPluginXml;
             
-            //To neaten the layout, the following parameters are used to define what game object the plugin is added to. 
-            public string urdfLinkName = "";
-            public UrdfLink urdfLink = null;
             public UrdfPlugins urdfPlugins;
 
             public UrdfPluginDescription pluginDescription;
@@ -71,17 +67,7 @@ namespace Unity.Robotics.UrdfImporter
             }
 
             //Used when creating the new Component.
-            public GameObject ObjectToAttachTo
-            {
-                get
-                {
-                    if (urdfLink != null)
-                    {
-                        return urdfLink.gameObject;
-                    }
-                    return urdfPlugins.gameObject;
-                }
-            }
+            public GameObject ObjectToAttachTo => urdfPlugins.gameObject;
         }
 
         public UrdfPluginImplementation GeneratePlugin(PluginData pluginData)
@@ -106,14 +92,6 @@ namespace Unity.Robotics.UrdfImporter
             if (nameAttribute != null)
             {
                 pluginData.name = filenameAttribute.Value;
-            }
-            
-            //Find the link if applicable.
-            if (UrdfPluginImplementation.ReadStringFromChildXElement(pluginData.innerPluginXml, _LinkNameElement,
-                out pluginData.urdfLinkName, false))
-            {
-                //A valid link name exists.
-                UrdfLinkExtensions.TryFindLink(pluginData.urdfLinkName, out pluginData.urdfLink);
             }
 
             if (PluginFactories.TryGetValue(pluginData.filename, out GeneratePluginDelegate generatePluginDelegate))

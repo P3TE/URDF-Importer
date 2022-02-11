@@ -29,31 +29,6 @@ namespace Unity.Robotics.UrdfImporter
             set;
         }
 
-        public string LinkName => ImplementationPluginData.urdfLinkName;
-
-        public UrdfLink PluginLink
-        {
-            get
-            {
-                UrdfLink result = ImplementationPluginData.urdfLink;
-                if (result == null)
-                {
-                    string errorMessage;
-                    if (string.IsNullOrEmpty(ImplementationPluginData.urdfLinkName))
-                    {
-                        errorMessage = $"Node {GetVerboseXElementName(ImplementationPluginData.innerPluginXml)} missing element '{PluginManagerBase._LinkNameElement}'";    
-                    }
-                    else
-                    {
-                        errorMessage =
-                            $"Node {GetVerboseXElementName(ImplementationPluginData.innerPluginXml)} could not find link with name '{ImplementationPluginData.urdfLinkName}'";
-                    }
-                    throw new Exception(errorMessage);
-                }
-                return result;
-            }
-        }
-        
         public UrdfPlugins Plugins => ImplementationPluginData.urdfPlugins;
 
         public UrdfLink RootMostLink
@@ -152,6 +127,45 @@ namespace Unity.Robotics.UrdfImporter
                 }
             }
         }
+
+        public static bool GetUrdfLinkWithNameFromElement(XElement element, string linkElementName, out string linkName,
+            out UrdfLink urdfLink, bool required = true)
+        {
+            bool linkNameExists = ReadStringFromChildXElement(element, linkElementName, out linkName, required);
+            if (!linkNameExists)
+            {
+                urdfLink = null;
+                return false;
+            }
+
+            bool foundLink = UrdfLinkExtensions.TryFindLink(linkName, out urdfLink);
+            if (!foundLink)
+            {
+                throw new Exception(
+                    $"For node {GetVerboseXElementName(element)}, unable to find link with name {linkName}");
+            }
+            return true;
+        }
+        
+        public static bool GetUrdfJointWithNameFromElement(XElement element, string jointElementName, out string jointName,
+            out UrdfJoint urdfJoint, bool required = true)
+        {
+            bool linkNameExists = ReadStringFromChildXElement(element, jointElementName, out jointName, required);
+            if (!linkNameExists)
+            {
+                urdfJoint = null;
+                return false;
+            }
+
+            bool foundLink = UrdfLinkExtensions.TryFindJoint(jointName, out urdfJoint);
+            if (!foundLink)
+            {
+                throw new Exception(
+                    $"For node {GetVerboseXElementName(element)}, unable to find link with name {jointName}");
+            }
+            return true;
+        }
+            
 
         /**
          * This function is designed to help the user find elements in the URDF that shouldn't be there
@@ -366,13 +380,21 @@ namespace Unity.Robotics.UrdfImporter
             return wasSuccess;
         }
 
-        public static bool ReadVector3FromXElementAttribute(XElement node, string attributeName, out Vector3 result, bool convertRosToUnity = true, bool required = true)
+        public static bool ReadVector3FromXElementAttribute(XElement node, string attributeName, out Vector3 result,
+            BuiltInExtensions.UrdfRosUnityVector3Conversion appliedConversion = BuiltInExtensions.UrdfRosUnityVector3Conversion.Direction, bool required = true)
+        {
+            return ReadVector3FromXElementAttribute(node, attributeName, out result, appliedConversion, required, Vector3.zero);
+        }
+
+        public static bool ReadVector3FromXElementAttribute(XElement node, string attributeName, out Vector3 result, 
+            BuiltInExtensions.UrdfRosUnityVector3Conversion appliedConversion, bool required,
+            Vector3 defaultValue)
         {
             bool exists = ReadMatrixNxMFromXElementAttribute(node, attributeName, out float[][] vector3AsMatrix,
                 out int width, out int height, required);
             if (!exists)
             {
-                result = Vector3.zero;
+                result = defaultValue;
                 if (required)
                 {
                     throw new Exception($"Unable to find Vector3 in node {GetVerboseXElementName(node)}");
@@ -387,10 +409,7 @@ namespace Unity.Robotics.UrdfImporter
             }
 
             result = new Vector3(vector3AsMatrix[0][0], vector3AsMatrix[0][1], vector3AsMatrix[0][2]);
-            if (convertRosToUnity)
-            {
-                result = result.Ros2Unity();
-            }
+            result = result.Ros2Unity(appliedConversion);
 
             return true;
         }
