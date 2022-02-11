@@ -124,7 +124,7 @@ namespace Unity.Robotics.UrdfImporter
                     throw new Exception($"Failed to generate plugin with filename {pluginData.filename}");
                 }
 
-                result.LinkName = pluginData.urdfLinkName;
+                result.ImplementationPluginData = pluginData;
                 result.DeserialiseFromXml(pluginData.innerPluginXml);
                 return result;
             }

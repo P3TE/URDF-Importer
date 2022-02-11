@@ -188,8 +188,19 @@ namespace Unity.Robotics.UrdfImporter
                     RuntimeUrdf.urdfBuildErrors.AddLast(e);
                 }
             }
-            
-            postImportDelegate?.Invoke(im.robotGameObject);
+
+            if (RuntimeUrdf.urdfBuildErrors.Count == 0)
+            {
+                //Only run this if there were no errors in the previous steps, it's best to fix things one at a time.
+                try
+                {
+                    postImportDelegate?.Invoke(im.robotGameObject);
+                }
+                catch (Exception e)
+                {
+                    RuntimeUrdf.urdfBuildErrors.AddLast(e);
+                }
+            }
 
             if (im.forceRuntimeMode) 
             { // set runtime mode back to what it was

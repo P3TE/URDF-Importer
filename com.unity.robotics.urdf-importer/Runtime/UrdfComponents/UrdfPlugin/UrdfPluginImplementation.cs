@@ -9,7 +9,7 @@ namespace Unity.Robotics.UrdfImporter
     public abstract class UrdfPluginImplementation : MonoBehaviour
     {
         
-        public string LinkName { get; set; }
+        
 
         public abstract void DeserialiseFromXml(XElement node);
 
@@ -22,6 +22,39 @@ namespace Unity.Robotics.UrdfImporter
         private bool rootMostLinkFound = false;
         private UrdfLink rootMostLink = null;
         private UrdfRobot urdfRobot = null;
+
+        public PluginManagerBase.PluginData ImplementationPluginData
+        {
+            get;
+            set;
+        }
+
+        public string LinkName => ImplementationPluginData.urdfLinkName;
+
+        public UrdfLink PluginLink
+        {
+            get
+            {
+                UrdfLink result = ImplementationPluginData.urdfLink;
+                if (result == null)
+                {
+                    string errorMessage;
+                    if (string.IsNullOrEmpty(ImplementationPluginData.urdfLinkName))
+                    {
+                        errorMessage = $"Node {GetVerboseXElementName(ImplementationPluginData.innerPluginXml)} missing element '{PluginManagerBase._LinkNameElement}'";    
+                    }
+                    else
+                    {
+                        errorMessage =
+                            $"Node {GetVerboseXElementName(ImplementationPluginData.innerPluginXml)} could not find link with name '{ImplementationPluginData.urdfLinkName}'";
+                    }
+                    throw new Exception(errorMessage);
+                }
+                return result;
+            }
+        }
+        
+        public UrdfPlugins Plugins => ImplementationPluginData.urdfPlugins;
 
         public UrdfLink RootMostLink
         {
@@ -200,7 +233,7 @@ namespace Unity.Robotics.UrdfImporter
             {
                 if (required)
                 {
-                    throw new Exception($"Node with name {node.Name} missing child element: {childElementName}");
+                    throw new Exception($"Node {GetVerboseXElementName(node)} missing child element: {childElementName}");
                 }
                 return false;
             }
@@ -214,7 +247,7 @@ namespace Unity.Robotics.UrdfImporter
             {
                 if (required)
                 {
-                    throw new Exception($"Node with name {GetVerboseXElementName(node)} missing attribute: {attributeName}");
+                    throw new Exception($"Node {GetVerboseXElementName(node)} with name {GetVerboseXElementName(node)} missing attribute: {attributeName}");
                 }
 
                 return false;
@@ -344,6 +377,7 @@ namespace Unity.Robotics.UrdfImporter
                 {
                     throw new Exception($"Unable to find Vector3 in node {GetVerboseXElementName(node)}");
                 }
+                return false;
             }
 
             if (width != 3 || height != 1)
