@@ -29,6 +29,7 @@ namespace Unity.Robotics.UrdfImporter
         public bool useUrdfData;
         public Vector3 centerOfMass;
         public Vector3? _adjustedCenterOfMass = null;
+        private bool startCalled = false;
         public bool automaticInertia = false;
         public Vector3 inertiaTensor;
         public Quaternion inertiaTensorRotation;
@@ -41,7 +42,14 @@ namespace Unity.Robotics.UrdfImporter
         public Vector3 AdjustedCenterOfMass
         {
             get => _adjustedCenterOfMass.GetValueOrDefault(centerOfMass);
-            set => _adjustedCenterOfMass = value;
+            set
+            {
+                _adjustedCenterOfMass = value;
+                if(startCalled)
+                {
+                    UpdateLinkData();
+                }
+            }
         }
 
         public static void Create(GameObject linkObject, UrdfLinkDescription.Inertial inertial = null, bool addRigidBody = true)
@@ -77,6 +85,7 @@ namespace Unity.Robotics.UrdfImporter
 
         private void Start()
         {
+            startCalled = true;
             UpdateLinkData();
         }
 

@@ -67,20 +67,7 @@ namespace Unity.Robotics.UrdfImporter
                 return null;
             }
             PreviousRigidbodyConstants previousRigidbodyConstants = fixedJointToOptimize.AddComponent<PreviousRigidbodyConstants>();
-            previousRigidbodyConstants.mass = (float) link.inertial.mass;
-            //TODO - Find the drag & angularDrag...
-            //previousRigidbodyConstants.drag = link.inertial.;
-            //previousRigidbodyConstants.angularDrag = rigidbody.angularDrag;
-            Vector3 centerOfMass = Vector3.zero;
-            if (link.inertial.origin == null)
-            {
-                RuntimeUrdf.AddImportWarning($"Missing link.inertial.origin for link with name {link.name}, assuming {centerOfMass}");
-            }
-            else
-            {
-                previousRigidbodyConstants.centerOfMass = link.inertial.origin.Xyz.ToVector3().Ros2Unity();
-            }
-
+            previousRigidbodyConstants.SetValues(link);
             return previousRigidbodyConstants;
         }
 
@@ -89,10 +76,7 @@ namespace Unity.Robotics.UrdfImporter
             Rigidbody rigidbody = fixedJointToOptimize.GetComponent<Rigidbody>();
 
             PreviousRigidbodyConstants previousRigidbodyConstants = fixedJointToOptimize.AddComponent<PreviousRigidbodyConstants>();
-            previousRigidbodyConstants.mass = rigidbody.mass;
-            previousRigidbodyConstants.drag = rigidbody.drag;
-            previousRigidbodyConstants.angularDrag = rigidbody.angularDrag;
-            previousRigidbodyConstants.centerOfMass = rigidbody.centerOfMass;
+            previousRigidbodyConstants.SetValues(rigidbody);
             
             Debug.LogWarning("This method shouldn't be used anymore, use AddPreviousRigidbodyConstantsUsingUrdfLinkDescription instead.");
             //Remove the rigidbody for the FixedJoint that is being removed.
@@ -104,7 +88,7 @@ namespace Unity.Robotics.UrdfImporter
         /**
          * The goal here is to have no 'FixedJoints' and instead merge the components together.
          */
-        private static void OptimizeFixedJoint(GameObject fixedJointToOptimize, PreviousRigidbodyConstants previousRigidbodyConstants)
+        public static void OptimizeFixedJoint(GameObject fixedJointToOptimize, PreviousRigidbodyConstants previousRigidbodyConstants)
         {
 
             if (previousRigidbodyConstants == null)
@@ -141,6 +125,7 @@ namespace Unity.Robotics.UrdfImporter
             fixedParentUrdfInertial.AdjustedCenterOfMass = newFixedParentCenterOfMass;
 
         }
+        
         
 #endif
     }
