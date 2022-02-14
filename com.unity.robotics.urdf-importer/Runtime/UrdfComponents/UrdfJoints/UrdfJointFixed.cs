@@ -71,7 +71,7 @@ namespace Unity.Robotics.UrdfImporter
             return previousRigidbodyConstants;
         }
 
-        private static PreviousRigidbodyConstants AddPreviousRigidbodyConstantsUsingRigidBody(GameObject fixedJointToOptimize)
+        public static PreviousRigidbodyConstants AddPreviousRigidbodyConstantsUsingRigidBody(GameObject fixedJointToOptimize)
         {
             Rigidbody rigidbody = fixedJointToOptimize.GetComponent<Rigidbody>();
 
