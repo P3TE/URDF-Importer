@@ -9,8 +9,6 @@ namespace Unity.Robotics.UrdfImporter
     public abstract class UrdfPluginImplementation : MonoBehaviour
     {
         
-        
-
         public abstract void DeserialiseFromXml(XElement node);
 
         public virtual void FinaliseImport(UrdfPlugins urdfPlugins)
@@ -619,6 +617,21 @@ namespace Unity.Robotics.UrdfImporter
 
             result = false;
             return false;
+        }
+        
+        public static string GetEnumNames(Type enumType)
+        {
+            string[] names = Enum.GetNames(enumType);
+            StringBuilder resultBuilder = new StringBuilder();
+            for (var i = 0; i < names.Length; i++)
+            {
+                if (i > 0)
+                {
+                    resultBuilder.Append(", ");
+                }
+                resultBuilder.Append(names[i]);
+            }
+            return resultBuilder.ToString();
         }
     }
 }
