@@ -521,14 +521,8 @@ namespace Unity.Robotics.UrdfImporter
             return true;
         }
 
-        public static bool ReadFloatArrayFromChildXElement(XElement node, string childElementName, out float[] result)
+        private static bool ReadFloatArrayFromString(string nodeName, string arrayString, out float[] result)
         {
-            if (!ReadStringFromChildXElement(node, childElementName, out string arrayString, true))
-            {
-                result = Array.Empty<float>();
-                return false;
-            }
-
             string[] arraySplit = arrayString.Split(' ');
             List<float> values = new List<float>();
 
@@ -539,10 +533,9 @@ namespace Unity.Robotics.UrdfImporter
                     continue;
                 }
                 
-                bool parseSuccess = float.TryParse(splitValue, out float value);
-                if (!parseSuccess)
+                if (!float.TryParse(splitValue, out float value))
                 {
-                    throw new Exception($"Node {node.Name} array element value expected a float, received: {splitValue}");
+                    throw new Exception($"Node {nodeName} array element value expected a float, received: {splitValue}");
                 }
                 
                 values.Add(value);
@@ -551,6 +544,28 @@ namespace Unity.Robotics.UrdfImporter
             result = values.ToArray();
 
             return true;
+        }
+
+        public static bool ReadFloatArrayFromChildXElement(XElement node, string childElementName, out float[] result)
+        {
+            if (!ReadStringFromChildXElement(node, childElementName, out string arrayString, true))
+            {
+                result = Array.Empty<float>();
+                return false;
+            }
+
+            return ReadFloatArrayFromString(node.Name.ToString(), arrayString, out result);
+        }
+
+        public static bool ReadFloatArrayFromXElementAttribute(XElement node, string attributeName, out float[] result)
+        {
+            if (!ReadStringFromXElementAttribute(node, attributeName, out string arrayString, true))
+            {
+                result = Array.Empty<float>();
+                return false;
+            }
+
+            return ReadFloatArrayFromString(node.Name.ToString(), arrayString, out result);
         }
         
         public static bool ReadBooleanFromChildXElement(XElement node, string childElementName, out bool result, 
