@@ -27,6 +27,9 @@ namespace Unity.Robotics.UrdfImporter
 
     public class UrdfRobot : MonoBehaviour
     {
+        [SerializeField] private string robotNamespace;
+        [SerializeField] private string robotName;
+        
         public string FilePath;
         public ImportSettings.axisType choosenAxis ;
         [SerializeField]
@@ -46,6 +49,22 @@ namespace Unity.Robotics.UrdfImporter
         public static bool addController = true;
         public static bool addFkRobot = true;
         public static bool changetoCorrectedSpace = false;
+
+        public string RobotNamespace => robotNamespace;
+        
+        public string RobotName => robotName;
+        
+        public string ModelName => gameObject.name;
+
+        public void SetRobotNamespace(string robotNamespace)
+        {
+            this.robotNamespace = robotNamespace;
+        }
+        
+        public void SetRobotName(string robotName)
+        {
+            this.robotName = robotName;
+        }
 
         #region Configure Robot
 

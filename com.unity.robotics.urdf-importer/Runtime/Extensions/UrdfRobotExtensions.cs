@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System;
 using System.IO;
 using System.Linq;
+using System.Xml.Linq;
 using Unity.Robotics.UrdfImporter.Control;
 using Unity.Robotics.UrdfImporter.Urdf.Extensions;
 #if UNITY_EDITOR
@@ -64,20 +65,42 @@ namespace Unity.Robotics.UrdfImporter
             public bool wasRuntimeMode;
             public bool loadStatus;
             public bool forceRuntimeMode;
+            public string robotNamespace;
+            public string modelName;
             public UrdfRobotDescription robot;
             public UrdfPlugins urdfPlugins;
             public GameObject robotGameObject;
             public Stack<Tuple<UrdfLinkDescription, Transform, UrdfJointDescription>> importStack;
         }
+        
+        private static ImportPipelineData ImportPipelineInitFromFile(string filename, ImportSettings settings, bool loadStatus,
+            bool forceRuntimeMode, string robotNamespace, string modelName)
+        {
+            XDocument xdoc = XDocument.Load(filename);
+            ImportPipelineData importPipelineData = ImportPipelineInit(xdoc, settings, loadStatus, forceRuntimeMode, robotNamespace, modelName);
+            importPipelineData.robot.filename = filename;
+            return importPipelineData;
+        }
+        
+        private static ImportPipelineData ImportPipelineInitFromString(string xmlText, ImportSettings settings, bool loadStatus,
+            bool forceRuntimeMode, string robotNamespace, string modelName)
+        {
+            XDocument xdoc = XDocument.Parse(xmlText);
+            ImportPipelineData importPipelineData = ImportPipelineInit(xdoc, settings, loadStatus, forceRuntimeMode, robotNamespace, modelName);
+            return importPipelineData;
+        }
 
         // Initializes import pipeline and reads the urdf file.
-        private static ImportPipelineData ImportPipelineInit(string filename, ImportSettings settings, bool loadStatus, bool forceRuntimeMode)
+        private static ImportPipelineData ImportPipelineInit(XDocument xdoc, ImportSettings settings, bool loadStatus, bool forceRuntimeMode,
+            string robotNamespace, string modelName)
         {
             ImportPipelineData im = new ImportPipelineData();
             im.settings = settings;
             im.loadStatus = loadStatus;
             im.wasRuntimeMode = RuntimeUrdf.IsRuntimeMode();
             im.forceRuntimeMode = forceRuntimeMode;
+            im.robotNamespace = robotNamespace;
+            im.modelName = modelName;
 
             if (forceRuntimeMode) 
             {
@@ -87,7 +110,7 @@ namespace Unity.Robotics.UrdfImporter
             RuntimeUrdf.ClearImportWarningsAndErrors();
             UrdfLinkExtensions.ClearLinkAndJointMaps();
 
-            im.robot = new UrdfRobotDescription(filename);
+            im.robot = new UrdfRobotDescription(xdoc);
 
             if (!UrdfAssetPathHandler.IsValidAssetPath(im.robot.filename))
             {
@@ -102,9 +125,14 @@ namespace Unity.Robotics.UrdfImporter
         }
 
         // Creates the robot game object.
-        private static void ImportPipelineCreateObject(ImportPipelineData im) 
+        private static void ImportPipelineCreateObject(ImportPipelineData im)
         {
-            im.robotGameObject = new GameObject(im.robot.name);
+            string usedModelName = im.modelName;
+            if (string.IsNullOrWhiteSpace(usedModelName))
+            {
+                usedModelName = im.robot.name;
+            }
+            im.robotGameObject = new GameObject(usedModelName);
            
             importsettings = im.settings;
             im.settings.totalLinks = im.robot.links.Count;
@@ -112,7 +140,15 @@ namespace Unity.Robotics.UrdfImporter
             CreateTag();
             SetTag(im.robotGameObject);
 
-            im.robotGameObject.AddComponent<UrdfRobot>();
+            UrdfRobot urdfRobot = im.robotGameObject.AddComponent<UrdfRobot>();
+            string usedRobotNamespace = im.robotNamespace;
+            if (string.IsNullOrWhiteSpace(usedRobotNamespace))
+            {
+                usedRobotNamespace = im.robot.name;
+                RuntimeUrdf.AddImportWarning($"Robot Namespace was not set, falling back to {usedRobotNamespace}");
+            }
+            urdfRobot.SetRobotNamespace(usedRobotNamespace);
+            urdfRobot.SetRobotName(im.robot.name);
 
             im.robotGameObject.AddComponent<Unity.Robotics.UrdfImporter.Control.Controller>();
             if (RuntimeUrdf.IsRuntimeMode()) 
@@ -122,7 +158,19 @@ namespace Unity.Robotics.UrdfImporter
 
             im.robotGameObject.GetComponent<UrdfRobot>().SetAxis(im.settings.choosenAxis);
 
-            UrdfAssetPathHandler.SetPackageRoot(Path.GetDirectoryName(im.robot.filename));
+            if(!string.IsNullOrWhiteSpace(im.robot.filename))
+            {
+                string directoryName;
+                try
+                {
+                    directoryName = Path.GetDirectoryName(im.robot.filename);
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"Unable to get directory from filename {im.robot.filename}", e);
+                }
+                UrdfAssetPathHandler.SetPackageRoot(directoryName);
+            }
             UrdfMaterial.InitializeRobotMaterials(im.robot);
             im.urdfPlugins = UrdfPlugins.Create(im.robotGameObject.transform, im.robot.plugins);
         }
@@ -233,9 +281,10 @@ namespace Unity.Robotics.UrdfImporter
         /// This is to allow initializing the controller values (stiffness, damping, etc.) before the controller.Start() is called
         /// </param>
         /// <returns></returns>
-        public static IEnumerator<GameObject> Create(string filename, ImportSettings settings, bool loadStatus = false, bool forceRuntimeMode = false)
+        public static IEnumerator<GameObject> Create(string filename, ImportSettings settings, bool loadStatus = false, bool forceRuntimeMode = false, 
+            string robotNamespace = "", string modelName = "")
         {
-            ImportPipelineData im = ImportPipelineInit(filename, settings, loadStatus, forceRuntimeMode);
+            ImportPipelineData im = ImportPipelineInitFromFile(filename, settings, loadStatus, forceRuntimeMode, robotNamespace, modelName);
             if (im == null)
             {
                 yield break;
@@ -263,9 +312,28 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="filename">URDF filename</param>
         /// <param name="settings">Import Settings</param>
         /// <returns> Robot game object</returns>
-        public static GameObject CreateRuntime(string filename, ImportSettings settings)
+        public static GameObject CreateRuntimeFromFile(string filename, ImportSettings settings)
         {
-            ImportPipelineData im = ImportPipelineInit(filename, settings, false, true);
+            ImportPipelineData im = ImportPipelineInitFromFile(filename, settings, false, true, "", "");
+            return CreateRuntime(im);
+        }
+        
+        /// <summary>
+        /// Create a Robot gameobject from filename in runtime.
+        /// It is a synchronous (blocking) function and only returns after the gameobject has been created.
+        /// </summary>
+        /// <param name="xmlText">URDF in text form</param>
+        /// <param name="settings">Import Settings</param>
+        /// <returns> Robot game object</returns>
+        public static GameObject CreateRuntimeFromString(string xmlText, ImportSettings settings, string robotNamespace, string modelName)
+        {
+            ImportPipelineData im = ImportPipelineInitFromString(xmlText, settings, false, true, robotNamespace, modelName);
+            return CreateRuntime(im);
+        }
+
+        
+        private static GameObject CreateRuntime(ImportPipelineData im)
+        {
             if (im == null)
             {
                 return null;

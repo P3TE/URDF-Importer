@@ -69,7 +69,7 @@ public class RuntimeUrdfImporterExample : MonoBehaviour
         }
         else
         {
-            robotObject = UrdfRobotExtensions.CreateRuntime(urdfFilepath, settings);
+            robotObject = UrdfRobotExtensions.CreateRuntimeFromFile(urdfFilepath, settings);
         }
 
         if (robotObject != null && robotObject.transform != null) 

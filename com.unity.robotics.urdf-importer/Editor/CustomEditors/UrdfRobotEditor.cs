@@ -25,9 +25,13 @@ namespace Unity.Robotics.UrdfImporter.Editor
         private static GUIStyle buttonStyle;
         private string exportRoot = "";
         SerializedProperty axisType;
+        SerializedProperty robotNamespace;
+        SerializedProperty robotName;
 
         public void OnEnable()
         {
+            robotNamespace = serializedObject.FindProperty("robotNamespace");
+            robotName = serializedObject.FindProperty("robotName");
             axisType = serializedObject.FindProperty("choosenAxis");
         }
         public override void OnInspectorGUI()
@@ -36,6 +40,10 @@ namespace Unity.Robotics.UrdfImporter.Editor
                 buttonStyle = new GUIStyle(EditorStyles.miniButtonRight) { fixedWidth = 75 };
 
             urdfRobot = (UrdfRobot) target;
+            
+            //drawer.Field("pauseOnOverAcceleration");
+            EditorGUILayout.PropertyField(robotNamespace);
+            EditorGUILayout.PropertyField(robotName);
 
             EditorGUILayout.PropertyField(axisType, new GUIContent("Axis Type"));
             serializedObject.ApplyModifiedProperties();

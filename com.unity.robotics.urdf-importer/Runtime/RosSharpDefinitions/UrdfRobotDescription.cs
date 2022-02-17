@@ -37,12 +37,11 @@ namespace Unity.Robotics.UrdfImporter
         public bool exportPlugins = true;
         public List<Tuple<string, string>> ignoreCollisionPair;
 
-        public UrdfRobotDescription(string filename)
+        public UrdfRobotDescription(XDocument xdoc, string filename = "")
         {
             
             this.filename = filename;
             
-            XDocument xdoc = XDocument.Load(filename);
             XElement node = xdoc.Element("robot");
 
             name = node.Attribute("name").Value;

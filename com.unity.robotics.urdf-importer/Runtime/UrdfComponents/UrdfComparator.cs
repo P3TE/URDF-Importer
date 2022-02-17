@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Xml.Linq;
 using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
@@ -14,8 +15,8 @@ namespace Unity.Robotics.UrdfImporter
 
         public UrdfComparator(string sourceFilePath, string exportedFilePath, string logFilePath)
         {
-            this.source = new UrdfRobotDescription(sourceFilePath);
-            this.exported = new UrdfRobotDescription(exportedFilePath);
+            this.source = new UrdfRobotDescription(XDocument.Load(sourceFilePath));
+            this.exported = new UrdfRobotDescription(XDocument.Load(sourceFilePath));
             this.logFileName = @logFilePath + "/" + Path.GetFileName(sourceFilePath) + "_" + Path.GetFileName(exportedFilePath)
                                    + "_" + DateTime.Now.TimeOfDay + ".txt";
             Debug.Log("Compared Log Filepath :" + logFilePath);

@@ -425,7 +425,12 @@ namespace Unity.Robotics.UrdfImporter
 
         public static string GetMaterialAssetPath(string materialName)
         {
-            return Path.Combine(packageRoot, MaterialFolderName, Path.GetFileName(materialName) + ".mat");
+            string result = Path.Combine(MaterialFolderName, Path.GetFileName(materialName) + ".mat");
+            if (packageRoot != null)
+            {
+                result = Path.Combine(packageRoot, result);
+            }
+            return result;
         }
 
         #endregion
