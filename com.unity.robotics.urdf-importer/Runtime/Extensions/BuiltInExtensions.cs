@@ -103,7 +103,7 @@ namespace Unity.Robotics.UrdfImporter
         public enum UrdfRosUnityVector3Conversion
         {
             None,
-            Direction,
+            PositionDirection,
             Scale
         }
         
@@ -113,7 +113,7 @@ namespace Unity.Robotics.UrdfImporter
             {
                 case UrdfRosUnityVector3Conversion.None:
                     return vector3;
-                case UrdfRosUnityVector3Conversion.Direction:
+                case UrdfRosUnityVector3Conversion.PositionDirection:
                     return new Vector3(-vector3.y, vector3.z, vector3.x);
                 case UrdfRosUnityVector3Conversion.Scale:
                     return new Vector3(vector3.y, vector3.z, vector3.x);

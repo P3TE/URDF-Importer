@@ -379,7 +379,7 @@ namespace Unity.Robotics.UrdfImporter
         }
 
         public static bool ReadVector3FromXElementAttribute(XElement node, string attributeName, out Vector3 result,
-            BuiltInExtensions.UrdfRosUnityVector3Conversion appliedConversion = BuiltInExtensions.UrdfRosUnityVector3Conversion.Direction, bool required = true)
+            BuiltInExtensions.UrdfRosUnityVector3Conversion appliedConversion = BuiltInExtensions.UrdfRosUnityVector3Conversion.PositionDirection, bool required = true)
         {
             return ReadVector3FromXElementAttribute(node, attributeName, out result, appliedConversion, required, Vector3.zero);
         }
