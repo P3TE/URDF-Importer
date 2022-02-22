@@ -412,6 +412,33 @@ namespace Unity.Robotics.UrdfImporter
             return true;
         }
         
+        private static class Vector3XYZ
+        {
+            public const string XYZ = "xyz";
+        }
+
+        public static bool ReadVector3FromXElementWithXYZAttribute(XElement node, string elementName,
+            out Vector3 result,
+            BuiltInExtensions.UrdfRosUnityVector3Conversion appliedConversion = BuiltInExtensions.UrdfRosUnityVector3Conversion.PositionDirection, bool required = true)
+        {
+            return ReadVector3FromXElementWithXYZAttribute(node, elementName, out result, appliedConversion, required,
+                Vector3.zero);
+        }
+
+        public static bool ReadVector3FromXElementWithXYZAttribute(XElement node, string elementName, out Vector3 result,
+            BuiltInExtensions.UrdfRosUnityVector3Conversion appliedConversion, bool required, Vector3 defaultValue)
+        {
+            bool nodeExists = GetXElement(node, elementName, out XElement startPositionNode, required);
+            if (!nodeExists)
+            {
+                result = defaultValue;
+                return false;
+            }
+            return ReadVector3FromXElementAttribute(startPositionNode, Vector3XYZ.XYZ, out result,
+                appliedConversion, false,
+                defaultValue);
+        }
+        
         public static bool ReadMatrixNxMFromXElementAttribute(XElement node, string attributeName, out float[][] result,
             out int width, out int height, bool required = true)
         {
