@@ -675,5 +675,79 @@ namespace Unity.Robotics.UrdfImporter
             }
             return resultBuilder.ToString();
         }
+
+        public static void ConvertMatrix3x3ToUnity(float[][] matrix, int offsetI = 0, int offsetJ = 0)
+        {
+            //For the 3x3 matrix:
+            //For each row, apply the Vec3 conversion
+            //For each column, apply the Vec3 conversion
+            
+            //Rows:
+            for (int iOffset = 0; iOffset < 3; iOffset++)
+            {
+                int i = offsetI + iOffset;
+                Vector3 rowRos = new Vector3(
+                    matrix[i][offsetJ + 0],
+                    matrix[i][offsetJ + 1],
+                    matrix[i][offsetJ + 2]
+                );
+                Vector3 rowUnity = rowRos.Ros2Unity();
+                matrix[i][offsetJ + 0] = rowUnity[0];
+                matrix[i][offsetJ + 1] = rowUnity[1];
+                matrix[i][offsetJ + 2] = rowUnity[2];
+            }
+                        
+            //Columns:
+            for (int jOffset = 0; jOffset < 3; jOffset++)
+            {
+                int j = offsetJ + jOffset;
+                Vector3 columnRos = new Vector3(
+                    matrix[offsetI + 0][j],
+                    matrix[offsetI + 1][j],
+                    matrix[offsetI + 2][j]
+                );
+                Vector3 columnUnity = columnRos.Ros2Unity();
+                matrix[offsetI + 0][j] = columnUnity[0];
+                matrix[offsetI + 1][j] = columnUnity[1];
+                matrix[offsetI + 2][j] = columnUnity[2];
+            }
+        }
+        
+        public static void ConvertMatrix3x3ToRos(float[][] matrix, int offsetI = 0, int offsetJ = 0)
+        {
+            //For the 3x3 matrix:
+            //For each row, apply the Vec3 conversion
+            //For each column, apply the Vec3 conversion
+            
+            //Rows:
+            for (int iOffset = 0; iOffset < 3; iOffset++)
+            {
+                int i = offsetI + iOffset;
+                Vector3 rowUnity = new Vector3(
+                    matrix[i][offsetJ + 0],
+                    matrix[i][offsetJ + 1],
+                    matrix[i][offsetJ + 2]
+                );
+                Vector3 rowRos = rowUnity.Unity2Ros();
+                matrix[i][offsetJ + 0] = rowRos[0];
+                matrix[i][offsetJ + 1] = rowRos[1];
+                matrix[i][offsetJ + 2] = rowRos[2];
+            }
+                        
+            //Columns:
+            for (int jOffset = 0; jOffset < 3; jOffset++)
+            {
+                int j = offsetJ + jOffset;
+                Vector3 columnUnity = new Vector3(
+                    matrix[offsetI + 0][j],
+                    matrix[offsetI + 1][j],
+                    matrix[offsetI + 2][j]
+                );
+                Vector3 columnRos = columnUnity.Unity2Ros();
+                matrix[offsetI + 0][j] = columnRos[0];
+                matrix[offsetI + 1][j] = columnRos[1];
+                matrix[offsetI + 2][j] = columnRos[2];
+            }
+        }
     }
 }
