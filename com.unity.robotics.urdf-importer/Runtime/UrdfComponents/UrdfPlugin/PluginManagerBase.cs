@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Xml.Linq;
 using UnityEngine;
 
@@ -7,6 +8,10 @@ namespace Unity.Robotics.UrdfImporter
 {
     public abstract class PluginManagerBase : MonoBehaviour
     {
+        public enum PluginCompatibility
+        {
+            Unknown, Implemented, Replaced 
+        }
 
         public static PluginManagerBase Instance
         {
@@ -29,7 +34,7 @@ namespace Unity.Robotics.UrdfImporter
 
         private Dictionary<string, GeneratePluginDelegate> pluginFactories = null;
 
-        private Dictionary<string, GeneratePluginDelegate> PluginFactories
+        protected Dictionary<string, GeneratePluginDelegate> PluginFactories
         {
             get
             {
@@ -70,13 +75,18 @@ namespace Unity.Robotics.UrdfImporter
             public GameObject ObjectToAttachTo => urdfPlugins.gameObject;
         }
 
+        public virtual PluginCompatibility GetPluginCompatibility(PluginData pluginData)
+        {
+            return PluginFactories.Keys.Contains(pluginData.filename) ? PluginCompatibility.Implemented : PluginCompatibility.Unknown;
+        }
+
         public UrdfPluginImplementation GeneratePlugin(PluginData pluginData)
         {
             
             pluginData.innerPluginXml = pluginData.xmlElement.Element(_PluginTag);
             if (pluginData.innerPluginXml == null)
             {
-                // I'm not convinced this warning is useful.
+                //Certain configurations for Gazebo are present in a gazebo tag with no plugin inside...
                 //RuntimeUrdf.AddImportWarning($"Plugin of type {pluginData.xmlElement.Name} lacks a child of type {_PluginTag} and was ignored!");
                 return null;
             }
@@ -94,17 +104,28 @@ namespace Unity.Robotics.UrdfImporter
                 pluginData.name = filenameAttribute.Value;
             }
 
-            if (PluginFactories.TryGetValue(pluginData.filename, out GeneratePluginDelegate generatePluginDelegate))
-            {
-                UrdfPluginImplementation result = generatePluginDelegate(pluginData);
-                if (result == null)
-                {
-                    throw new Exception($"Failed to generate plugin with filename {pluginData.filename}");
-                }
+            PluginCompatibility compatibility = GetPluginCompatibility(pluginData);
 
-                result.ImplementationPluginData = pluginData;
-                result.DeserialiseFromXml(pluginData.innerPluginXml);
-                return result;
+            if (compatibility == PluginCompatibility.Replaced)
+            {
+                //This plugin has been replaced by another for the same functionality. It shall be silently ignored.
+                return null;
+            }
+            
+            if (compatibility == PluginCompatibility.Implemented)
+            {
+                if (PluginFactories.TryGetValue(pluginData.filename, out GeneratePluginDelegate generatePluginDelegate))
+                {
+                    UrdfPluginImplementation result = generatePluginDelegate(pluginData);
+                    if (result == null)
+                    {
+                        throw new Exception($"Failed to generate plugin with filename {pluginData.filename}");
+                    }
+
+                    result.ImplementationPluginData = pluginData;
+                    result.DeserialiseFromXml(pluginData.innerPluginXml);
+                    return result;
+                }    
             }
             
             RuntimeUrdf.AddImportWarning($"No plugin implementation for plugin with filename {pluginData.filename} it will be ignored!");
