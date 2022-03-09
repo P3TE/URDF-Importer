@@ -366,19 +366,25 @@ namespace Unity.Robotics.UrdfImporter
             
             foreach (UrdfPluginDescription urdfPluginDescription in im.robot.plugins)
             {
-                try
+                XElement xmlElement = XElement.Parse(urdfPluginDescription.text);
+                IEnumerable<XElement> pluginElements = xmlElement.Elements(PluginManagerBase._PluginTag);
+                foreach (XElement pluginElement in pluginElements)
                 {
-                    PluginManagerBase.PluginData pluginData =
-                        new PluginManagerBase.PluginData(im.urdfPlugins, urdfPluginDescription);
-                    UrdfPluginImplementation urdfPluginImplementation = pluginManager.GeneratePlugin(pluginData);
-                    if (urdfPluginImplementation != null)
+                    try
                     {
-                        loadedPlugins.AddLast(urdfPluginImplementation);
+                        PluginManagerBase.PluginData pluginData =
+                            new PluginManagerBase.PluginData(im.urdfPlugins, urdfPluginDescription);
+                        UrdfPluginImplementation urdfPluginImplementation = pluginManager.GeneratePlugin(pluginData, pluginElement);
+                        
+                        if (urdfPluginImplementation != null)
+                        {
+                            loadedPlugins.AddLast(urdfPluginImplementation);
+                        }
                     }
-                }
-                catch (Exception e)
-                {
-                    RuntimeUrdf.urdfBuildErrors.AddLast(e);
+                    catch (Exception e)
+                    {
+                        RuntimeUrdf.urdfBuildErrors.AddLast(e);
+                    }
                 }
             }
 

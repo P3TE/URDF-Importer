@@ -70,25 +70,17 @@ namespace Unity.Robotics.UrdfImporter
             public GameObject ObjectToAttachTo => urdfPlugins.gameObject;
         }
 
-        public UrdfPluginImplementation GeneratePlugin(PluginData pluginData)
+        public UrdfPluginImplementation GeneratePlugin(PluginData pluginData, XElement innerPluginXml)
         {
-            
-            pluginData.innerPluginXml = pluginData.xmlElement.Element(_PluginTag);
-            if (pluginData.innerPluginXml == null)
-            {
-                // I'm not convinced this warning is useful.
-                //RuntimeUrdf.AddImportWarning($"Plugin of type {pluginData.xmlElement.Name} lacks a child of type {_PluginTag} and was ignored!");
-                return null;
-            }
-            
-            XAttribute filenameAttribute = pluginData.innerPluginXml.Attribute(_FilenameAttribute);
+
+            XAttribute filenameAttribute = innerPluginXml.Attribute(_FilenameAttribute);
             if (filenameAttribute == null)
             {
-                RuntimeUrdf.AddImportWarning($"Plugin of type {pluginData.xmlElement.Name}:{_PluginTag} is missing attribute {_FilenameAttribute} and will be ignored!");
+                RuntimeUrdf.AddImportWarning($"Plugin of type {innerPluginXml.Name}:{_PluginTag} is missing attribute {_FilenameAttribute} and will be ignored!");
                 return null;
             }
             pluginData.filename = filenameAttribute.Value;
-            XAttribute nameAttribute = pluginData.innerPluginXml.Attribute(_NameAttribute);
+            XAttribute nameAttribute = innerPluginXml.Attribute(_NameAttribute);
             if (nameAttribute != null)
             {
                 pluginData.name = filenameAttribute.Value;
@@ -103,7 +95,7 @@ namespace Unity.Robotics.UrdfImporter
                 }
 
                 result.ImplementationPluginData = pluginData;
-                result.DeserialiseFromXml(pluginData.innerPluginXml);
+                result.DeserialiseFromXml(innerPluginXml);
                 return result;
             }
             
