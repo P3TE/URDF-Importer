@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Xml.Linq;
 using UnityEngine;
 
@@ -7,6 +8,10 @@ namespace Unity.Robotics.UrdfImporter
 {
     public abstract class PluginManagerBase : MonoBehaviour
     {
+        public enum PluginCompatibility
+        {
+            Unknown, Implemented, Replaced 
+        }
 
         public static PluginManagerBase Instance
         {
@@ -29,7 +34,7 @@ namespace Unity.Robotics.UrdfImporter
 
         private Dictionary<string, GeneratePluginDelegate> pluginFactories = null;
 
-        private Dictionary<string, GeneratePluginDelegate> PluginFactories
+        protected Dictionary<string, GeneratePluginDelegate> PluginFactories
         {
             get
             {
@@ -70,9 +75,14 @@ namespace Unity.Robotics.UrdfImporter
             public GameObject ObjectToAttachTo => urdfPlugins.gameObject;
         }
 
+        public virtual PluginCompatibility GetPluginCompatibility(PluginData pluginData)
+        {
+            return PluginFactories.Keys.Contains(pluginData.filename) ? PluginCompatibility.Implemented : PluginCompatibility.Unknown;
+        }
+
         public UrdfPluginImplementation GeneratePlugin(PluginData pluginData, XElement innerPluginXml)
         {
-
+            
             XAttribute filenameAttribute = innerPluginXml.Attribute(_FilenameAttribute);
             if (filenameAttribute == null)
             {
@@ -86,13 +96,23 @@ namespace Unity.Robotics.UrdfImporter
                 pluginData.name = filenameAttribute.Value;
             }
 
-            if (PluginFactories.TryGetValue(pluginData.filename, out GeneratePluginDelegate generatePluginDelegate))
+            PluginCompatibility compatibility = GetPluginCompatibility(pluginData);
+
+            if (compatibility == PluginCompatibility.Replaced)
             {
-                UrdfPluginImplementation result = generatePluginDelegate(pluginData);
-                if (result == null)
+                //This plugin has been replaced by another for the same functionality. It shall be silently ignored.
+                return null;
+            }
+            
+            if (compatibility == PluginCompatibility.Implemented)
+            {
+                if (PluginFactories.TryGetValue(pluginData.filename, out GeneratePluginDelegate generatePluginDelegate))
                 {
-                    throw new Exception($"Failed to generate plugin with filename {pluginData.filename}");
-                }
+                    UrdfPluginImplementation result = generatePluginDelegate(pluginData);
+                    if (result == null)
+                    {
+                        throw new Exception($"Failed to generate plugin with filename {pluginData.filename}");
+                    }
 
                 result.ImplementationPluginData = pluginData;
                 result.DeserialiseFromXml(innerPluginXml);
