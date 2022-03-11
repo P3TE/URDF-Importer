@@ -103,7 +103,7 @@ namespace Unity.Robotics.UrdfImporter
                 //This plugin has been replaced by another for the same functionality. It shall be silently ignored.
                 return null;
             }
-            
+
             if (compatibility == PluginCompatibility.Implemented)
             {
                 if (PluginFactories.TryGetValue(pluginData.filename, out GeneratePluginDelegate generatePluginDelegate))
@@ -114,11 +114,12 @@ namespace Unity.Robotics.UrdfImporter
                         throw new Exception($"Failed to generate plugin with filename {pluginData.filename}");
                     }
 
-                result.ImplementationPluginData = pluginData;
-                result.DeserialiseFromXml(innerPluginXml);
-                return result;
+                    result.ImplementationPluginData = pluginData;
+                    result.DeserialiseFromXml(innerPluginXml);
+                    return result;
+                }
             }
-            
+
             RuntimeUrdf.AddImportWarning($"No plugin implementation for plugin with filename {pluginData.filename} it will be ignored!");
 
             return null;
