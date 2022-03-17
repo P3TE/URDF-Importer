@@ -676,7 +676,19 @@ namespace Unity.Robotics.UrdfImporter
             return resultBuilder.ToString();
         }
 
-        public static void ConvertMatrix3x3ToUnity(float[][] matrix, int offsetI = 0, int offsetJ = 0)
+        public static void ConvertTranslationRotationMatrix6x6ToUnity(float[][] matrix)
+        {
+            //For the 6x6 matrix, split it up into 4 3x3 matrices
+            ConvertMatrix3x3ToUnity(matrix, 0, 0, BuiltInExtensions.UrdfRosUnityVector3Conversion.PositionDirection, BuiltInExtensions.UrdfRosUnityVector3Conversion.PositionDirection);
+            ConvertMatrix3x3ToUnity(matrix, 3, 0, BuiltInExtensions.UrdfRosUnityVector3Conversion.PositionDirection, BuiltInExtensions.UrdfRosUnityVector3Conversion.Rotation);
+            ConvertMatrix3x3ToUnity(matrix, 0, 3, BuiltInExtensions.UrdfRosUnityVector3Conversion.Rotation, BuiltInExtensions.UrdfRosUnityVector3Conversion.PositionDirection);
+            ConvertMatrix3x3ToUnity(matrix, 3, 3, BuiltInExtensions.UrdfRosUnityVector3Conversion.Rotation, BuiltInExtensions.UrdfRosUnityVector3Conversion.Rotation);
+        }
+        
+
+        public static void ConvertMatrix3x3ToUnity(float[][] matrix, int offsetI = 0, int offsetJ = 0, 
+            BuiltInExtensions.UrdfRosUnityVector3Conversion rowConversion = BuiltInExtensions.UrdfRosUnityVector3Conversion.PositionDirection,
+            BuiltInExtensions.UrdfRosUnityVector3Conversion columnConversion = BuiltInExtensions.UrdfRosUnityVector3Conversion.PositionDirection)
         {
             //For the 3x3 matrix:
             //For each row, apply the Vec3 conversion
@@ -691,7 +703,7 @@ namespace Unity.Robotics.UrdfImporter
                     matrix[i][offsetJ + 1],
                     matrix[i][offsetJ + 2]
                 );
-                Vector3 rowUnity = rowRos.Ros2Unity();
+                Vector3 rowUnity = rowRos.Ros2Unity(rowConversion);
                 matrix[i][offsetJ + 0] = rowUnity[0];
                 matrix[i][offsetJ + 1] = rowUnity[1];
                 matrix[i][offsetJ + 2] = rowUnity[2];
@@ -706,7 +718,7 @@ namespace Unity.Robotics.UrdfImporter
                     matrix[offsetI + 1][j],
                     matrix[offsetI + 2][j]
                 );
-                Vector3 columnUnity = columnRos.Ros2Unity();
+                Vector3 columnUnity = columnRos.Ros2Unity(columnConversion);
                 matrix[offsetI + 0][j] = columnUnity[0];
                 matrix[offsetI + 1][j] = columnUnity[1];
                 matrix[offsetI + 2][j] = columnUnity[2];

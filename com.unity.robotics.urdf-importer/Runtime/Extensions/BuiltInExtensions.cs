@@ -104,7 +104,8 @@ namespace Unity.Robotics.UrdfImporter
         {
             None,
             PositionDirection,
-            Scale
+            Scale,
+            Rotation
         }
         
         public static Vector3 Ros2Unity(this Vector3 vector3, UrdfRosUnityVector3Conversion conversion)
@@ -117,6 +118,8 @@ namespace Unity.Robotics.UrdfImporter
                     return new Vector3(-vector3.y, vector3.z, vector3.x);
                 case UrdfRosUnityVector3Conversion.Scale:
                     return new Vector3(vector3.y, vector3.z, vector3.x);
+                case UrdfRosUnityVector3Conversion.Rotation:
+                    return new Vector3(vector3.y, -vector3.z, -vector3.x);
             }
 
             throw new ArgumentException($"No conversion for {conversion}");
