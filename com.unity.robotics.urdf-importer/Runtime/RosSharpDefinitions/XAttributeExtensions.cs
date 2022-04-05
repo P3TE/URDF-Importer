@@ -31,7 +31,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public static double ReadOptionalDouble(this XAttribute attribute, double fallbackDefaultValue = Double.NaN)
         {
-            return (attribute != null) ? (double)attribute : double.NaN;
+            return (attribute != null) ? (double)attribute : fallbackDefaultValue;
         }
 
         public static string DoubleArrayToString(this IEnumerable<double> arr)
