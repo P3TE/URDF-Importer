@@ -58,7 +58,9 @@ namespace Unity.Robotics.UrdfImporter
 
         public void SetRobotNamespace(string robotNamespace)
         {
-            this.robotNamespace = robotNamespace;
+            this.robotNamespace = robotNamespace.EndsWith('/')
+                ? robotNamespace.Substring(0, robotNamespace.Length - 1)
+                : robotNamespace;
         }
         
         public void SetRobotName(string robotName)
@@ -88,7 +90,6 @@ namespace Unity.Robotics.UrdfImporter
             foreach (ArticulationBody ar in GetComponentsInChildren<ArticulationBody>())
                 ar.useGravity = !useGravity;
             useGravity = !useGravity;
-
         }
 
         public void GenerateUniqueJointNames()
@@ -203,6 +204,5 @@ namespace Unity.Robotics.UrdfImporter
             //Couldn't find the base_link!
             return null;
         }
-        
     }
 }
