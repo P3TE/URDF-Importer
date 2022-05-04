@@ -45,8 +45,8 @@ namespace Unity.Robotics.UrdfImporter
             GameObject linkObject = new GameObject("link");
             linkObject.transform.SetParentAndAlign(parent);
             UrdfLink urdfLink = linkObject.AddComponent<UrdfLink>();
-            UrdfVisualsExtensions.Create(linkObject.transform, link?.visuals);
-            UrdfCollisionsExtensions.Create(linkObject.transform, link?.collisions);
+            urdfLink.Visuals = UrdfVisualsExtensions.Create(linkObject.transform, link?.visuals);
+            urdfLink.Collisions = UrdfCollisionsExtensions.Create(linkObject.transform, link?.collisions);
 
             if (link != null)
             {

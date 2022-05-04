@@ -362,12 +362,22 @@ namespace Unity.Robotics.UrdfImporter
             return true;
         }
 
+        public static bool ReadFloatFromChildXElement(XElement node, string childElementName, ref float value)
+        {
+            return ReadFloatFromChildXElement(node, childElementName, out value, false, value);
+        }
+
         public static bool ReadFloatFromChildXElement(XElement node, string childElementName, out float result, 
             bool required = true, float defaultValue = 0.0f)
         {
             bool wasSuccess = ReadDoubleFromChildXElement(node, childElementName, out double resultAsDouble, required, defaultValue);
             result = (float) resultAsDouble;
             return wasSuccess;
+        }
+
+        public static bool ReadFloatFromXElementAttribute(XElement node, string attributeName, ref float value)
+        {
+            return ReadFloatFromXElementAttribute(node, attributeName, out value, false, value);
         }
 
         public static bool ReadFloatFromXElementAttribute(XElement node, string attributeName, out float result,
@@ -584,15 +594,20 @@ namespace Unity.Robotics.UrdfImporter
             return ReadFloatArrayFromString(node.Name.ToString(), arrayString, out result);
         }
 
-        public static bool ReadFloatArrayFromXElementAttribute(XElement node, string attributeName, out float[] result)
+        public static bool ReadFloatArrayFromXElementAttribute(XElement node, string attributeName, out float[] result, bool required = true)
         {
-            if (!ReadStringFromXElementAttribute(node, attributeName, out string arrayString, true))
+            if (!ReadStringFromXElementAttribute(node, attributeName, out string arrayString, required))
             {
                 result = Array.Empty<float>();
                 return false;
             }
 
             return ReadFloatArrayFromString(node.Name.ToString(), arrayString, out result);
+        }
+
+        public static bool ReadBooleanFromChildXElement(XElement node, string childElementName, ref bool value)
+        {
+            return ReadBooleanFromChildXElement(node, childElementName, out value, false, value);
         }
         
         public static bool ReadBooleanFromChildXElement(XElement node, string childElementName, out bool result, 
@@ -612,6 +627,11 @@ namespace Unity.Robotics.UrdfImporter
             return true;
         }
 
+        public static bool ReadBooleanFromXElementAttribute(XElement node, string attributeName, ref bool value)
+        {
+            return ReadBooleanFromXElementAttribute(node, attributeName, out value, false, value);
+        }
+
         public static bool ReadBooleanFromXElementAttribute(XElement node, string attributeName, out bool result,
             bool required = true, bool defaultValue = false)
         {
@@ -625,6 +645,52 @@ namespace Unity.Robotics.UrdfImporter
             {
                 throw new Exception($"Attribute {node.Name}/{xAttribute.Name.LocalName} expected a bool, received: {xAttribute.Value}");
             }
+            
+            return true;
+        }
+
+        public static bool ReadColorFromXElement(XElement node, string elementName, ref Color value)
+        {
+            bool elementFound = ReadColorFromXElement(node, elementName, out Color result, false);
+            if (elementFound)
+            {
+                value = result;
+            }
+            return elementFound;
+        }
+        
+        public static bool ReadColorFromXElement(XElement node, string elementName, out Color result,
+            bool required = true)
+        {
+            if(!GetXElement(node, elementName, out XElement element, required))
+            {
+                result = Color.white;
+                return false;
+            }
+            return ReadColorFromXElementAttribute(element, "rgba", out result, true);
+        }
+
+        public static bool ReadColorFromXElementAttribute(XElement node, string attributeName, ref Color value)
+        {
+            bool elementFound = ReadColorFromXElementAttribute(node, attributeName, out Color result, false);
+            if (elementFound)
+            {
+                value = result;
+            }
+            return elementFound;
+        }
+
+        public static bool ReadColorFromXElementAttribute(XElement node, string attributeName, out Color result,
+            bool required = true)
+        {
+            
+            if (!ReadFloatArrayFromXElementAttribute(node, attributeName, out float[] colorArray, required))
+            {
+                result = Color.white;
+                return false;
+            }
+
+            result = XAttributeExtensions.FloatArrayToColor(colorArray);
             
             return true;
         }

@@ -20,7 +20,7 @@ namespace Unity.Robotics.UrdfImporter
 {
     public static class UrdfVisualsExtensions
     {
-        public static void Create(Transform parent, List<UrdfLinkDescription.Visual> visuals = null)
+        public static UrdfVisuals Create(Transform parent, List<UrdfLinkDescription.Visual> visuals = null)
         {
             GameObject visualsObject = new GameObject("Visuals");
             visualsObject.transform.SetParentAndAlign(parent);
@@ -36,6 +36,8 @@ namespace Unity.Robotics.UrdfImporter
                     UrdfVisualExtensions.Create(urdfVisuals.transform, visual);
                 }
             }
+
+            return urdfVisuals;
         }
 
         public static List<UrdfLinkDescription.Visual> ExportVisualsData(this UrdfVisuals urdfVisuals)
