@@ -45,12 +45,17 @@ namespace Unity.Robotics.UrdfImporter
             UrdfGeometryVisual.Create(visualObject.transform, urdfVisual.geometryType, visual.geometry);
 
             //UrdfMaterial.SetUrdfMaterial(visualObject, visual.material);
-            SetupMaterials(visualObject, visual);
+            List<UrdfVisual.UrdfVisualRenderable> instantiatedMaterials = SetupMaterials(visualObject, visual);
+            foreach (UrdfVisual.UrdfVisualRenderable instantiatedMaterial in instantiatedMaterials)
+            {
+                urdfVisual.AddInstantiatedMaterial(instantiatedMaterial);
+            }
             UrdfOrigin.ImportOriginData(visualObject.transform, visual.origin);
         }
 
-        private static void SetupMaterials(GameObject visualObject, UrdfLinkDescription.Visual visual)
+        private static List<UrdfVisual.UrdfVisualRenderable> SetupMaterials(GameObject visualObject, UrdfLinkDescription.Visual visual)
         {
+            List<UrdfVisual.UrdfVisualRenderable> instantiatedMaterials = new List<UrdfVisual.UrdfVisualRenderable>();
 
             Renderer[] renderers = visualObject.GetComponentsInChildren<Renderer>();
             foreach (Renderer renderer in renderers)
@@ -68,7 +73,10 @@ namespace Unity.Robotics.UrdfImporter
                         if (additionalMeshImportData.additionalMeshImportData.materialName == materialName)
                         {
                             matchingMaterialFound = true;
-                            renderer.sharedMaterial = urdfMaterialDescription.CreateMaterial();
+                            Material instantiatedMaterial = urdfMaterialDescription.CreateMaterial();
+                            renderer.sharedMaterial = instantiatedMaterial;
+                            instantiatedMaterials.Add(new UrdfVisual.UrdfVisualRenderable(urdfMaterialDescription.name,
+                                renderer, instantiatedMaterial));
                             break;
                         }
                     }
@@ -89,6 +97,8 @@ namespace Unity.Robotics.UrdfImporter
                     }
                 }
             }
+
+            return instantiatedMaterials;
         }
 
         public static void AddCorrespondingCollision(this UrdfVisual urdfVisual)
