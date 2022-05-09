@@ -27,13 +27,16 @@ namespace Unity.Robotics.UrdfImporter.Editor
         SerializedProperty axisType;
         SerializedProperty robotNamespace;
         SerializedProperty robotName;
+        SerializedProperty layerIndex;
 
         public void OnEnable()
         {
             robotNamespace = serializedObject.FindProperty("robotNamespace");
             robotName = serializedObject.FindProperty("robotName");
             axisType = serializedObject.FindProperty("choosenAxis");
+            layerIndex = serializedObject.FindProperty("m_LayerIndex");
         }
+        
         public override void OnInspectorGUI()
         {
             if (buttonStyle == null)
@@ -48,6 +51,8 @@ namespace Unity.Robotics.UrdfImporter.Editor
             EditorGUILayout.PropertyField(axisType, new GUIContent("Axis Type"));
             serializedObject.ApplyModifiedProperties();
             //UrdfRobotExtensions.CorrectAxis(urdfRobot.gameObject); TODO - This correct axis is causing issues.
+            
+            layerIndex.intValue = EditorGUILayout.LayerField(new GUIContent("Robot Layer", "The Unity Layer the robot will be on."), layerIndex.intValue);
 
             GUILayout.Space(5);
             GUILayout.Label("All Rigidbodies", EditorStyles.boldLabel);

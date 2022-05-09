@@ -41,6 +41,11 @@ namespace Unity.Robotics.UrdfImporter
         [SerializeField] public bool exportPlugins = true;
 
         [SerializeField] public UrdfCoordinateSpace coordinateSpace = UrdfCoordinateSpace.ENUFLU;
+        
+        [SerializeField] private int m_LayerIndex = 0;
+        private int previousLayer = 0;
+        
+        private bool startCalled = false;
 
         //Current Settings
         public static bool collidersConvex = true;
@@ -66,6 +71,15 @@ namespace Unity.Robotics.UrdfImporter
         public void SetRobotName(string robotName)
         {
             this.robotName = robotName;
+        }
+        
+        public void SetLayer(int layerIndex)
+        {
+            this.m_LayerIndex = layerIndex;
+            if (startCalled)
+            {
+                UpdateLayerForAllTransforms();
+            }
         }
 
         #region Configure Robot
@@ -152,7 +166,9 @@ namespace Unity.Robotics.UrdfImporter
 
         void Start()
         {
+            startCalled = true;
             CreateCollisionExceptions();
+            UpdateLayerForAllTransforms();
         }
 
         public void CreateCollisionExceptions()
@@ -173,6 +189,36 @@ namespace Unity.Robotics.UrdfImporter
                 }
             }
         }
+
+        private void UpdateLayerForAllTransforms()
+        {
+            if (m_LayerIndex == previousLayer)
+            {
+                return;
+            }
+
+            LinkedList<Transform> transformQueue = new LinkedList<Transform>();
+            transformQueue.AddLast(transform);
+            while (transformQueue.Count > 0)
+            {
+                Transform current = transformQueue.First.Value;
+                transformQueue.RemoveFirst();
+
+                if (current.gameObject.layer == previousLayer)
+                {
+                    current.gameObject.layer = m_LayerIndex;
+                }
+
+                for (int i = 0; i < current.childCount; i++)
+                {
+                    transformQueue.AddLast(current.GetChild(i));
+                }
+
+            }
+
+            previousLayer = m_LayerIndex;
+        }
+        
         #endregion
 
         public UrdfLink FindBaseLink()
@@ -204,5 +250,6 @@ namespace Unity.Robotics.UrdfImporter
             //Couldn't find the base_link!
             return null;
         }
+
     }
 }
