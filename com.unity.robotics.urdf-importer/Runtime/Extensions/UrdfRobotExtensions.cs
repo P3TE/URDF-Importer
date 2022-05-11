@@ -190,7 +190,11 @@ namespace Unity.Robotics.UrdfImporter
                 Tuple<UrdfLinkDescription, Transform, UrdfJointDescription> currentLink = im.importStack.Pop();
                 if (currentLink.Item1 == null)
                 {
-                    throw new Exception($"Failed to find link for joint: {currentLink.Item3.name}!");
+                    if (currentLink.Item3 != null)
+                    {
+                        throw new Exception($"Failed to find link for joint: {currentLink.Item3.name}!");
+                    }
+                    throw new Exception($"Failed to find link for: {currentLink.Item2.name}!");
                 }
                 if (currentLink.Item2 == null)
                 {
