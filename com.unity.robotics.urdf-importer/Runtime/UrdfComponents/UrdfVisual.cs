@@ -23,33 +23,45 @@ namespace Unity.Robotics.UrdfImporter
         [SerializeField]
         public GeometryTypes geometryType;
 
-        private Dictionary<string, UrdfVisualRenderable> instantiatedMaterialMap = new Dictionary<string, UrdfVisualRenderable>();
+        private Dictionary<string, UrdfVisualRenderable> instantiatedMaterialMap = new();
 
         public void AddInstantiatedMaterial(UrdfVisualRenderable instantiatedMaterial)
         {
-            bool addSuccess = instantiatedMaterialMap.TryAdd(instantiatedMaterial.materialName, instantiatedMaterial);
-            if (!addSuccess)
+            if (instantiatedMaterialMap.TryGetValue(instantiatedMaterial.materialName, out UrdfVisualRenderable renderable))
             {
-                RuntimeUrdf.AddImportWarning($"Multiple materials with the same name ({instantiatedMaterial.materialName}) on a single visual!");
+                foreach (Renderer correspondingRenderer in instantiatedMaterial.correspondingRenderers)
+                {
+                    renderable.AddRenderer(correspondingRenderer);   
+                }
+            }
+            else
+            {
+                instantiatedMaterialMap.Add(instantiatedMaterial.materialName, instantiatedMaterial);
             }
         }
 
-        public bool TryGetMaterialByName(string materialName, out UrdfVisualRenderable renderable)
+        public bool TryGetMaterialsByName(string materialName, out UrdfVisualRenderable renderables)
         {
-            return instantiatedMaterialMap.TryGetValue(materialName, out renderable);
+            return instantiatedMaterialMap.TryGetValue(materialName, out renderables);
         }
         
         public class UrdfVisualRenderable
         {
             public readonly string materialName;
-            public readonly Renderer correspondingRenderer;
+            public readonly List<Renderer> correspondingRenderers;
             public readonly Material correspondingMaterial;
 
             public UrdfVisualRenderable(string materialName, Renderer correspondingRenderer, Material correspondingMaterial)
             {
                 this.materialName = materialName;
-                this.correspondingRenderer = correspondingRenderer;
+                correspondingRenderers = new List<Renderer> { correspondingRenderer };
                 this.correspondingMaterial = correspondingMaterial;
+            }
+
+            public void AddRenderer(Renderer renderer)
+            {
+                correspondingRenderers.Add(renderer);
+                renderer.material = correspondingMaterial;
             }
         }
     }

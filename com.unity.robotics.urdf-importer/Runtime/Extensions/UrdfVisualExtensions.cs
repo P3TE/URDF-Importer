@@ -55,6 +55,9 @@ namespace Unity.Robotics.UrdfImporter
 
         private static List<UrdfVisual.UrdfVisualRenderable> SetupMaterials(GameObject visualObject, UrdfLinkDescription.Visual visual)
         {
+            // TODO: We should probably keep a list of materials we have already set up so we can determine if we're making a duplicate.
+            // TODO: Once the above is addressed, we no longer need to update the material in UrdfVisualRenderable.
+            
             List<UrdfVisual.UrdfVisualRenderable> instantiatedMaterials = new List<UrdfVisual.UrdfVisualRenderable>();
 
             Renderer[] renderers = visualObject.GetComponentsInChildren<Renderer>();
