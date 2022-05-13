@@ -60,6 +60,7 @@ namespace Unity.Robotics.UrdfImporter
 
             public void AddRenderer(Renderer renderer)
             {
+                renderer.material = correspondingMaterial;
                 correspondingRenderers.Add(renderer);
             }
         }
