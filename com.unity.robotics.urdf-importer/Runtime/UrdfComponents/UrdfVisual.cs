@@ -31,7 +31,7 @@ namespace Unity.Robotics.UrdfImporter
             {
                 foreach (Renderer correspondingRenderer in instantiatedMaterial.correspondingRenderers)
                 {
-                    renderable.AddRenderer(correspondingRenderer);   
+                    renderable.AddRenderer(correspondingRenderer);
                 }
             }
             else
@@ -40,9 +40,9 @@ namespace Unity.Robotics.UrdfImporter
             }
         }
 
-        public bool TryGetMaterialsByName(string materialName, out UrdfVisualRenderable renderables)
+        public bool TryGetMaterialsByName(string materialName, out UrdfVisualRenderable renderable)
         {
-            return instantiatedMaterialMap.TryGetValue(materialName, out renderables);
+            return instantiatedMaterialMap.TryGetValue(materialName, out renderable);
         }
         
         public class UrdfVisualRenderable
@@ -61,7 +61,6 @@ namespace Unity.Robotics.UrdfImporter
             public void AddRenderer(Renderer renderer)
             {
                 correspondingRenderers.Add(renderer);
-                renderer.material = correspondingMaterial;
             }
         }
     }

@@ -44,7 +44,6 @@ namespace Unity.Robotics.UrdfImporter
             urdfVisual.geometryType = UrdfGeometry.GetGeometryType(visual.geometry);
             UrdfGeometryVisual.Create(visualObject.transform, urdfVisual.geometryType, visual.geometry);
 
-            //UrdfMaterial.SetUrdfMaterial(visualObject, visual.material);
             List<UrdfVisual.UrdfVisualRenderable> instantiatedMaterials = SetupMaterials(visualObject, visual);
             foreach (UrdfVisual.UrdfVisualRenderable instantiatedMaterial in instantiatedMaterials)
             {
@@ -55,10 +54,7 @@ namespace Unity.Robotics.UrdfImporter
 
         private static List<UrdfVisual.UrdfVisualRenderable> SetupMaterials(GameObject visualObject, UrdfLinkDescription.Visual visual)
         {
-            // TODO: We should probably keep a list of materials we have already set up so we can determine if we're making a duplicate.
-            // TODO: Once the above is addressed, we no longer need to update the material in UrdfVisualRenderable.
-            
-            List<UrdfVisual.UrdfVisualRenderable> instantiatedMaterials = new List<UrdfVisual.UrdfVisualRenderable>();
+            Dictionary<string, UrdfVisual.UrdfVisualRenderable> loadedMaterials = new Dictionary<string, UrdfVisual.UrdfVisualRenderable>();
 
             Renderer[] renderers = visualObject.GetComponentsInChildren<Renderer>();
             foreach (Renderer renderer in renderers)
@@ -73,13 +69,21 @@ namespace Unity.Robotics.UrdfImporter
                     foreach (UrdfMaterialDescription urdfMaterialDescription in visual.materials)
                     {
                         string materialName = urdfMaterialDescription.name;
+                        
                         if (additionalMeshImportData.additionalMeshImportData.materialName == materialName)
                         {
                             matchingMaterialFound = true;
-                            Material instantiatedMaterial = urdfMaterialDescription.CreateMaterial();
-                            renderer.sharedMaterial = instantiatedMaterial;
-                            instantiatedMaterials.Add(new UrdfVisual.UrdfVisualRenderable(urdfMaterialDescription.name,
-                                renderer, instantiatedMaterial));
+                            if (loadedMaterials.TryGetValue(materialName, out UrdfVisual.UrdfVisualRenderable renderable))
+                            {
+                                renderable.AddRenderer(renderer);
+                            }
+                            else
+                            {
+                                Material instantiatedMaterial = urdfMaterialDescription.CreateMaterial();
+                                renderer.sharedMaterial = instantiatedMaterial;
+                                loadedMaterials.Add(materialName, 
+                                    new UrdfVisual.UrdfVisualRenderable(materialName, renderer, instantiatedMaterial));
+                            }
                             break;
                         }
                     }
@@ -101,7 +105,7 @@ namespace Unity.Robotics.UrdfImporter
                 }
             }
 
-            return instantiatedMaterials;
+            return loadedMaterials.Values.ToList();
         }
 
         public static void AddCorrespondingCollision(this UrdfVisual urdfVisual)
