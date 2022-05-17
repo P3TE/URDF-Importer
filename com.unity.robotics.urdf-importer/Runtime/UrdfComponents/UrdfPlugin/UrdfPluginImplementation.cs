@@ -557,6 +557,31 @@ namespace Unity.Robotics.UrdfImporter
             
             return true;
         }
+        
+        private static bool ReadIntArrayFromString(string nodeName, string arrayString, out int[] result)
+        {
+            string[] arraySplit = arrayString.Split(' ');
+            List<int> values = new List<int>();
+
+            foreach (string splitValue in arraySplit)
+            {
+                if (string.IsNullOrWhiteSpace(splitValue))
+                {
+                    continue;
+                }
+                
+                if (!int.TryParse(splitValue, out int value))
+                {
+                    throw new Exception($"Node {nodeName} array element value expected a float, received: {splitValue}");
+                }
+                
+                values.Add(value);
+            }
+
+            result = values.ToArray();
+
+            return true;
+        }
 
         private static bool ReadFloatArrayFromString(string nodeName, string arrayString, out float[] result)
         {
@@ -581,6 +606,17 @@ namespace Unity.Robotics.UrdfImporter
             result = values.ToArray();
 
             return true;
+        }
+        
+        public static bool ReadIntArrayFromChildXElement(XElement node, string childElementName, out int[] result)
+        {
+            if (!ReadStringFromChildXElement(node, childElementName, out string arrayString, true))
+            {
+                result = Array.Empty<int>();
+                return false;
+            }
+
+            return ReadIntArrayFromString(node.Name.ToString(), arrayString, out result);
         }
 
         public static bool ReadFloatArrayFromChildXElement(XElement node, string childElementName, out float[] result)
