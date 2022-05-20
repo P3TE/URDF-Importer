@@ -146,6 +146,10 @@ namespace UnityMeshImporter
                         Texture2D uTexture = new Texture2D(2,2);
                         string texturePath = Path.Combine(parentDir, m.TextureDiffuse.FilePath);
                         
+                        if(!File.Exists(texturePath))
+                        {
+                            throw new Exception("Cannot find texture file: " + texturePath);
+                        }
                         byte[] byteArray = File.ReadAllBytes(texturePath);
                         bool isLoaded = uTexture.LoadImage(byteArray);
                         if (!isLoaded)
