@@ -69,7 +69,7 @@ namespace Unity.Robotics.UrdfImporter
             }
             while (rawRobotNamespace.StartsWith('/'))
             {
-                rawRobotNamespace = rawRobotNamespace.Substring(1, rawRobotNamespace.Length);
+                rawRobotNamespace = rawRobotNamespace.Substring(1, rawRobotNamespace.Length - 1);
             }
             this.robotNamespace = rawRobotNamespace;
         }
