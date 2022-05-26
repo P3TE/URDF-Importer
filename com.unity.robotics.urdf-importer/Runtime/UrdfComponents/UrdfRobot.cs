@@ -61,11 +61,17 @@ namespace Unity.Robotics.UrdfImporter
         
         public string ModelName => gameObject.name;
 
-        public void SetRobotNamespace(string robotNamespace)
+        public void SetRobotNamespace(string rawRobotNamespace)
         {
-            this.robotNamespace = robotNamespace.EndsWith('/')
-                ? robotNamespace.Substring(0, robotNamespace.Length - 1)
-                : robotNamespace;
+            while (rawRobotNamespace.EndsWith('/'))
+            {
+                rawRobotNamespace = rawRobotNamespace.Substring(0, rawRobotNamespace.Length - 1);
+            }
+            while (rawRobotNamespace.StartsWith('/'))
+            {
+                rawRobotNamespace = rawRobotNamespace.Substring(1, rawRobotNamespace.Length);
+            }
+            this.robotNamespace = rawRobotNamespace;
         }
         
         public void SetRobotName(string robotName)
