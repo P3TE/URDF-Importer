@@ -10,13 +10,16 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/  
+*/
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using Unity.Robotics.UrdfImporter.Urdf.Extensions;
+using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -82,6 +85,14 @@ namespace Unity.Robotics.UrdfImporter
             public double mass;
             public UrdfOriginDescription origin;
             public Inertia inertia;
+            
+            public enum InertiaCalculationType
+            {
+                Inherit_Fallback_Manual = 0, //The default.
+                Inherit_Fallback_Automatic,
+                Force_Manual,
+                Force_Automatic
+            }
 
             public Inertial(XElement node)
             {
@@ -114,20 +125,84 @@ namespace Unity.Robotics.UrdfImporter
 
             public class Inertia
             {
-                public bool automaticInertia = false;
+
+                private static Dictionary<string, InertiaCalculationType> StringToInertiaCalculationTypeMap =
+                    new Dictionary<string, InertiaCalculationType>()
+                    {
+                        {"force_automatic", InertiaCalculationType.Force_Automatic},
+                        {"force_manual", InertiaCalculationType.Force_Manual},
+                        {"inherit_fallback_automatic", InertiaCalculationType.Inherit_Fallback_Automatic},
+                        {"inherit_fallback_manual", InertiaCalculationType.Inherit_Fallback_Manual}
+                    };
+
+
+                private const string _InertiaCalculationTypeId = "unity_automatic_inertia";
+                public InertiaCalculationType inertiaCalculationType = InertiaCalculationType.Inherit_Fallback_Manual;
+
+                public bool automaticInertiaDefined; //Used for warning messages.
+                
                 public double ixx;
                 public double ixy;
                 public double ixz;
                 public double iyy;
                 public double iyz;
                 public double izz;
+                
+                public string StringNameFromInertiaCalculationType(InertiaCalculationType inertiaCalculationType)
+                {
+                    foreach (KeyValuePair<string, InertiaCalculationType> keyValuePair in StringToInertiaCalculationTypeMap)
+                    {
+                        if (keyValuePair.Value == inertiaCalculationType)
+                        {
+                            return keyValuePair.Key;
+                        }
+                    }
+
+                    throw new Exception($"Unmapped InertiaCalculationType: {inertiaCalculationType}");
+                }
+
+                public InertiaCalculationType InertiaCalculationTypeFromString(string value)
+                {
+                    if (StringToInertiaCalculationTypeMap.TryGetValue(value, out InertiaCalculationType result))
+                    {
+                        return result;
+                    }
+
+                    StringBuilder errorMessage = new StringBuilder();
+                    
+                    errorMessage.Append($"Unknown value for '{_InertiaCalculationTypeId}'! Provided: '{value}'");
+                    int count = 0;
+                    foreach (KeyValuePair<string, InertiaCalculationType> keyValuePair in StringToInertiaCalculationTypeMap)
+                    {
+                        if (count == 0)
+                        {
+                            errorMessage.Append(", available values include: ");
+                        }
+                        else
+                        {
+                            errorMessage.Append(", ");
+                        }
+                        count++;
+                        errorMessage.Append("'");
+                        errorMessage.Append(keyValuePair.Key);
+                        errorMessage.Append("'");
+                    }
+                    throw new Exception(errorMessage.ToString());
+                }
 
                 public Inertia(XElement node)
                 {
-                    XAttribute automaticInertiaAttribute = node.Attribute("unity_automatic_inertia");
-                    if (automaticInertiaAttribute != null)
+                    XAttribute automaticInertiaAttribute = node.Attribute(_InertiaCalculationTypeId);
+                    automaticInertiaDefined = automaticInertiaAttribute != null;
+                    if (automaticInertiaDefined)
                     {
-                        automaticInertia = (bool)automaticInertiaAttribute;
+                        inertiaCalculationType = InertiaCalculationTypeFromString(automaticInertiaAttribute.Value);
+                    }
+                    else
+                    {
+                        string warningMessage =
+                            $"inertial was defined without specifying the '{_InertiaCalculationTypeId}' behaviour, it is recommended that this is set. For automatic '{StringNameFromInertiaCalculationType(InertiaCalculationType.Inherit_Fallback_Automatic)}' is recommended, if the inertia is well characterised '{StringNameFromInertiaCalculationType(InertiaCalculationType.Inherit_Fallback_Manual)}' is recommended. To force a inertia mode, use '{StringNameFromInertiaCalculationType(InertiaCalculationType.Force_Automatic)}' or '{StringNameFromInertiaCalculationType(InertiaCalculationType.Force_Manual)}'";
+                        RuntimeUrdf.AddImportWarning(warningMessage);
                     }
                     ixx = (double)node.Attribute("ixx");
                     ixy = (double)node.Attribute("ixy");
@@ -150,6 +225,15 @@ namespace Unity.Robotics.UrdfImporter
                 public void WriteToUrdf(XmlWriter writer)
                 {
                     writer.WriteStartElement("inertia");
+
+                    foreach (KeyValuePair<string,InertiaCalculationType> keyValuePair in StringToInertiaCalculationTypeMap)
+                    {
+                        if (keyValuePair.Value == inertiaCalculationType)
+                        {
+                            writer.WriteAttributeString(_InertiaCalculationTypeId, keyValuePair.Key);
+                        }
+                    }
+                    
                     writer.WriteAttributeString("ixx", ixx + "");
                     writer.WriteAttributeString("ixy", ixy + "");
                     writer.WriteAttributeString("ixz", ixz + "");
@@ -466,5 +550,39 @@ namespace Unity.Robotics.UrdfImporter
                 }
             }
         }
+    }
+    
+    public static class InertiaCalculationTypeHelper
+    {
+        public static bool AutomaticInertiaCalculation(this UrdfLinkDescription.Inertial.InertiaCalculationType inertiaCalculationType)
+        {
+            switch (inertiaCalculationType)
+            {
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Inherit_Fallback_Automatic:
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Force_Automatic:
+                    return true;
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Inherit_Fallback_Manual:
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Force_Manual:
+                    return false;
+            }
+
+            throw new Exception($"Unhandled InertiaCalculationType {inertiaCalculationType}");
+        }
+        
+        public static bool CanInheritInertiaCalculation(this UrdfLinkDescription.Inertial.InertiaCalculationType inertiaCalculationType)
+        {
+            switch (inertiaCalculationType)
+            {
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Inherit_Fallback_Automatic:
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Inherit_Fallback_Manual:
+                    return true;
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Force_Automatic:
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Force_Manual:
+                    return false;
+            }
+
+            throw new Exception($"Unhandled InertiaCalculationType {inertiaCalculationType}");
+        }
+        
     }
 }

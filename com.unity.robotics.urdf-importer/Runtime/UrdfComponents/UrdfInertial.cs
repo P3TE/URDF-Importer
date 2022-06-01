@@ -30,7 +30,7 @@ namespace Unity.Robotics.UrdfImporter
         public Vector3 centerOfMass;
         public Vector3? _adjustedCenterOfMass = null;
         private bool startCalled = false;
-        public bool automaticInertia = false;
+        public UrdfLinkDescription.Inertial.InertiaCalculationType inertiaCalculationType;
         public Vector3 inertiaTensor;
         public Quaternion inertiaTensorRotation;
         public Quaternion inertialAxisRotation;
@@ -107,7 +107,7 @@ namespace Unity.Robotics.UrdfImporter
             if (useUrdfData)
             {
                 robotLink.centerOfMass = AdjustedCenterOfMass;
-                if (automaticInertia)
+                if (inertiaCalculationType.AutomaticInertiaCalculation())
                 {
                     robotLink.ResetInertiaTensor();
                 }
@@ -153,10 +153,19 @@ namespace Unity.Robotics.UrdfImporter
 
         private void ImportInertiaData(UrdfLinkDescription.Inertial inertial)
         {
-            Vector3 eigenvalues;
-            Vector3[] eigenvectors;
-            Matrix3x3 rotationMatrix = ToMatrix3x3(inertial.inertia);
-            rotationMatrix.DiagonalizeRealSymmetric(out eigenvalues, out eigenvectors);
+            
+
+            Matrix3x3 unityInertiaMatrix = ToUnityMatrix3x3(inertial.inertia);
+            Vector3 inertialTensorUnity = unityInertiaMatrix.PxDiagonalize(out Quaternion inertialTensorRotationUnity);
+            
+            //This previous implementation:
+            //Vector3 eigenvalues;
+            //Vector3[] eigenvectors;
+            //Matrix3x3 rotationMatrix = ToMatrix3x3(inertial.inertia);
+            //rotationMatrix.DiagonalizeRealSymmetric(out eigenvalues, out eigenvectors);
+            //Vector3 inertialTensorUnity = ToUnityInertiaTensor(FixMinInertia(eigenvalues));
+            //Quaternion inertialTensorRotationUnity = ToQuaternion(eigenvectors[0], eigenvectors[1], eigenvectors[2]).Ros2Unity() * this.inertialAxisRotation;
+            
 #if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = GetComponent<ArticulationBody>();
 
@@ -177,13 +186,10 @@ namespace Unity.Robotics.UrdfImporter
 
             this.inertialAxisRotation.eulerAngles = inertiaEulerAngles;
             
-            this.automaticInertia = inertial.inertia.automaticInertia;
+            this.inertiaCalculationType = inertial.inertia.inertiaCalculationType;
 
-            if (!this.automaticInertia)
-            {
-                robotLink.inertiaTensor = ToUnityInertiaTensor(FixMinInertia(eigenvalues));
-                robotLink.inertiaTensorRotation = ToQuaternion(eigenvectors[0], eigenvectors[1], eigenvectors[2]).Ros2Unity() * this.inertialAxisRotation;
-            }
+            this.inertiaTensor = inertialTensorUnity;
+            this.inertiaTensorRotation = inertialTensorRotationUnity;
 
             this.centerOfMass = robotLink.centerOfMass;
             
@@ -203,6 +209,14 @@ namespace Unity.Robotics.UrdfImporter
                 new[] { (float)inertia.ixx, (float)inertia.ixy, (float)inertia.ixz,
                                              (float)inertia.iyy, (float)inertia.iyz,
                                                                  (float)inertia.izz });
+        }
+        
+        public static Matrix3x3 ToUnityMatrix3x3(UrdfLinkDescription.Inertial.Inertia inertia)
+        {
+            return new Matrix3x3(
+                new[] { (float)inertia.iyy, (float)inertia.iyz, (float)inertia.ixy,
+                    (float)inertia.izz, (float)inertia.ixz,
+                    (float)inertia.ixx });
         }
 
         private static Vector3 FixMinInertia(Vector3 vector3)
@@ -301,7 +315,7 @@ namespace Unity.Robotics.UrdfImporter
                 inertiaTensor[1],
                 inertiaTensor[2] });
             
-            Matrix3x3 qMatrix = Quaternion2Matrix(inertiaTensorRotation * Quaternion.Inverse(inertialAxisRotation));
+            Matrix3x3 qMatrix = Matrix3x3.Quaternion2Matrix(inertiaTensorRotation * Quaternion.Inverse(inertialAxisRotation));
 
             Matrix3x3 qMatrixTransposed = qMatrix.Transpose();
 
@@ -309,29 +323,6 @@ namespace Unity.Robotics.UrdfImporter
             return inertiaMatrix;
         }
         
-        private static Matrix3x3 Quaternion2Matrix(Quaternion quaternion)
-        {
-            Quaternion rosQuaternion = Quaternion.Normalize(quaternion);
-            float qx = rosQuaternion.x;
-            float qy = rosQuaternion.y;
-            float qz = rosQuaternion.z;
-            float qw = rosQuaternion.w;
-
-            //From http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm
-            return new Matrix3x3(new float[] {
-                1 - (2 * qy * qy) - (2 * qz * qz),
-                (2 * qx * qy) - (2 * qz * qw),
-                (2 * qx * qz) + (2 * qy * qw),
-
-                (2 * qx * qy) + (2 * qz * qw),
-                1 - (2 * qx * qx) - (2 * qz * qz),
-                (2 * qy * qz) - (2 * qx * qw),
-
-                (2 * qx * qz) - (2 * qy * qw),
-                (2 * qy * qz) + (2 * qx * qw),
-                1 - (2 * qx * qx) - (2 * qy * qy)});
-        }
-
         private static UrdfLinkDescription.Inertial.Inertia ToInertia(Matrix3x3 matrix)
         {
             return new UrdfLinkDescription.Inertial.Inertia(matrix[0][0], matrix[0][1], matrix[0][2],

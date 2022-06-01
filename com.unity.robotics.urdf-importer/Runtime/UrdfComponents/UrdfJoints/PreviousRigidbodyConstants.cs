@@ -9,6 +9,10 @@ namespace Unity.Robotics.UrdfImporter
         [SerializeField] public float drag;
         [SerializeField] public float angularDrag;
         [SerializeField] public Vector3 centerOfMass;
+        [SerializeField] public UrdfLinkDescription.Inertial.InertiaCalculationType inertiaCalculationType;
+        [SerializeField] public Vector3 inertiaTensor;
+        [SerializeField] public Quaternion inertiaTensorRotation;
+        
 
         public void SetValues(UrdfLinkDescription link)
         {
@@ -24,14 +28,21 @@ namespace Unity.Robotics.UrdfImporter
             {
                 this.centerOfMass = link.inertial.origin.Xyz.ToVector3().Ros2Unity();
             }
+
+            inertiaCalculationType = link.inertial.inertia.inertiaCalculationType;
+            Matrix3x3 inertia = UrdfInertial.ToUnityMatrix3x3(link.inertial.inertia);
+            inertiaTensor = inertia.PxDiagonalize(out inertiaTensorRotation);
         }
         
         public void SetValues(Rigidbody from)
         {
+            this.inertiaCalculationType = default;
             this.mass = from.mass;
             this.drag = from.drag;
             this.angularDrag = from.angularDrag;
             this.centerOfMass = from.centerOfMass;
+            this.inertiaTensor = from.inertiaTensor;
+            this.inertiaTensorRotation = from.inertiaTensorRotation;
         }
 
     }
