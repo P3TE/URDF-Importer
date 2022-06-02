@@ -116,12 +116,35 @@ namespace Unity.Robotics.UrdfImporter
                     robotLink.inertiaTensor = inertiaTensor;
                     robotLink.inertiaTensorRotation = inertiaTensorRotation * inertialAxisRotation;
                 }
+
+                Vector3 safeInertia = EnsureMinimumInertia(robotLink.inertiaTensor, out bool wasBelowMinimumInertia);
+                if(wasBelowMinimumInertia)
+                {
+                    robotLink.inertiaTensor = safeInertia;
+                    RuntimeUrdf.AddImportWarning($"Inertia Tensor below {MinInertia} detected on {robotLink.gameObject.name}! Due to floating-point precision values lower than {MinInertia} may cause erratic behaviour so the Inertia Tensor for this object has been adjusted to be at least the minimum value.");
+                }
+                
             }
             else
             {
                 robotLink.ResetCenterOfMass();
                 robotLink.ResetInertiaTensor();
             }
+        }
+
+        private Vector3 EnsureMinimumInertia(Vector3 originalInertiaTensor, out bool wasBelowMinimumInertia)
+        {
+            wasBelowMinimumInertia = false;
+            Vector3 result = originalInertiaTensor;
+            for (int i = 0; i < 3; i++)
+            {
+                if (result[i] < MinInertia)
+                {
+                    result[i] = MinInertia;
+                    wasBelowMinimumInertia = true;
+                }
+            }
+            return result;
         }
 
         private void OnDrawGizmosSelected()
