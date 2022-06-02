@@ -195,6 +195,24 @@ namespace Unity.Robotics.UrdfImporter
                 VelocityLimit);
 #endif
         }
+        
+        public static bool ShouldRevoluteJointBeOptimisedToFixed(UrdfJointDescription joint, out string reason)
+        {
+            if (Math.Abs(joint.limit.lowerRadians - joint.limit.upperRadians) < 0.0001f)
+            {
+                /*
+                 * Note: This typically happens because Gazebo requires a revolute joint for sensors otherwise it will crash.
+                 *       To keep things cross compatible with gazebo, we'll just remove revolute joints that should be fixed.
+                 */
+                reason = $"For Revolute Joint with name {joint.name}, " +
+                                 "joint.limit.lowerRadians == joint.limit.upperRadians should be distinct!" +
+                                 " Consider using a Continuous Joint or a Fixed Joint Instead.";
+                return true;
+            }
+
+            reason = "";
+            return false;
+        }
 
         /// <summary>
         /// Reads axis joint information and rotation to the articulation body to produce the required motion
@@ -230,11 +248,8 @@ namespace Unity.Robotics.UrdfImporter
             ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
             UrdfJointContinuous.AdjustMovementShared(configurableJoint, joint);
             configurableJoint.angularXMotion = ConfigurableJointMotion.Limited;
-            if (Math.Abs(joint.limit.lowerRadians - joint.limit.upperRadians) < 0.0001f)
+            if (ShouldRevoluteJointBeOptimisedToFixed(joint, out string warningMessage))
             {
-                string warningMessage = $"For Revolute Joint with name {joint.name}, " +
-                                        "joint.limit.lowerRadians == joint.limit.upperRadians should be distinct!" +
-                                        " Consider using a Continuous Joint or a Fixed Joint Instead.";
                 RuntimeUrdf.AddImportWarning(warningMessage);
             }
             configurableJoint.lowAngularXLimit = new SoftJointLimit()

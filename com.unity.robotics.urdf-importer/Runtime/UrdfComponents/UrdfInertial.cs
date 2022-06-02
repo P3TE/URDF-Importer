@@ -156,7 +156,7 @@ namespace Unity.Robotics.UrdfImporter
             
 
             Matrix3x3 unityInertiaMatrix = ToUnityMatrix3x3(inertial.inertia);
-            Vector3 inertialTensorUnity = unityInertiaMatrix.PxDiagonalize(out Quaternion inertialTensorRotationUnity);
+            Vector3 inertialTensorUnity = FixMinInertia(unityInertiaMatrix.PxDiagonalize(out Quaternion inertialTensorRotationUnity));
             
             //This previous implementation:
             //Vector3 eigenvalues;

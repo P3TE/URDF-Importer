@@ -22,6 +22,19 @@ namespace Unity.Robotics.UrdfImporter
     {
         public override JointTypes JointType => JointTypes.Fixed;
 
+        /*
+         * Some joints that weren't previously fixed joints in the xacro
+         * but were optimised into fixed joints won't have their transform
+         * published by a joint state publisher without their joint state
+         * being published. This flags that the joint state should be
+         * published for this joint even though it is fixed.
+         */
+        public bool JointIsDynamicForJointStatePublishing
+        {
+            get;
+            set;
+        }
+
         public static UrdfJoint Create(GameObject linkObject)
         {
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
@@ -52,12 +65,27 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
 #else
 
-        public static UrdfJointFixed CreateOptimizeFixedJoint(GameObject fixedJointToOptimize, UrdfLinkDescription link)
+        public static UrdfJointFixed CreateOptimizeFixedJoint(GameObject fixedJointToOptimize, UrdfLinkDescription link, UrdfJointDescription joint)
         {
             UrdfInertial.Create(fixedJointToOptimize, link.inertial, false);
             PreviousRigidbodyConstants previousRigidbodyConstants =
                 AddPreviousRigidbodyConstantsUsingUrdfLinkDescription(fixedJointToOptimize, link);
             UrdfJointFixed result = fixedJointToOptimize.AddComponent<UrdfJointFixed>();
+            
+            JointTypes jointType = GetJointType(joint.type);
+            result.originalLocalRotation = fixedJointToOptimize.transform.localRotation;
+            result.jointName = joint.name;
+
+            switch (jointType)
+            {
+                case JointTypes.Revolute:
+                case JointTypes.Continuous:
+                case JointTypes.Prismatic:
+                    result.JointIsDynamicForJointStatePublishing = true;
+                    break;
+            }
+            //JointIsDynamicForJointStatePublishing
+            
             OptimizeFixedJoint(fixedJointToOptimize, previousRigidbodyConstants);
             return result;
         }

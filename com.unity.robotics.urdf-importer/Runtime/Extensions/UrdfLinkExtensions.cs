@@ -75,26 +75,56 @@ namespace Unity.Robotics.UrdfImporter
             if (joint?.origin != null)
                 UrdfOrigin.ImportOriginData(urdfLink.transform, joint.origin);
 
-
-            if (joint != null && UrdfJoint.GetJointType(joint.type) == UrdfJoint.JointTypes.Fixed)
+            bool hasJoint = joint != null;
+            string jointName = "Unknown";
+            UrdfJoint.JointTypes jointType = default;
+            if (hasJoint)
             {
-                UrdfJoint newJoint = UrdfJointFixed.CreateOptimizeFixedJoint(urdfLink.gameObject, link);
-                jointMap.Add(joint.name, newJoint);
+                jointName = joint.name;
+                jointType = UrdfJoint.GetJointType(joint.type);
             }
-            else
-            {
-                if (link.inertial != null)
-                {
-                    UrdfInertial.Create(urdfLink.gameObject, link.inertial);
-                }
             
-                if (joint != null)
-                {
-                    UrdfJoint newJoint = UrdfJoint.Create(urdfLink.gameObject, UrdfJoint.GetJointType(joint.type), joint);
-                    jointMap.Add(joint.name, newJoint);
-                }
+            
+            bool shouldCreateOptimisedFixedJoint = ShouldCreatedOptimizedFixedJoint(joint);
+            if (shouldCreateOptimisedFixedJoint)
+            {
+                UrdfJoint newJoint = UrdfJointFixed.CreateOptimizeFixedJoint(urdfLink.gameObject, link, joint);
+                jointMap.Add(jointName, newJoint);
+                return;
+            }
+            
+            if (link.inertial != null)
+            {
+                UrdfInertial.Create(urdfLink.gameObject, link.inertial);
+            }
+        
+            if (hasJoint)
+            {
+                UrdfJoint newJoint = UrdfJoint.Create(urdfLink.gameObject, jointType, joint);
+                jointMap.Add(jointName, newJoint);
             }
         }
+
+        public static bool ShouldCreatedOptimizedFixedJoint(UrdfJointDescription joint)
+        {
+            if (joint == null)
+            {
+                return false;
+            }
+            
+            UrdfJoint.JointTypes jointType = UrdfJoint.GetJointType(joint.type);
+            switch (jointType)
+            {
+                case UrdfJoint.JointTypes.Fixed:
+                    return true;
+                case UrdfJoint.JointTypes.Revolute:
+                    return UrdfJointRevolute.ShouldRevoluteJointBeOptimisedToFixed(joint, out _);
+                default:
+                    return false;
+            }
+        }
+
+        
 
         public static void RemoveJoint(UrdfJoint urdfJoint)
         {
