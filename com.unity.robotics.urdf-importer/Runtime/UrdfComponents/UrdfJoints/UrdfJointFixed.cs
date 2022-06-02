@@ -177,7 +177,8 @@ namespace Unity.Robotics.UrdfImporter
                           relativeComAdded * bodyMassWeightingAdded;
 
             Vector3 inertiaTensorAdded = intertiaAdded.PxDiagonalize(out Quaternion inertiaTensorRotationAdded);
-            Matrix3x3 existingInertiaAdded = UrdfInertial.CalculateInertiaTensorMatrix(inertiaTensorAdded, inertiaTensorRotationAdded, relativeRotationAdded); //TODO - Verify.
+            //TODO - Verify that relativeRotationAdded is the correct parameter for inertialAxisRotation when combining inertias from objects with different rotations.
+            Matrix3x3 existingInertiaAdded = UrdfInertial.CalculateInertiaTensorMatrix(inertiaTensorAdded, inertiaTensorRotationAdded, relativeRotationAdded);
             Matrix3x3 existingInertia = intertiaOriginal + existingInertiaAdded;
             
             //Calculate the additional offset using parallel axis theorem
