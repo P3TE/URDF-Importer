@@ -200,9 +200,21 @@ namespace Unity.Robotics.UrdfImporter
                     }
                     else
                     {
-                        string warningMessage =
-                            $"inertial was defined without specifying the '{_InertiaCalculationTypeId}' behaviour, it is recommended that this is set. For automatic '{StringNameFromInertiaCalculationType(InertiaCalculationType.Inherit_Fallback_Automatic)}' is recommended, if the inertia is well characterised '{StringNameFromInertiaCalculationType(InertiaCalculationType.Inherit_Fallback_Manual)}' is recommended. To force a inertia mode, use '{StringNameFromInertiaCalculationType(InertiaCalculationType.Force_Automatic)}' or '{StringNameFromInertiaCalculationType(InertiaCalculationType.Force_Manual)}'";
-                        RuntimeUrdf.AddImportWarning(warningMessage);
+                        StringBuilder warningBuilder = new StringBuilder();
+                        warningBuilder.Append("In the <inertial> within ");
+                        warningBuilder.Append(UrdfPluginImplementation.GetVerboseXElementName(node.Parent.Parent));
+                        warningBuilder.Append(" inertial was defined without specifying the ");
+                        warningBuilder.Append(_InertiaCalculationTypeId);
+                        warningBuilder.Append("' behaviour, it is recommended that this is set. For automatic '");
+                        warningBuilder.Append(StringNameFromInertiaCalculationType(InertiaCalculationType.Inherit_Fallback_Automatic));
+                        warningBuilder.Append("' is recommended, if the inertia is well characterised '");
+                        warningBuilder.Append(StringNameFromInertiaCalculationType(InertiaCalculationType.Inherit_Fallback_Manual));
+                        warningBuilder.Append("' is recommended. To force a inertia mode, use '");
+                        warningBuilder.Append(StringNameFromInertiaCalculationType(InertiaCalculationType.Force_Automatic));
+                        warningBuilder.Append("' or '");
+                        warningBuilder.Append(StringNameFromInertiaCalculationType(InertiaCalculationType.Force_Manual));
+                        warningBuilder.Append("'");
+                        RuntimeUrdf.AddImportWarning(warningBuilder.ToString());
                     }
                     ixx = (double)node.Attribute("ixx");
                     ixy = (double)node.Attribute("ixy");
