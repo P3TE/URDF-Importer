@@ -214,10 +214,8 @@ namespace Unity.Robotics.UrdfImporter
             this.inertiaTensor = inertialTensorUnity;
             this.inertiaTensorRotation = inertialTensorRotationUnity;
 
+            //TODO -  if the user can specify this in the xacro, we shouldn't be using the rigibidboy (robotLink) version.
             this.centerOfMass = robotLink.centerOfMass;
-            
-            this.inertiaTensor = robotLink.inertiaTensor;
-            this.inertiaTensorRotation = robotLink.inertiaTensorRotation;
 
         }
 

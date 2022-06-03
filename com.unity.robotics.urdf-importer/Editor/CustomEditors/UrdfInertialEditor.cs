@@ -34,6 +34,7 @@ namespace Unity.Robotics.UrdfImporter.Editor
             bool newValue = EditorGUILayout.BeginToggleGroup("Use URDF Data", urdfInertial.useUrdfData);
             EditorGUILayout.Vector3Field("URDF Center of Mass", urdfInertial.centerOfMass);
             EditorGUILayout.Vector3Field("Adjusted Center of Mass", urdfInertial.AdjustedCenterOfMass);
+            EditorGUILayout.EnumPopup("Inertia Calculation Type", urdfInertial.inertiaCalculationType);
             EditorGUILayout.Vector3Field("URDF Inertia Tensor", urdfInertial.inertiaTensor);
             EditorGUILayout.Vector3Field("URDF Inertia Tensor Rotation",
                 urdfInertial.inertiaTensorRotation.eulerAngles);
