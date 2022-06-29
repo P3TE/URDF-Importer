@@ -142,13 +142,11 @@ namespace Unity.Robotics.UrdfImporter
 
             UrdfRobot urdfRobot = im.robotGameObject.AddComponent<UrdfRobot>();
             urdfRobot.SetLayer(im.settings.defaultVehicleLayerIndex);
-            string usedRobotNamespace = im.robotNamespace;
-            if (string.IsNullOrWhiteSpace(usedRobotNamespace))
+            if (string.IsNullOrWhiteSpace(im.robotNamespace))
             {
-                usedRobotNamespace = im.robot.name;
-                RuntimeUrdf.AddImportWarning($"Robot Namespace was not set, falling back to {usedRobotNamespace}");
+                throw new Exception($"Robot Namespace was not set!");
             }
-            urdfRobot.SetRobotNamespace(usedRobotNamespace);
+            urdfRobot.SetRobotNamespace(im.robotNamespace);
             urdfRobot.SetRobotName(im.robot.name);
 
             im.robotGameObject.AddComponent<Unity.Robotics.UrdfImporter.Control.Controller>();
