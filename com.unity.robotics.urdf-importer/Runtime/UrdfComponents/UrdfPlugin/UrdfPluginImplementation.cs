@@ -557,11 +557,11 @@ namespace Unity.Robotics.UrdfImporter
             
             return true;
         }
-        
-        private static bool ReadIntArrayFromString(string nodeName, string arrayString, out int[] result)
+
+        private static string[] ReadArrayValuesFromString(string arrayString)
         {
             string[] arraySplit = arrayString.Split(' ');
-            List<int> values = new List<int>();
+            List<string> values = new List<string>();
 
             foreach (string splitValue in arraySplit)
             {
@@ -569,42 +569,61 @@ namespace Unity.Robotics.UrdfImporter
                 {
                     continue;
                 }
-                
-                if (!int.TryParse(splitValue, out int value))
+
+                values.Add(splitValue);
+            }
+            
+            return values.ToArray();
+        }
+        
+        private static bool ReadBoolArrayFromString(string nodeName, string arrayString, out bool[] result)
+        {
+            
+            string[] valuesToParse = ReadArrayValuesFromString(arrayString);
+            List<bool> values = new List<bool>();
+            foreach (string valueToParse in valuesToParse)
+            {
+                if (!ParseBoolean(valueToParse, out bool value))
                 {
-                    throw new Exception($"Node {nodeName} array element value expected a float, received: {splitValue}");
+                    throw new Exception($"Node {nodeName} array element value expected a bool, received: {valueToParse}");
                 }
-                
                 values.Add(value);
             }
-
             result = values.ToArray();
-
+            return true;
+        }
+        
+        private static bool ReadIntArrayFromString(string nodeName, string arrayString, out int[] result)
+        {
+            
+            string[] valuesToParse = ReadArrayValuesFromString(arrayString);
+            List<int> values = new List<int>();
+            foreach (string valueToParse in valuesToParse)
+            {
+                if (!int.TryParse(valueToParse, out int value))
+                {
+                    throw new Exception($"Node {nodeName} array element value expected a int, received: {valueToParse}");
+                }
+                values.Add(value);
+            }
+            result = values.ToArray();
             return true;
         }
 
         private static bool ReadFloatArrayFromString(string nodeName, string arrayString, out float[] result)
         {
-            string[] arraySplit = arrayString.Split(' ');
+            string[] valuesToParse = ReadArrayValuesFromString(arrayString);
             List<float> values = new List<float>();
-
-            foreach (string splitValue in arraySplit)
+            foreach (string valueToParse in valuesToParse)
             {
-                if (string.IsNullOrWhiteSpace(splitValue))
+                if (!float.TryParse(valueToParse, out float value))
                 {
-                    continue;
-                }
-                
-                if (!float.TryParse(splitValue, out float value))
-                {
-                    throw new Exception($"Node {nodeName} array element value expected a float, received: {splitValue}");
+                    throw new Exception($"Node {nodeName} array element value expected a float, received: {valueToParse}");
                 }
                 
                 values.Add(value);
             }
-
             result = values.ToArray();
-
             return true;
         }
         
@@ -639,6 +658,16 @@ namespace Unity.Robotics.UrdfImporter
             }
 
             return ReadFloatArrayFromString(node.Name.ToString(), arrayString, out result);
+        }
+        
+        public static bool ReadBooleanArrayFromXElementAttribute(XElement node, string attributeName, out bool[] result, bool required = true)
+        {
+            if (!ReadStringFromXElementAttribute(node, attributeName, out string arrayString, required))
+            {
+                result = Array.Empty<bool>();
+                return false;
+            }
+            return ReadBoolArrayFromString(node.Name.ToString(), arrayString, out result);
         }
 
         public static bool ReadBooleanFromChildXElement(XElement node, string childElementName, ref bool value)
