@@ -1,4 +1,6 @@
-﻿/*
+﻿#define REVOLUTE_AS_HINGE_JOINTS
+
+/*
 © Siemens AG, 2018-2019
 Author: Suzannah Smith (suzannah.smith@siemens.com)
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +17,8 @@ limitations under the License.
 using System;
 using UnityEngine;
 
+
+
 namespace Unity.Robotics.UrdfImporter
 {
     public class UrdfJointRevolute : UrdfJoint
@@ -29,9 +33,15 @@ namespace Unity.Robotics.UrdfImporter
             urdfJoint.unityJoint.jointType = ArticulationJointType.RevoluteJoint;
 
 #else
-            //ConfigurableJoint configurableJoint = linkObject.AddComponent<ConfigurableJoint>();
+            
+#if REVOLUTE_AS_HINGE_JOINTS
             HingeJoint hingeJoint = linkObject.AddComponent<HingeJoint>();
             urdfJoint.unityJoint = hingeJoint;
+#else
+            ConfigurableJoint configurableJoint = linkObject.AddComponent<ConfigurableJoint>();
+            urdfJoint.unityJoint = configurableJoint;
+#endif
+            
             urdfJoint.unityJoint.autoConfigureConnectedAnchor = true;
 #endif
 
@@ -272,40 +282,20 @@ namespace Unity.Robotics.UrdfImporter
 #else
 
 
+#if REVOLUTE_AS_HINGE_JOINTS
             HingeJoint hingeJoint = (HingeJoint)unityJoint;
+            UrdfJointContinuous.AdjustMovementSharedHingleJoint(joint, hingeJoint);
             
-            Vector3 axisOfMotionUnity = joint.axis.AxisUnity;
-            Vector3 secondaryAxisOfMotionUnity = joint.axis.SecondaryAxisEstimateUnity;
-
-            hingeJoint.axis = axisOfMotionUnity;
-
             hingeJoint.useLimits = true;
-
             hingeJoint.limits = new JointLimits()
             {
                 min = Mathf.Rad2Deg * (float)joint.limit.lowerRadians,
                 max = Mathf.Rad2Deg * (float)joint.limit.upperRadians
             };
+#else
 
-            hingeJoint.useSpring = true;
-            hingeJoint.spring = new JointSpring()
-            {
-                damper = (float) joint.dynamics.damping,
-                spring = (float) joint.dynamics.spring,
-                //TODO - effort is ignored...
-            };
-            hingeJoint.motor = new JointMotor()
-            {
-                force = (float) joint.limit.effort,
-                targetVelocity = (float) joint.limit.velocity,
-            };
-            //TODO - hingeJoint.useMotor
-            //TODO - Go back to the official Urdf Importer Repo and figure out what they do for Hinge Joints...
-            //TODO - Also change the continuous joint.
-            
-            /*
             ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
-            UrdfJointContinuous.AdjustMovementShared(configurableJoint, joint);
+            UrdfJointContinuous.AdjustMovementSharedConfirguableJoint(configurableJoint, joint);
             configurableJoint.angularXMotion = ConfigurableJointMotion.Limited;
             if (ShouldRevoluteJointBeOptimisedToFixed(joint, out string warningMessage))
             {
@@ -319,13 +309,16 @@ namespace Unity.Robotics.UrdfImporter
             {
                 limit = Mathf.Rad2Deg * (float) joint.limit.upperRadians
             };
-            */
 
             //TODO - Spring.
             /*configurableJoint.angularXLimitSpring = new SoftJointLimitSpring()
             {
                 damper = (float) joint.dynamics.damping,
             };*/
+#endif
+            
+            
+            
             
 #endif
         }

@@ -1,4 +1,6 @@
-﻿/*
+﻿#define CONTINUOUS_AS_HINGE_JOINTS
+
+/*
 © Siemens AG, 2018-2019
 Author: Suzannah Smith (suzannah.smith@siemens.com)
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +17,8 @@ limitations under the License.
 using System;
 using UnityEngine;
 
+
+
 namespace Unity.Robotics.UrdfImporter
 {
     public class UrdfJointContinuous : UrdfJoint
@@ -29,8 +33,15 @@ namespace Unity.Robotics.UrdfImporter
             urdfJoint.unityJoint = linkObject.GetComponent<ArticulationBody>();
             urdfJoint.unityJoint.jointType = ArticulationJointType.RevoluteJoint;
 #else
+            
+#if CONTINUOUS_AS_HINGE_JOINTS
+            HingeJoint hingeJoint = linkObject.AddComponent<HingeJoint>();
+            urdfJoint.unityJoint = hingeJoint;
+#else
             ConfigurableJoint configurableJoint = linkObject.AddComponent<ConfigurableJoint>();
             urdfJoint.unityJoint = configurableJoint;
+#endif
+            
             urdfJoint.unityJoint.autoConfigureConnectedAnchor = true;
 #endif
             return urdfJoint;
@@ -215,14 +226,54 @@ namespace Unity.Robotics.UrdfImporter
 #else
             
             //Rigidbody rigidbody = unityJoint.GetComponent<Rigidbody>();
-            //rigidbody.constraints = RigidbodyConstraints.FreezePosition; - I think this is a bad idea.
-            ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
-            AdjustMovementShared(configurableJoint, joint);
+
+            
+            
+#if CONTINUOUS_AS_HINGE_JOINTS
+            HingeJoint hingeJoint = unityJoint as HingeJoint;
+            AdjustMovementSharedHingleJoint(joint, hingeJoint);
+            hingeJoint.useLimits = false;
+#else
+            ConfigurableJoint configurableJoint = unityJoint as ConfigurableJoint; 
+            AdjustMovementSharedConfirguableJoint(configurableJoint, joint);
             configurableJoint.angularXMotion = ConfigurableJointMotion.Free;
 #endif
+            
+            
+#endif
+        }
+        
+        public static void AdjustMovementSharedHingleJoint(UrdfJointDescription joint, HingeJoint hingeJoint)
+        {
+            Vector3 axisOfMotionUnity = joint.axis.AxisUnity;
+            //Vector3 secondaryAxisOfMotionUnity = joint.axis.SecondaryAxisEstimateUnity;
+
+            hingeJoint.axis = axisOfMotionUnity;
+
+            // useLimits is not shared.
+
+            hingeJoint.useSpring = true;
+            hingeJoint.spring = new JointSpring()
+            {
+                damper = (float) joint.dynamics.damping,
+                spring = (float) joint.dynamics.spring,
+            };
+            hingeJoint.motor = new JointMotor()
+            {
+                force = (float) joint.limit.effort,
+                targetVelocity = (float) joint.limit.velocity,
+            };
+            //TODO - hingeJoint.useMotor  
         }
 
-        public static void AdjustMovementShared(ConfigurableJoint configurableJoint, UrdfJointDescription joint)
+
+        private void AdjustMotionConfigurableJoint(UrdfJointDescription joint, ConfigurableJoint configurableJoint)
+        {
+            AdjustMovementSharedConfirguableJoint(configurableJoint, joint);
+            configurableJoint.angularXMotion = ConfigurableJointMotion.Free;
+        }
+
+        public static void AdjustMovementSharedConfirguableJoint(ConfigurableJoint configurableJoint, UrdfJointDescription joint)
         {
             Vector3 axisOfMotionUnity = joint.axis.AxisUnity;
             Vector3 secondaryAxisOfMotionUnity = joint.axis.SecondaryAxisEstimateUnity;
