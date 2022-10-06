@@ -253,21 +253,35 @@ namespace Unity.Robotics.UrdfImporter
             unityJoint.angularDamping = dynamics.Damping();
             unityJoint.jointFriction = dynamics.Friction();
 #else
-            //Assuming all joints are implemented as a ConfigurableJoint
-            ConfigurableJoint configurableJoint = this.unityJoint as ConfigurableJoint;
-            if (configurableJoint == null)
+            
+            if (unityJoint is HingeJoint hingeJoint)
             {
-                throw new Exception("Expecting joint of type ConfigurableJoint, but this was not the case, unable to continue!");
+                hingeJoint.useSpring = true;
+                hingeJoint.spring = new JointSpring()
+                {
+                    damper = 0.0001f,
+                    spring = 0.001f,
+                    //damper = (float) dynamics.damping,
+                    //spring = (float) dynamics.spring,
+                };
+                
+                //Note: HingeJoint doesn't have any friction component and will be ignored.
+            } else if (unityJoint is ConfigurableJoint configurableJoint)
+            {
+                configurableJoint.xDrive = UpdateSingleAxis(dynamics, configurableJoint.xDrive, configurableJoint.xMotion);
+                configurableJoint.yDrive = UpdateSingleAxis(dynamics, configurableJoint.yDrive, configurableJoint.yMotion);
+                configurableJoint.zDrive = UpdateSingleAxis(dynamics, configurableJoint.zDrive, configurableJoint.zMotion);
+            
+                configurableJoint.angularXDrive = UpdateSingleAxis(dynamics, configurableJoint.angularXDrive, configurableJoint.angularXMotion);
+                configurableJoint.angularYZDrive = UpdateSingleAxis(dynamics, configurableJoint.angularYZDrive, configurableJoint.angularYMotion, configurableJoint.angularZMotion);
+                
+                //Note: ConfigurableJoint doesn't have any friction component and will be ignored.
+            }
+            else
+            {
+                throw new Exception($"Unhandled joint of type {unityJoint.GetType().Name}, unable to continue!");
             }
             
-            configurableJoint.xDrive = UpdateSingleAxis(dynamics, configurableJoint.xDrive, configurableJoint.xMotion);
-            configurableJoint.yDrive = UpdateSingleAxis(dynamics, configurableJoint.yDrive, configurableJoint.yMotion);
-            configurableJoint.zDrive = UpdateSingleAxis(dynamics, configurableJoint.zDrive, configurableJoint.zMotion);
-            
-            configurableJoint.angularXDrive = UpdateSingleAxis(dynamics, configurableJoint.angularXDrive, configurableJoint.angularXMotion);
-            configurableJoint.angularYZDrive = UpdateSingleAxis(dynamics, configurableJoint.angularYZDrive, configurableJoint.angularYMotion, configurableJoint.angularZMotion);
-            
-            //Note: ConfigurableJoint doesn't have any friction component and will be ignored.
 #endif
         }
 
@@ -300,8 +314,8 @@ namespace Unity.Robotics.UrdfImporter
             JointDrive result = new JointDrive()
             {
                 maximumForce = originalJointDrive.maximumForce,
-                positionDamper = dynamics.Damping(),
-                positionSpring = dynamics.Spring()
+                positionDamper = (float) dynamics.damping,
+                positionSpring = (float) dynamics.spring
             };
             return result;
         }

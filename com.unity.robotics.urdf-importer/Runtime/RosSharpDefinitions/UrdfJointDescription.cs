@@ -232,9 +232,9 @@ namespace Unity.Robotics.UrdfImporter
 
             public Dynamics(XElement node)
             {
-                spring = node.Attribute("spring").ReadOptionalDouble(1000.0); // optional
-                damping = node.Attribute("damping").ReadOptionalDouble(10.0); // optional
-                friction = node.Attribute("friction").ReadOptionalDouble(0.0); // optional
+                spring = node.Attribute("spring").ReadOptionalDouble(spring); // optional
+                damping = node.Attribute("damping").ReadOptionalDouble(damping); // optional
+                friction = node.Attribute("friction").ReadOptionalDouble(friction); // optional
             }
             
             private Dynamics()
@@ -398,56 +398,6 @@ namespace Unity.Robotics.UrdfImporter
 
                 writer.WriteEndElement();
             }
-        }
-    }
-
-    public static class UrdfJointDescriptionHelper
-    {
-        
-        public const int defaultDamping = 0;
-        public const int defaultFriction = 0;
-        public const int defaultSpring = 0;
-        
-        public static float Damping(this UrdfJointDescription.Dynamics dynamics)
-        {
-            if (dynamics == null)
-            {
-                return defaultDamping;
-            }
-
-            if (double.IsNaN(dynamics.damping))
-            {
-                return defaultDamping;
-            }
-            return (float) dynamics.damping;
-        }
-        
-        public static float Friction(this UrdfJointDescription.Dynamics dynamics)
-        {
-            if (dynamics == null)
-            {
-                return defaultFriction;
-            }
-
-            if (double.IsNaN(dynamics.friction))
-            {
-                return defaultFriction;
-            }
-            return (float) dynamics.friction;
-        }
-        
-        public static float Spring(this UrdfJointDescription.Dynamics dynamics)
-        {
-            if (dynamics == null)
-            {
-                return defaultSpring;
-            }
-
-            if (double.IsNaN(dynamics.spring))
-            {
-                return defaultSpring;
-            }
-            return (float) dynamics.spring;
         }
     }
 

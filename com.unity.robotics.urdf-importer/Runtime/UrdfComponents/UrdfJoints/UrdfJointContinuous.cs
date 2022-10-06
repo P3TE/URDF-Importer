@@ -58,13 +58,22 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             return unityJoint.jointPosition[xAxis];
 #else
+    #if CONTINUOUS_AS_HINGE_JOINTS
+            return GetCurrentAngleRadHingeJoint(unityJoint as HingeJoint);
+    #else
             ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
             Rigidbody rigidbody = configurableJoint.GetComponent<Rigidbody>();
-            return GetCurrentAngleRad(rigidbody, configurableJoint, originalLocalRotation);
+            return GetCurrentAngleRadContinuousJoint(rigidbody, configurableJoint, originalLocalRotation);
+    #endif
 #endif
         }
 
-        public static float GetCurrentAngleRad(Rigidbody rigidbody, ConfigurableJoint configurableJoint, 
+        public static float GetCurrentAngleRadHingeJoint(HingeJoint hingeJoint)
+        {
+            return -hingeJoint.angle * Mathf.Deg2Rad;
+        }
+
+        public static float GetCurrentAngleRadContinuousJoint(Rigidbody rigidbody, ConfigurableJoint configurableJoint, 
             Quaternion originalLocalRotation)
         {
             Quaternion currentLocalRotation = rigidbody.transform.localRotation;
@@ -96,11 +105,21 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             return unityJoint.jointVelocity[xAxis];
 #else
-            return GetCurrentLocalVelocity((ConfigurableJoint) unityJoint);
+            
+    #if CONTINUOUS_AS_HINGE_JOINTS
+            return GetCurrentLocalVelocityHingeJoint(unityJoint as HingeJoint);
+    #else
+            return GetCurrentLocalVelocityConfigurableJoint(unityJoint as ConfigurableJoint);
+    #endif
 #endif
         }
+
+        public static float GetCurrentLocalVelocityHingeJoint(HingeJoint hingeJoint)
+        {
+            return -hingeJoint.velocity * Mathf.Deg2Rad;
+        }
         
-        public static float GetCurrentLocalVelocity(ConfigurableJoint configurableJoint)
+        public static float GetCurrentLocalVelocityConfigurableJoint(ConfigurableJoint configurableJoint)
         {
             Rigidbody rigidbody = configurableJoint.GetComponent<Rigidbody>();
             Rigidbody connectedBody = configurableJoint.connectedBody;
@@ -129,12 +148,21 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             return unityJoint.jointForce[xAxis];
 #else
-            return GetEffort((ConfigurableJoint) unityJoint);
-            //return -((HingeJoint)unityJoint).motor.force;
+            
+    #if CONTINUOUS_AS_HINGE_JOINTS
+            return GetEffortHingeJoint(unityJoint as HingeJoint);
+    #else
+            return GetEffortConfigurableJoint(unityJoint as ConfigurableJoint);
+    #endif
 #endif
         }
 
-        public static float GetEffort(ConfigurableJoint configurableJoint)
+        public static float GetEffortHingeJoint(HingeJoint hingeJoint)
+        {
+            return -hingeJoint.motor.force;
+        }
+
+        public static float GetEffortConfigurableJoint(ConfigurableJoint configurableJoint)
         {
             //TODO - Verify, this seems dodgy...
             return configurableJoint.angularXDrive.maximumForce;
@@ -165,7 +193,22 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             SetDynamics(joint.dynamics);
 #else
-            ConfigurableJoint configurableJoint = AsUnityJoint;
+            SetDynamics(joint.dynamics);
+            
+/*
+#if CONTINUOUS_AS_HINGE_JOINTS
+            
+            HingeJoint hingeJoint = unityJoint as HingeJoint;
+            hingeJoint.spring = new JointSpring()
+            {
+                damper = (float) joint.dynamics.damping,
+                spring = (float) joint.dynamics.spring,
+            };
+            Debug.LogWarning("Dynamics friction not implemented.");
+            Debug.LogWarning("Dynamics maximum force not implemented.");
+            
+#else
+            ConfigurableJoint configurableJoint = unityJoint as ConfigurableJoint;
             configurableJoint.angularXDrive = new JointDrive()
             {
                 maximumForce = configurableJoint.angularXDrive.maximumForce,
@@ -173,6 +216,9 @@ namespace Unity.Robotics.UrdfImporter
                 positionSpring = configurableJoint.angularXDrive.positionSpring
             };
             Debug.LogWarning("Dynamics friction not implemented.");
+#endif
+*/
+            
 #endif
         }
 
@@ -193,9 +239,6 @@ namespace Unity.Robotics.UrdfImporter
             return joint;
         }
         
-        ConfigurableJoint AsUnityJoint => (ConfigurableJoint) unityJoint;
-
-
         /// <summary>
         /// Reads axis joint information and rotation to the articulation body to produce the required motion
         /// </summary>
@@ -231,7 +274,7 @@ namespace Unity.Robotics.UrdfImporter
             
 #if CONTINUOUS_AS_HINGE_JOINTS
             HingeJoint hingeJoint = unityJoint as HingeJoint;
-            AdjustMovementSharedHingleJoint(joint, hingeJoint);
+            AdjustMovementSharedHingeJoint(joint, hingeJoint);
             hingeJoint.useLimits = false;
 #else
             ConfigurableJoint configurableJoint = unityJoint as ConfigurableJoint; 
@@ -243,7 +286,7 @@ namespace Unity.Robotics.UrdfImporter
 #endif
         }
         
-        public static void AdjustMovementSharedHingleJoint(UrdfJointDescription joint, HingeJoint hingeJoint)
+        public static void AdjustMovementSharedHingeJoint(UrdfJointDescription joint, HingeJoint hingeJoint)
         {
             Vector3 axisOfMotionUnity = joint.axis.AxisUnity;
             //Vector3 secondaryAxisOfMotionUnity = joint.axis.SecondaryAxisEstimateUnity;
@@ -252,12 +295,6 @@ namespace Unity.Robotics.UrdfImporter
 
             // useLimits is not shared.
 
-            hingeJoint.useSpring = true;
-            hingeJoint.spring = new JointSpring()
-            {
-                damper = (float) joint.dynamics.damping,
-                spring = (float) joint.dynamics.spring,
-            };
             hingeJoint.motor = new JointMotor()
             {
                 force = (float) joint.limit.effort,

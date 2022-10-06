@@ -59,19 +59,13 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             return ((ArticulationBody)unityJoint).jointPosition[xAxis];
 #else
-            return -((HingeJoint)unityJoint).angle * Mathf.Deg2Rad;
-            /*ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
-            HingeJoint hingeJoint = (HingeJoint)unityJoint;
-            if (configurableJoint == null)
-            {
-                //TODO - Handle properly!
-                return 0;
-            }
-            else
-            {
-                Rigidbody rigidbody = configurableJoint.GetComponent<Rigidbody>();
-                return UrdfJointContinuous.GetCurrentAngleRad(rigidbody, configurableJoint, originalLocalRotation);
-            }*/
+    #if REVOLUTE_AS_HINGE_JOINTS
+            return UrdfJointContinuous.GetCurrentAngleRadHingeJoint(unityJoint as HingeJoint);
+    #else
+            ConfigurableJoint configurableJoint = unityJoint as ConfigurableJoint;
+            Rigidbody rigidbody = configurableJoint.GetComponent<Rigidbody>();
+            return UrdfJointContinuous.GetCurrentAngleRadContinuousJoint(rigidbody, configurableJoint, originalLocalRotation);
+    #endif
 #endif
         }
 
@@ -84,17 +78,11 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             return ((ArticulationBody)unityJoint).jointVelocity[xAxis];
 #else
-            return -((HingeJoint)unityJoint).velocity * Mathf.Deg2Rad;
-            /*ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
-            if (configurableJoint == null)
-            {
-                //TODO - Handle properly!
-                return 0;
-            }
-            else
-            {
-                return UrdfJointContinuous.GetCurrentLocalVelocity(configurableJoint);
-            }*/
+    #if REVOLUTE_AS_HINGE_JOINTS
+            return UrdfJointContinuous.GetCurrentLocalVelocityHingeJoint(unityJoint as HingeJoint);
+    #else
+            return UrdfJointContinuous.GetCurrentLocalVelocityConfigurableJoint(unityJoint as ConfigurableJoint);
+    #endif
 #endif
         }
 
@@ -107,18 +95,11 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             return unityJoint.jointForce[xAxis];
 #else
-            return -((HingeJoint)unityJoint).motor.force;
-            /*ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
-            if (configurableJoint == null)
-            {
-                //TODO - Handle properly!
-                return 0;
-            }
-            else
-            {
-                return UrdfJointContinuous.GetEffort(configurableJoint);
-            }*/
-            
+    #if REVOLUTE_AS_HINGE_JOINTS
+            return UrdfJointContinuous.GetEffortHingeJoint(unityJoint as HingeJoint);
+    #else
+            return UrdfJointContinuous.GetEffortConfigurableJoint(unityJoint as ConfigurableJoint);
+    #endif
 #endif
         }
 
@@ -284,7 +265,7 @@ namespace Unity.Robotics.UrdfImporter
 
 #if REVOLUTE_AS_HINGE_JOINTS
             HingeJoint hingeJoint = (HingeJoint)unityJoint;
-            UrdfJointContinuous.AdjustMovementSharedHingleJoint(joint, hingeJoint);
+            UrdfJointContinuous.AdjustMovementSharedHingeJoint(joint, hingeJoint);
             
             hingeJoint.useLimits = true;
             hingeJoint.limits = new JointLimits()
