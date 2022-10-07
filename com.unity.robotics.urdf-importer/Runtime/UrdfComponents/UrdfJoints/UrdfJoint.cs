@@ -54,6 +54,29 @@ namespace Unity.Robotics.UrdfImporter
         
         protected Quaternion originalLocalRotation = Quaternion.identity;
 
+        public bool publishJointStateIfApplicable = false;
+
+        //Whether the joint state publisher should publish the joint state.
+        public bool ShouldPublishJointState
+        {
+            get
+            {
+                if (!publishJointStateIfApplicable)
+                {
+                    return false;
+                }
+
+                switch (JointType)
+                {
+                    case JointTypes.Fixed:
+                        UrdfJointFixed urdfJointFixed = (UrdfJointFixed)this;
+                        return urdfJointFixed.JointIsDynamicForJointStatePublishing;
+                    default:
+                        return true;
+                }
+            }
+        }
+
         public static UrdfJoint Create(GameObject linkObject, JointTypes jointType, UrdfJointDescription joint = null)
         {
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
@@ -259,10 +282,10 @@ namespace Unity.Robotics.UrdfImporter
                 hingeJoint.useSpring = true;
                 hingeJoint.spring = new JointSpring()
                 {
-                    damper = 0.0001f,
-                    spring = 0.001f,
-                    //damper = (float) dynamics.damping,
-                    //spring = (float) dynamics.spring,
+                    //damper = 0.0001f,
+                    //spring = 0.001f,
+                    damper = (float) dynamics.damping,
+                    spring = (float) dynamics.spring,
                 };
                 
                 //Note: HingeJoint doesn't have any friction component and will be ignored.
