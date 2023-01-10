@@ -171,7 +171,7 @@ namespace Unity.Robotics.UrdfImporter
         {
             if (RuntimeUrdf.IsRuntimeMode())
             {
-                texture = UrdfRuntimeTextureManager.Instance.LoadTextureFromFile(AbsoluteFilePath, IsNormalTexture);
+                texture = RuntimeAssetCache.Instance.LoadTextureFromFile(AbsoluteFilePath, IsNormalTexture);
             }
             else
             {

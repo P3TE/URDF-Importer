@@ -30,12 +30,15 @@ using System.Collections.Generic;
 using System.IO;
 #if ASSIMP_SUPPORTED
 using Assimp;
+using Unity.Robotics.UrdfImporter.Urdf.RuntimeImport;
+using UnityEditor.SceneTemplate;
 #endif
 using Unity.Robotics;
 using UnityEngine;
 using Material = UnityEngine.Material;
 using Matrix4x4 = UnityEngine.Matrix4x4;
 using Mesh = UnityEngine.Mesh;
+using Object = UnityEngine.Object;
 using Quaternion = UnityEngine.Quaternion;
 
 namespace UnityMeshImporter
@@ -85,7 +88,14 @@ namespace UnityMeshImporter
     {
         public static GameObject Load(string meshPath, float scaleX=1, float scaleY=1, float scaleZ=1)
         {
-#if ASSIMP_SUPPORTED
+            if (RuntimeAssetCache.Instance.GetAssetFromCache(meshPath, out GameObject mesh))
+            {
+                GameObject go = Object.Instantiate(mesh);
+                go.SetActive(true);
+                return go;
+            }
+            
+#if ASSIMP_SUPPORTED            
             if (!File.Exists(meshPath))
             {
                 return null;
@@ -143,22 +153,15 @@ namespace UnityMeshImporter
                     // Texture
                     if (m.HasTextureDiffuse)
                     {
-                        Texture2D uTexture = new Texture2D(2,2);
-                        string texturePath = Path.Combine(parentDir, m.TextureDiffuse.FilePath);
-                        
-                        if(!File.Exists(texturePath))
-                        {
-                            throw new Exception("Cannot find texture file: " + texturePath);
-                        }
-                        byte[] byteArray = File.ReadAllBytes(texturePath);
-                        bool isLoaded = uTexture.LoadImage(byteArray);
-                        if (!isLoaded)
-                        {
-                            throw new Exception("Cannot find texture file: " + texturePath);
-                        }
+                        /* TODO: Chances are this was commented out as all of our materials are coming through from the xacro.
+                                It might still be good however to still support loading from the mesh file as a fallback.
+                                Turn this back on and find out if it does nothing bad :)
 
-                        //uMaterial.mainTexture = uTexture;
-                        //uMaterial.SetTexture("_MainTex", uTexture);
+                        string texturePath = Path.Combine(parentDir, m.TextureDiffuse.FilePath);
+                        Texture2D uTexture = RuntimeAssetCache.Instance.LoadTextureFromFile(texturePath);
+                        uMaterial.mainTexture = uTexture;
+                        uMaterial.SetTexture("_MainTex", uTexture);
+                        */
                     }
 
                     AdditionalMeshImportData additionalMeshImportData = new AdditionalMeshImportData()
@@ -317,8 +320,13 @@ namespace UnityMeshImporter
                 }
                 return uOb;
             }
+
+            GameObject cachedAsset = NodeToGameObject(scene.RootNode, Matrix4x4.identity);
+            GameObject result = Object.Instantiate(cachedAsset);
             
-            return NodeToGameObject(scene.RootNode, Matrix4x4.identity);
+            RuntimeAssetCache.Instance.AddGameObjectToCache(meshPath, cachedAsset);
+            
+            return result;
 #else
             Debug.LogError("Runtime import of collada files is not currently supported in builds created with 'IL2CPP' scripting backend." + 
                            "\nEither create a build with the scripting backend set as 'Mono' in 'Player Settings' or use STL meshes instead of Collada (dae) meshes.");
