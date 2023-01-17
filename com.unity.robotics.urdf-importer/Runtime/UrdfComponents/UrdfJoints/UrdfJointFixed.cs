@@ -124,7 +124,16 @@ namespace Unity.Robotics.UrdfImporter
                 return;
             }
 
-            Rigidbody fixedParent = FindCrucialParent(fixedJointToOptimize);
+            Rigidbody fixedParent;
+            try
+            {
+                fixedParent = FindCrucialParent(fixedJointToOptimize);
+            }
+            catch
+            {
+                //Ghosts (bots which are receiving their pose externally) have no rigidbody anywhere in their hierarchy.
+                return;
+            }
             UrdfInertial fixedParentUrdfInertial = fixedParent.GetComponent<UrdfInertial>();
 
             if (previousRigidbodyConstants.inertiaCalculationType.CanInheritInertiaCalculation())
