@@ -31,7 +31,6 @@ using System.IO;
 #if ASSIMP_SUPPORTED
 using Assimp;
 using Unity.Robotics.UrdfImporter.Urdf.RuntimeImport;
-using UnityEditor.SceneTemplate;
 #endif
 using Unity.Robotics;
 using UnityEngine;
@@ -39,7 +38,6 @@ using Material = UnityEngine.Material;
 using Matrix4x4 = UnityEngine.Matrix4x4;
 using Mesh = UnityEngine.Mesh;
 using Object = UnityEngine.Object;
-using Quaternion = UnityEngine.Quaternion;
 
 namespace UnityMeshImporter
 {
