@@ -79,7 +79,7 @@ namespace Unity.Robotics.UrdfImporter
                 }
 
                 GameObject meshObject = (GameObject)RuntimeUrdf.PrefabUtility_InstantiatePrefab(prefabObject);
-                ConvertMeshToColliders(meshObject, location: mesh.filename);
+                ConvertMeshToColliders(meshObject, location: mesh.filename, mesh.colliderShouldBeConvex);
 
                 return meshObject;
             }
@@ -90,10 +90,7 @@ namespace Unity.Robotics.UrdfImporter
         private static GameObject CreateMeshColliderRuntime(UrdfLinkDescription.Geometry.Mesh mesh)
         {
             string meshFilePath = UrdfAssetPathHandler.GetRelativeAssetPathFromUrdfPath(mesh.filename, false);
-            
-            FileInfo meshFileInfo = new FileInfo(meshFilePath);
-            Debug.Log($"Loading a {meshFileInfo.Extension}! {meshFilePath}");
-            GameObject meshObject = TryLoadCollidersWithAssimp(meshFilePath);
+            GameObject meshObject = TryLoadCollidersWithAssimp(meshFilePath, mesh.colliderShouldBeConvex);
 
             return meshObject;
         }
@@ -112,7 +109,7 @@ namespace Unity.Robotics.UrdfImporter
             transform.localRotation = Quaternion.Euler(euler.x, euler.y, euler.z);
         }
 
-        private static void PrepareNode(ref List<Mesh> meshes, Assimp.Node node, GameObject nodeGO, Transform parent = null)
+        private static void PrepareNode(ref List<Mesh> meshes, Assimp.Node node, GameObject nodeGO, Transform parent = null, bool setConvex = true)
         {
             if (parent != null)
             {
@@ -130,16 +127,16 @@ namespace Unity.Robotics.UrdfImporter
             {
                 MeshCollider collider = nodeGO.AddComponent<MeshCollider>();
                 collider.sharedMesh = meshes[meshIndex];
-                collider.convex = true;
+                collider.convex = setConvex;
             }
 
             foreach (Assimp.Node child in node.Children)
             {
-                PrepareNode(ref meshes, child, new GameObject(child.Name), nodeGO.transform);
+                PrepareNode(ref meshes, child, new GameObject(child.Name), nodeGO.transform, setConvex);
             }
         }
 
-        private static GameObject TryLoadCollidersWithAssimp(string meshFilePath)
+        private static GameObject TryLoadCollidersWithAssimp(string meshFilePath, bool setConvex = true)
         {
             if (!File.Exists(meshFilePath))
             {
@@ -204,7 +201,7 @@ namespace Unity.Robotics.UrdfImporter
                 meshes.Add(uMesh);
             }
             
-            PrepareNode(ref meshes, scene.RootNode, baseObject);
+            PrepareNode(ref meshes, scene.RootNode, baseObject, null, setConvex);
             
             return baseObject;
         }

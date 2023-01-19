@@ -536,10 +536,15 @@ namespace Unity.Robotics.UrdfImporter
             {
                 public string filename;
                 public double[] scale;
+                public bool colliderShouldBeConvex = true;
 
                 public Mesh(XElement node)
                 {
                     filename = (string)node.Attribute("filename");
+                
+                    XAttribute convexAttribute = node.Attribute("convex");
+                    if (convexAttribute is not null) colliderShouldBeConvex = (bool)convexAttribute; // optional
+                    
                     scale = node.Attribute("scale") != null ? node.Attribute("scale").ReadDoubleArray() : null;
                 }
 
