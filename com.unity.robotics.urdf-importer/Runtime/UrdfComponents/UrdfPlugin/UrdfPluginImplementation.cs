@@ -226,15 +226,23 @@ namespace Unity.Robotics.UrdfImporter
          * fed to CheckForInvalidElements.
          * Automates the process of building the HashSet some.
          */
-        public static void CheckForInvalidElements(XElement element, Type staticClassWithIdsType)
+        public static void CheckForInvalidElements(XElement element, params Type[] staticClassWithIdsType)
         {
-            HashSet<string> validElements = PluginReflectionHelper.GetConstStringValues(staticClassWithIdsType);
+            HashSet<string> validElements = new HashSet<string>();
+            foreach (Type type in staticClassWithIdsType)
+            {
+                validElements.UnionWith(PluginReflectionHelper.GetConstStringValues(type));
+            }
             CheckForInvalidElements(element, validElements);
         }
         
-        public static void CheckForInvalidAttributes(XElement element, Type staticClassWithIdsType)
+        public static void CheckForInvalidAttributes(XElement element, params Type[] staticClassWithIdsType)
         {
-            HashSet<string> validAttributes = PluginReflectionHelper.GetConstStringValues(staticClassWithIdsType);
+            HashSet<string> validAttributes = new HashSet<string>();
+            foreach (Type type in staticClassWithIdsType)
+            {
+                validAttributes.UnionWith(PluginReflectionHelper.GetConstStringValues(type));
+            }
             CheckForInvalidAttributes(element, validAttributes);
         }
         
