@@ -37,7 +37,7 @@ namespace Unity.Robotics.UrdfImporter
         public int xAxis = 0;
 
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
-        public ArticulationBody unityJoint;
+        protected ArticulationBody unityJoint;
         protected Vector3 axisofMotion;
 #else
         public UnityEngine.Joint unityJoint;
@@ -188,7 +188,7 @@ namespace Unity.Robotics.UrdfImporter
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             linkObject.transform.DestroyImmediateIfExists<UnityEngine.ArticulationBody>();
 #else
-                        linkObject.transform.DestroyImmediateIfExists<UnityEngine.Joint>();
+            linkObject.transform.DestroyImmediateIfExists<UnityEngine.Joint>();
 #endif
             AddCorrectJointType(linkObject, newJointType);
         }
@@ -254,7 +254,7 @@ namespace Unity.Robotics.UrdfImporter
 
         protected static Vector3 GetAxis(UrdfJointDescription.Axis axis)
         {
-            return axis.xyz.ToVector3().Ros2Unity();
+            return axis.AxisUnity;
         }
 
         protected static Vector3 GetDefaultAxis()
@@ -263,6 +263,8 @@ namespace Unity.Robotics.UrdfImporter
         }
 
         protected virtual void AdjustMovement(UrdfJointDescription joint) { }
+        protected virtual void SetAxisData(Vector3 axisofMotion) { }
+        protected  virtual void SetLimits(Joint joint){}
 
         protected void SetDynamics(UrdfJointDescription.Dynamics dynamics)
         {
@@ -416,10 +418,7 @@ namespace Unity.Robotics.UrdfImporter
         protected virtual bool IsJointAxisDefined()
         {
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
-            if (axisofMotion == null)
-                return false;
-            else
-                return true;
+            return true;
 #else
             UnityEngine.Joint joint = GetComponent<UnityEngine.Joint>();
             return !(Math.Abs(joint.axis.x) < Tolerance &&
@@ -433,10 +432,9 @@ namespace Unity.Robotics.UrdfImporter
             jointName = transform.parent.name + "_" + transform.name + "_joint";
         }
 
-        protected static UrdfJointDescription.Axis GetAxisData(Vector3 axis)
+        protected static UrdfJointDescription.Axis GetAxisData(Vector3 axisRosEnu)
         {
-            double[] rosAxis = axis.ToRoundedDoubleArray();
-            return new UrdfJointDescription.Axis(rosAxis);
+            return new UrdfJointDescription.Axis(axisRosEnu);
         }
 
         private bool IsAnchorTransformed() // TODO : Check for tolerances before implementation

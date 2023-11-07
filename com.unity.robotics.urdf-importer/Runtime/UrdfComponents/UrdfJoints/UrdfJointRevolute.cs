@@ -1,6 +1,4 @@
-﻿#define REVOLUTE_AS_HINGE_JOINTS
-
-/*
+﻿/*
 © Siemens AG, 2018-2019
 Author: Suzannah Smith (suzannah.smith@siemens.com)
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,10 +12,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#define REVOLUTE_AS_HINGE_JOINTS
+
+
 using System;
 using UnityEngine;
-
-
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -131,9 +130,10 @@ namespace Unity.Robotics.UrdfImporter
         protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
         {
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
-            joint.axis = GetAxisData(axisofMotion);
-            joint.dynamics = new UrdfJointDescription.Dynamics(unityJoint.angularDamping, unityJoint.jointFriction);
+            joint.axis = new UrdfJointDescription.Axis((unityJoint.anchorRotation * Vector3.right).Unity2Ros());
+            joint.dynamics = new Joint.Dynamics(unityJoint.angularDamping, unityJoint.jointFriction);
             joint.limit = ExportLimitData();
+            return joint;
 #else
             joint.axis = GetAxisData(unityJoint.axis);
             if (unityJoint is HingeJoint hingeJoint)
@@ -238,16 +238,17 @@ namespace Unity.Robotics.UrdfImporter
         protected override void AdjustMovement(UrdfJointDescription joint)
         {
 #if !URDF_FORCE_RIGIDBODY
-            axisofMotion = (joint.axis != null && joint.axis.xyz != null) ? joint.axis.xyz.ToVector3() : new Vector3(1, 0, 0);
-            unityJoint.linearLockX = ArticulationDofLock.LimitedMotion;
-            unityJoint.linearLockY = ArticulationDofLock.LockedMotion;
-            unityJoint.linearLockZ = ArticulationDofLock.LockedMotion;
-            unityJoint.twistLock = ArticulationDofLock.LimitedMotion;
 
+            axisofMotion = axis;
             Vector3 axisofMotionUnity = axisofMotion.Ros2Unity();
             Quaternion Motion = new Quaternion();
             Motion.SetFromToRotation(new Vector3(1, 0, 0), -1 * axisofMotionUnity);
             unityJoint.anchorRotation = Motion;
+
+            unityJoint.linearLockX = ArticulationDofLock.LimitedMotion;
+            unityJoint.linearLockY = ArticulationDofLock.LockedMotion;
+            unityJoint.linearLockZ = ArticulationDofLock.LockedMotion;
+            unityJoint.twistLock = ArticulationDofLock.LimitedMotion;
 
             if (joint.limit != null)
             {

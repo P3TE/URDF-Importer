@@ -20,11 +20,9 @@ using System.Xml.Linq;
 using Unity.Robotics.UrdfImporter.Control;
 using Unity.Robotics.UrdfImporter.Urdf.Extensions;
 #if UNITY_EDITOR
-using System.Xml;
 using UnityEditor;
 #endif
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -102,7 +100,7 @@ namespace Unity.Robotics.UrdfImporter
             im.robotNamespace = robotNamespace;
             im.modelName = modelName;
 
-            if (forceRuntimeMode) 
+            if (forceRuntimeMode)
             {
                 RuntimeUrdf.SetRuntimeMode(true);
             }
@@ -114,8 +112,9 @@ namespace Unity.Robotics.UrdfImporter
 
             if (!UrdfAssetPathHandler.IsValidAssetPath(im.robot.filename))
             {
-                Debug.LogError("URDF file and ressources must be placed in Assets Folder:\n" + Application.dataPath);
-                if (forceRuntimeMode) 
+                Debug.LogError("URDF file and resources must be placed in project folder:" +
+                    $"\n{Application.dataPath.Substring(0, Application.dataPath.Length - "Assets".Length)}");
+                if (forceRuntimeMode)
                 { // set runtime mode back to what it was
                     RuntimeUrdf.SetRuntimeMode(im.wasRuntimeMode);
                 }
@@ -150,12 +149,12 @@ namespace Unity.Robotics.UrdfImporter
             urdfRobot.SetRobotName(im.robot.name);
 
             im.robotGameObject.AddComponent<Unity.Robotics.UrdfImporter.Control.Controller>();
-            if (RuntimeUrdf.IsRuntimeMode()) 
+            if (RuntimeUrdf.IsRuntimeMode())
             {// In runtime mode, we have to disable controller while robot is being constructed.
                 im.robotGameObject.GetComponent<Unity.Robotics.UrdfImporter.Control.Controller>().enabled = false;
             }
 
-            im.robotGameObject.GetComponent<UrdfRobot>().SetAxis(im.settings.choosenAxis);
+            im.robotGameObject.GetComponent<UrdfRobot>().SetAxis(im.settings.chosenAxis);
 
             if(!string.IsNullOrWhiteSpace(im.robot.filename))
             {
@@ -177,12 +176,12 @@ namespace Unity.Robotics.UrdfImporter
         // Creates the stack of robot joints. Should be called iteratively until false is returned.
         private static bool ProcessJointStack(ImportPipelineData im)
         {
-            if (im.importStack == null) 
+            if (im.importStack == null)
             {
                 im.importStack = new Stack<Tuple<UrdfLinkDescription, Transform, UrdfJointDescription>>();
                 im.importStack.Push(new Tuple<UrdfLinkDescription, Transform, UrdfJointDescription>(im.robot.root, im.robotGameObject.transform, null));
             }
-            
+
             if (im.importStack.Count != 0)
             {
                 Tuple<UrdfLinkDescription, Transform, UrdfJointDescription> currentLink = im.importStack.Pop();
@@ -287,6 +286,7 @@ namespace Unity.Robotics.UrdfImporter
         public static IEnumerator<GameObject> Create(string filename, ImportSettings settings, bool loadStatus = false, bool forceRuntimeMode = false, 
             string robotNamespace = "", string modelName = "")
         {
+            UrdfGeometryCollision.BeginNewUrdfImport();
             ImportPipelineData im = ImportPipelineInitFromFile(filename, settings, loadStatus, forceRuntimeMode, robotNamespace, modelName);
             if (im == null)
             {
@@ -304,7 +304,6 @@ namespace Unity.Robotics.UrdfImporter
             }
 
             ImportPipelinePostCreate(im);
-
             yield return im.robotGameObject;
         }
 
@@ -408,7 +407,7 @@ namespace Unity.Robotics.UrdfImporter
         public static void CorrectAxis(GameObject robot)
         {
             UrdfRobot robotScript = robot.GetComponent<UrdfRobot>();
-            if (robotScript == null) 
+            if (robotScript == null)
             {
                 Debug.LogError("Robot has no UrdfRobot component attached. Abandon correcting axis");
                 return;
@@ -422,7 +421,7 @@ namespace Unity.Robotics.UrdfImporter
             Quaternion correctZtoY = Quaternion.Inverse((correctYtoZ));
             Quaternion correction = new Quaternion();
 
-            if (robotScript.choosenAxis == ImportSettings.axisType.zAxis)
+            if (robotScript.chosenAxis == ImportSettings.axisType.zAxis)
             {
                 correction = correctYtoZ;
             }
@@ -440,7 +439,7 @@ namespace Unity.Robotics.UrdfImporter
 
             foreach (UrdfCollision collision in collisionMeshList)
             {
-                if (robotScript.choosenAxis != ImportSettings.axisType.zAxis) 
+                if (collision.geometryType == GeometryTypes.Mesh)
                 {
                     collision.transform.localRotation = collision.transform.localRotation * correction;
                 }
@@ -573,7 +572,7 @@ namespace Unity.Robotics.UrdfImporter
                 n.stringValue = FKRobot.k_TagName;
             }
 
-            tagManager.ApplyModifiedProperties();                
+            tagManager.ApplyModifiedProperties();
 #endif
         }
 
@@ -585,11 +584,11 @@ namespace Unity.Robotics.UrdfImporter
             }
             catch (Exception)
             {
-                Debug.LogError($"Unable to find tag '{FKRobot.k_TagName}'." + 
+                Debug.LogError($"Unable to find tag '{FKRobot.k_TagName}'." +
                                $"Add a tag '{FKRobot.k_TagName}' in the Project Settings in Unity Editor.");
                 return;
             }
-            
+
             if (!go)
                 return;
 

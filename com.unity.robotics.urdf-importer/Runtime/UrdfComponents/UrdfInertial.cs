@@ -14,6 +14,7 @@ limitations under the License.
 
 using System;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -24,8 +25,12 @@ namespace Unity.Robotics.UrdfImporter
 #endif
     public class UrdfInertial : MonoBehaviour
     {
-        public bool displayInertiaGizmo;
-
+        [SerializeField] public bool displayInertiaGizmo;
+        
+        const int k_RoundDigits = 10;
+        const float k_MinInertia = 1e-6f;
+        const float k_MinMass = 0.1f;
+        
         public bool useUrdfData;
         public Vector3 centerOfMass;
         public Vector3? _adjustedCenterOfMass = null;
@@ -34,10 +39,12 @@ namespace Unity.Robotics.UrdfImporter
         public Vector3 inertiaTensor;
         public Quaternion inertiaTensorRotation;
         public Quaternion inertialAxisRotation;
-
-        private const int RoundDigits = 10;
-        private const float MinInertia = 1e-6f;
-        private const float minMass = 0.1f;
+        
+        [SerializeField, HideInInspector]
+        UrdfLinkDescription.Inertial m_OriginalValues;
+        
+        [SerializeField, HideInInspector]
+        UrdfLinkDescription.Inertial m_Overrides;
 
         public Vector3 AdjustedCenterOfMass
         {
@@ -52,60 +59,83 @@ namespace Unity.Robotics.UrdfImporter
             }
         }
 
-        public static void Create(GameObject linkObject, UrdfLinkDescription.Inertial inertial = null, bool addRigidBody = true)
+        public static void Create(GameObject linkObject, UrdfLinkDescription.Inertial inertialLink = null, bool addRigidBody = true)
         {
             UrdfInertial urdfInertial = linkObject.AddComponent<UrdfInertial>();
-
+        
+            //TODO - P3TE_MERGE - addRigidBody ??. Should GetComponent even be called?
 #if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = urdfInertial.GetComponent<ArticulationBody>();
 #else
-            Rigidbody robotLink = null;
+            Rigidbody robotLink = urdfInertial.GetComponent<Rigidbody>();
             if (addRigidBody)
             {
                 robotLink = linkObject.AddComponent<Rigidbody>();
             }
-            else
-            {
-                inertial = null;
-            }
 #endif
-            if (inertial != null)
+            if (inertialLink != null)
             {
-                robotLink.mass = ((float)inertial.mass > 0)?((float)inertial.mass):minMass;
-                robotLink.centerOfMass = inertial.origin != null ? UrdfOrigin.GetPositionFromUrdf(inertial.origin) : Vector3.zero;
-                urdfInertial.ImportInertiaData(inertial);
+                robotLink.mass = Mathf.Max((float)inertialLink.mass, k_MinMass);
+                if (inertialLink.origin != null) {
+                    robotLink.centerOfMass = UrdfOrigin.GetPositionFromUrdf(inertialLink.origin);
+                }
+                else
+                {
+                    robotLink.centerOfMass = Vector3.zero;
+                }
+                //TODO - P3TE_MERGE - Does this function set m_OriginalValues, m_Overrides, useUrdfData ?
+                //TODO - P3TE_MERGE - inertialUrdf.m_Overrides = inertialUrdf.ToLinkInertial(robotLink);
+                urdfInertial.ImportInertiaData(inertialLink);
                  
                 urdfInertial.useUrdfData = true;
             }
-
+            inertialUrdf.UpdateLinkData();
+            
             urdfInertial.displayInertiaGizmo = false;
+        }
+
+        public void ResetInertial()
+        {
+            m_Overrides = m_OriginalValues;
+            AssignUrdfInertiaData(m_Overrides);
         }
 
 #region Runtime
 
-        private void Start()
+        void Start()
         {
             startCalled = true;
             UpdateLinkData();
         }
 
-        public void UpdateLinkData()
+        public void UpdateLinkData(bool copyOverrides = false, bool manualInput = false)
         {
 
 #if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = GetComponent<ArticulationBody>();
-
 #else
               Rigidbody robotLink = GetComponent<Rigidbody>();
-              if (robotLink == null)
-              {
-                  //Can be null when FixedJoint optimisations are applied.
-                  return;
-              }
 #endif
+            if (robotLink == null)
+            {
+                //Can be null when FixedJoint optimisations are applied.
+                return;
+            }
 
             if (useUrdfData)
             {
+                
+                if (m_OriginalValues == null)
+                {
+                    //TODO - P3TE_MERGE - ??
+                    Debug.LogWarning(
+                        "This instance doesn't have any urdf data stored - " +
+                        "creating some using the current inertial values.");
+                    m_OriginalValues = ToLinkInertial(articulationBody);
+                }
+                Assert.IsNotNull(m_OriginalValues);
+                
+                //TODO - P3TE_MERGE - Why don't we just call ImportInertiaData
                 robotLink.centerOfMass = AdjustedCenterOfMass;
                 if (inertiaCalculationType.AutomaticInertiaCalculation())
                 {
@@ -121,7 +151,7 @@ namespace Unity.Robotics.UrdfImporter
                 if(wasBelowMinimumInertia)
                 {
                     robotLink.inertiaTensor = safeInertia;
-                    RuntimeUrdf.AddImportWarning($"Inertia Tensor below {MinInertia} detected on {robotLink.gameObject.name}! Due to floating-point precision values lower than {MinInertia} may cause erratic behaviour so the Inertia Tensor for this object has been adjusted to be at least the minimum value.");
+                    RuntimeUrdf.AddImportWarning($"Inertia Tensor below {k_MinInertia} detected on {robotLink.gameObject.name}! Due to floating-point precision values lower than {MinInertia} may cause erratic behaviour so the Inertia Tensor for this object has been adjusted to be at least the minimum value.");
                 }
                 
             }
@@ -129,6 +159,22 @@ namespace Unity.Robotics.UrdfImporter
             {
                 robotLink.ResetCenterOfMass();
                 robotLink.ResetInertiaTensor();
+            }
+            
+            //TODO - P3TE_MERGE - copyOverrides ???
+            if (copyOverrides)
+            {
+                m_Overrides ??= new Link.Inertial(m_OriginalValues);
+            }
+            // Ensure that when this script is hot-loaded for the first time that this previously non-existent variable
+            // gets some sensible values (by copying them from the current state of the ArticulationBody)
+            else if (m_Overrides == null)
+            {
+                m_Overrides = ToLinkInertial(articulationBody);
+            }
+            else if (manualInput)
+            {
+                m_Overrides = ToLinkInertial(articulationBody, false);
             }
         }
 
@@ -181,7 +227,7 @@ namespace Unity.Robotics.UrdfImporter
             Matrix3x3 unityInertiaMatrix = ToUnityMatrix3x3(inertial.inertia);
             Vector3 inertialTensorUnity = FixMinInertia(unityInertiaMatrix.PxDiagonalize(out Quaternion inertialTensorRotationUnity));
             
-            //This previous implementation:
+            //TODO - P3TE_MERGE - This previous implementation:
             //Vector3 eigenvalues;
             //Vector3[] eigenvectors;
             //Matrix3x3 rotationMatrix = ToMatrix3x3(inertial.inertia);
@@ -191,10 +237,18 @@ namespace Unity.Robotics.UrdfImporter
             
 #if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = GetComponent<ArticulationBody>();
-
 #else
             Rigidbody robotLink = GetComponent<Rigidbody>();
 #endif
+            
+            robotLink.mass = Mathf.Max((float)inertial.mass, k_MinMass);
+            if (inertial.origin != null) {
+                robotLink.centerOfMass = UrdfOrigin.GetPositionFromUrdf(inertial.origin);
+            }
+            else
+            {
+                robotLink.centerOfMass = Vector3.zero;
+            }
 
             Vector3 inertiaEulerAngles;
 
@@ -214,7 +268,7 @@ namespace Unity.Robotics.UrdfImporter
             this.inertiaTensor = inertialTensorUnity;
             this.inertiaTensorRotation = inertialTensorRotationUnity;
 
-            //TODO -  if the user can specify this in the xacro, we shouldn't be using the rigibidboy (robotLink) version.
+            //TODO - P3TE_MERGE -  -  if the user can specify this in the xacro, we shouldn't be using the rigibidboy (robotLink) version.
             this.centerOfMass = robotLink.centerOfMass;
 
         }
@@ -244,8 +298,8 @@ namespace Unity.Robotics.UrdfImporter
         {
             for (int i = 0; i < 3; i++)
             {
-                if (vector3[i] < MinInertia)
-                    vector3[i] = MinInertia;
+                if (vector3[i] < k_MinInertia)
+                    vector3[i] = k_MinInertia;
             }
             return vector3;
         }
@@ -297,32 +351,35 @@ namespace Unity.Robotics.UrdfImporter
         {
 #if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = GetComponent<ArticulationBody>();
-
 #else
             Rigidbody robotLink = GetComponent<Rigidbody>();
 #endif
 
             if (robotLink == null)
+            {
+                Debug.LogWarning("No data to export.");
                 return null;
+            }
 
             UpdateLinkData();
             Vector3 originAngles = inertialAxisRotation.eulerAngles;
             UrdfOriginDescription inertialOrigin = new UrdfOriginDescription(robotLink.centerOfMass.Unity2Ros().ToRoundedDoubleArray(), new double[] { (double)originAngles.x, (double)originAngles.y, (double)originAngles.z });
             UrdfLinkDescription.Inertial.Inertia inertia = ExportInertiaData();
 
-            return new UrdfLinkDescription.Inertial(Math.Round(robotLink.mass, RoundDigits), inertialOrigin, inertia);
+            return new UrdfLinkDescription.Inertial(Math.Round(robotLink.mass, k_RoundDigits), inertialOrigin, inertia);
         }
 
         private UrdfLinkDescription.Inertial.Inertia ExportInertiaData()
         {
 #if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = GetComponent<ArticulationBody>();
-
 #else
             Rigidbody robotLink = GetComponent<Rigidbody>();
 #endif
             
             Matrix3x3 inertiaMatrix = CalculateInertiaTensorMatrix(robotLink.inertiaTensor, robotLink.inertiaTensorRotation, inertialAxisRotation);
+            
+            //TODO - P3TE_MERGE - The upstream had branching code where you could specify whether it was calculated from the articulation body or fell back to inertiaTensor and inertiaTensorRotation
 
             return ToRosCoordinates(ToInertia(inertiaMatrix));
         }

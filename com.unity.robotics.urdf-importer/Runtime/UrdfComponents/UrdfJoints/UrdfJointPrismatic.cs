@@ -115,57 +115,62 @@ namespace Unity.Robotics.UrdfImporter
 
         protected override void ImportJointData(UrdfJointDescription joint)
         {
-            AdjustMovement(joint);
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+            var axis = (joint.axis != null && joint.axis.xyz != null) ? joint.axis.xyz.ToVector3() : new Vector3(1, 0, 0);
+            SetAxisData(axis);
+            SetLimits(joint);
             SetDynamics(joint.dynamics);
+#else
+            throw new NotImplementedException();
+#endif
         }
 
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
         /// <summary>
         /// Reads axis joint information and rotation to the articulation body to produce the required motion
         /// </summary>
         /// <param name="joint">Structure containing joint information</param>
-        protected override void AdjustMovement(UrdfJointDescription joint) // Test this function
+        protected override void SetAxisData(Vector3 axis) // Test this function
         {
-#if !URDF_FORCE_RIGIDBODY
-            axisofMotion = (joint.axis != null && joint.axis.xyz != null) ? joint.axis.xyz.ToVector3() : new Vector3(1, 0, 0);
-            unityJoint.linearLockX = (joint.limit != null) ? ArticulationDofLock.LimitedMotion : ArticulationDofLock.FreeMotion;
-            unityJoint.linearLockY = ArticulationDofLock.LockedMotion;
-            unityJoint.linearLockZ = ArticulationDofLock.LockedMotion;
-
+            axisofMotion = axis;
             Vector3 axisofMotionUnity = axisofMotion.Ros2Unity();
             Quaternion Motion = new Quaternion();
             Motion.SetFromToRotation(new Vector3(1, 0, 0), axisofMotionUnity);
             unityJoint.anchorRotation = Motion;
+        }
 
+        protected override void SetLimits(Joint joint)
+        {
+            unityJoint.linearLockX = (joint.limit != null) ? ArticulationDofLock.LimitedMotion : ArticulationDofLock.FreeMotion;
+            unityJoint.linearLockY = ArticulationDofLock.LockedMotion;
+            unityJoint.linearLockZ = ArticulationDofLock.LockedMotion;
+            
             if (joint.limit != null)
             {
                 ArticulationDrive drive = unityJoint.xDrive;
                 drive.upperLimit = (float)joint.limit.upper;
                 drive.lowerLimit = (float)joint.limit.lower;
                 drive.forceLimit = (float)joint.limit.effort;
-#if UNITY_2020_2_OR_NEWER
-                unityJoint.maxLinearVelocity = (float)joint.limit.velocity;
-#elif UNITY_2020_1
-                maxLinearVelocity = (float)joint.limit.velocity;
-#endif
-                unityJoint.xDrive = drive;
 
+                unityJoint.maxLinearVelocity = (float)joint.limit.velocity;
+                unityJoint.xDrive = drive;
             }
-#else
-            throw new NotImplementedException("TODO - Implement");
-#endif
         }
 
+#endif
+        
         #endregion
-
-
+        
         #region Export
 
         protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
         {
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
-            joint.axis = GetAxisData(axisofMotion);
-            joint.dynamics = new UrdfJointDescription.Dynamics(unityJoint.linearDamping, unityJoint.jointFriction);
+            
+            joint.axis = new UrdfJointDescription.Axis((unityJoint.anchorRotation * Vector3.right).Unity2Ros());
+            joint.dynamics = new Joint.Dynamics(unityJoint.linearDamping, unityJoint.jointFriction);
             joint.limit = ExportLimitData();
+            return joint;
 #else
             ConfigurableJoint configurableJoint = (ConfigurableJoint)unityJoint;
 

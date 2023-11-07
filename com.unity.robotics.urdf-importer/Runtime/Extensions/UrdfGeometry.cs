@@ -34,8 +34,12 @@ namespace Unity.Robotics.UrdfImporter
                         null,
                         new UrdfLinkDescription.Geometry.Cylinder(ExportUrdfRadius(transform), ExportCylinderHeight(transform)));
                     break;
+                case GeometryTypes.Capsule:
+                    geometry = new UrdfLinkDescription.Geometry(
+                        null, null, new UrdfLinkDescription.Geometry.Capsule(ExportUrdfRadius(transform), ExportCylinderHeight(transform)));
+                    break;
                 case GeometryTypes.Sphere:
-                    geometry = new UrdfLinkDescription.Geometry(null, null, new UrdfLinkDescription.Geometry.Sphere(ExportUrdfRadius(transform)));
+                    geometry = new UrdfLinkDescription.Geometry(null, null, null, new UrdfLinkDescription.Geometry.Sphere(ExportUrdfRadius(transform)));
                     break;
                 case GeometryTypes.Mesh:
                     geometry = ExportGeometryMeshData(transform.GetChild(0).gameObject, ExportUrdfSize(transform), isCollisionGeometry);
@@ -53,6 +57,8 @@ namespace Unity.Robotics.UrdfImporter
                 return GeometryTypes.Box;
             if (geometry.cylinder != null)
                 return GeometryTypes.Cylinder;
+            if (geometry.capsule != null)
+                return GeometryTypes.Capsule;
             if (geometry.sphere != null)
                 return GeometryTypes.Sphere;
 
@@ -72,6 +78,12 @@ namespace Unity.Robotics.UrdfImporter
                         (float)geometry.cylinder.radius * 2,
                         (float)geometry.cylinder.length / 2,
                         (float)geometry.cylinder.radius * 2);
+                    break;
+                case GeometryTypes.Capsule:
+                    transform.localScale = new Vector3(
+                        (float)geometry.capsule.radius * 2,
+                        (float)geometry.capsule.length / 2,
+                        (float)geometry.capsule.radius * 2);
                     break;
                 case GeometryTypes.Sphere:
                     transform.localScale = new Vector3(
@@ -305,7 +317,7 @@ namespace Unity.Robotics.UrdfImporter
             string newFilePath = UrdfMeshExportHandler.CopyOrCreateMesh(geometryObject, isCollisionGeometry);
             string packagePath = UrdfExportPathHandler.GetPackagePathForMesh(newFilePath);
 
-            return new UrdfLinkDescription.Geometry(null, null, null, new UrdfLinkDescription.Geometry.Mesh(packagePath, urdfSize));
+            return new UrdfLinkDescription.Geometry(null, null, null, null, new UrdfLinkDescription.Geometry.Mesh(packagePath, urdfSize));
         }
 
         public static bool CheckForUrdfCompatibility(Transform transform, GeometryTypes type)

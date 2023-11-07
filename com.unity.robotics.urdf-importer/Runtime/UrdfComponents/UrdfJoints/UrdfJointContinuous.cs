@@ -1,6 +1,4 @@
-﻿#define CONTINUOUS_AS_HINGE_JOINTS
-
-/*
+﻿/*
 © Siemens AG, 2018-2019
 Author: Suzannah Smith (suzannah.smith@siemens.com)
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,10 +12,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#define CONTINUOUS_AS_HINGE_JOINTS
+
 using System;
 using UnityEngine;
-
-
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -27,8 +25,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public static UrdfJoint Create(GameObject linkObject)
         {
-            UrdfJointContinuous urdfJoint;
-            urdfJoint = linkObject.AddComponent<UrdfJointContinuous>();
+            UrdfJointContinuous urdfJoint = linkObject.AddComponent<UrdfJointContinuous>();
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             urdfJoint.unityJoint = linkObject.GetComponent<ArticulationBody>();
             urdfJoint.unityJoint.jointType = ArticulationJointType.RevoluteJoint;
@@ -190,46 +187,17 @@ namespace Unity.Robotics.UrdfImporter
         protected override void ImportJointData(UrdfJointDescription joint)
         {
             AdjustMovement(joint);
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             SetDynamics(joint.dynamics);
-#else
-            SetDynamics(joint.dynamics);
-            
-/*
-#if CONTINUOUS_AS_HINGE_JOINTS
-            
-            HingeJoint hingeJoint = unityJoint as HingeJoint;
-            hingeJoint.spring = new JointSpring()
-            {
-                damper = (float) joint.dynamics.damping,
-                spring = (float) joint.dynamics.spring,
-            };
-            Debug.LogWarning("Dynamics friction not implemented.");
-            Debug.LogWarning("Dynamics maximum force not implemented.");
-            
-#else
-            ConfigurableJoint configurableJoint = unityJoint as ConfigurableJoint;
-            configurableJoint.angularXDrive = new JointDrive()
-            {
-                maximumForce = configurableJoint.angularXDrive.maximumForce,
-                positionDamper = joint.dynamics.Damping(),
-                positionSpring = configurableJoint.angularXDrive.positionSpring
-            };
-            Debug.LogWarning("Dynamics friction not implemented.");
-#endif
-*/
-            
-#endif
         }
 
         protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
         {
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
-            joint.axis = GetAxisData(axisofMotion);
+            joint.axis = new UrdfJointDescription.Axis((unityJoint.anchorRotation * Vector3.right).Unity2Ros());
             joint.dynamics = new UrdfJointDescription.Dynamics(unityJoint.angularDamping, unityJoint.jointFriction);
             joint.limit = ExportLimitData();
 #else
-            joint.axis = GetAxisData(unityJoint.axis);
+            joint.axis = GetAxisData(unityJoint.axis.Unity2Ros());
             Debug.LogError("TODO - Broken!");
             joint.dynamics = new UrdfJointDescription.Dynamics(
                 ((HingeJoint)unityJoint).spring.spring,
@@ -246,7 +214,7 @@ namespace Unity.Robotics.UrdfImporter
         protected override void AdjustMovement(UrdfJointDescription joint)
         {
 #if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
-            axisofMotion = (joint.axis != null && joint.axis.xyz != null) ? joint.axis.xyz.ToVector3() : new Vector3(1, 0, 0);
+            axisofMotion = axis;
             unityJoint.linearLockX = ArticulationDofLock.LockedMotion;
             unityJoint.linearLockY = ArticulationDofLock.LockedMotion;
             unityJoint.linearLockZ = ArticulationDofLock.LockedMotion;

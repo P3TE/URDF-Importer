@@ -15,6 +15,7 @@ limitations under the License.
 using System.Xml;
 using System.Xml.Linq;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -95,45 +96,66 @@ namespace Unity.Robotics.UrdfImporter
 
         public class Axis
         {
-            public double[] xyz;
 
-            public static Axis DefaultAxis => new Axis(new double[] {1, 0, 0});
+            public Vector3 axisROS;
+            
+            const string _AtrributeName = "xyz";
+
+            private static Vector3 GetDefaultAxisValues()
+            {
+                return new Vector3(1, 0, 0);
+            }
+
+            private void SetAxisRos(Vector3 newAxisRos)
+            {
+                if (newAxisRos.sqrMagnitude < 0.001f)
+                {
+                    RuntimeUrdf.AddImportWarning($"Axis attribute '{_AtrributeName}' magnitude should be non zero! Found: {newAxisRos}, using default axis.");
+                    axisROS = GetDefaultAxisValues();
+                    return;
+                }
+                axisROS = newAxisRos.normalized;
+            }
+
+            public static Axis DefaultAxis => new Axis(GetDefaultAxisValues());
 
             public Axis(XElement node)
             {
-                xyz = node.Attribute("xyz") != null ? node.Attribute("xyz").ReadDoubleArray() : null;
+                
+                XAttribute xyzAttribute = node.Attribute(_AtrributeName);
+                if (xyzAttribute == null)
+                {
+                    RuntimeUrdf.AddImportWarning($"Axis missing attribute '{_AtrributeName}', using default axis.");
+                    axisROS = GetDefaultAxisValues();
+                    return;
+                }
+                double[] xyz = xyzAttribute.ReadDoubleArray();
+                if (xyz.Length != 3)
+                {
+                    RuntimeUrdf.AddImportWarning($"Axis attribute '{_AtrributeName}' should have exactly 3 values, but has {xyz.Length}, using default axis.");
+                    axisROS = GetDefaultAxisValues();
+                    return;
+                }
+                SetAxisRos(new Vector3((float)xyz[0], (float)xyz[1], (float)xyz[2]));
             }
 
-            public Axis(double[] xyz)
+            public Axis(Vector3 axisRosEnu)
             {
-                this.xyz = xyz;
+                SetAxisRos(axisRosEnu);
             }
 
             public void WriteToUrdf(XmlWriter writer)
             {
-                if (!(xyz[0] == 0 && xyz[1] == 0 && xyz[2] == 0))
+                if (!(axisROS.sqrMagnitude > 0.001f))
                 {
+                    double[] xyz = { axisROS.x, axisROS.y, axisROS.z };
                     writer.WriteStartElement("axis");
                     writer.WriteAttributeString("xyz", xyz.DoubleArrayToString());
                     writer.WriteEndElement();
                 }
             }
 
-            public int AxisofMotion()
-            {
-                for (int i = 0; i < 3; i++)
-                {
-                    if (xyz[i] > 0)
-                    {
-                        return i;
-                    }
-                }
-                return -1;
-            }
-            
-            public Vector3 AxisROS => new Vector3((float) xyz[0], (float) xyz[1], (float) xyz[2]);
-
-            public Vector3 AxisUnity => AxisROS.Ros2Unity();
+            public Vector3 AxisUnity => axisROS.Ros2Unity();
 
             public Vector3 SecondaryAxisEstimateUnity
             {
@@ -149,7 +171,7 @@ namespace Unity.Robotics.UrdfImporter
                     //axis.x * secondaryAxis.x + axis.y * secondaryAxis.y + axis.z * secondaryAxis.z = 0
                     Vector3 secondaryAxis = new Vector3(0, 1, 0); //Set a default value.
 
-                    if (absAxisX > absAxisY && absAxisX < absAxisZ)
+                    if (absAxisX > absAxisY && absAxisX > absAxisZ)
                     {
                         //use axisX
                         if (absAxisX > 0.0001)
@@ -160,7 +182,7 @@ namespace Unity.Robotics.UrdfImporter
                             //axis.x * secondaryAxis.x = -axis.y - axis.z
                             //secondaryAxis.x = (- axis.y - axis.z) / axis.x
                             float secondaryAxisX = (-axis.y - axis.z) / axis.x;
-                            secondaryAxis = new Vector3(secondaryAxisX, 1, 1);
+                            secondaryAxis = new Vector3(secondaryAxisX, 1, 1).normalized;
                         }
                     } else if (absAxisY > absAxisZ)
                     {
@@ -173,7 +195,7 @@ namespace Unity.Robotics.UrdfImporter
                            //axis.y * secondaryAxis.y = -axis.x - axis.z
                            //secondaryAxis.y = (- axis.x - axis.z) / axis.y
                            float secondaryAxisY = (-axis.x - axis.z) / axis.y;
-                           secondaryAxis = new Vector3(1, secondaryAxisY, 1);
+                           secondaryAxis = new Vector3(1, secondaryAxisY, 1).normalized;
                        }
                     }
                     else
@@ -187,7 +209,7 @@ namespace Unity.Robotics.UrdfImporter
                             //axis.z * secondaryAxis.z = -axis.x - axis.y
                             //secondaryAxis.z = (- axis.x - axis.y) / axis.z
                             float secondaryAxisZ = (-axis.x - axis.y) / axis.z;
-                            secondaryAxis = new Vector3(1, 1, secondaryAxisZ);
+                            secondaryAxis = new Vector3(1, 1, secondaryAxisZ).normalized;
                         }
                     }
                     return secondaryAxis;

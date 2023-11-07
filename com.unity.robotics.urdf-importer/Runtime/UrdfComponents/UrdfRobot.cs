@@ -18,12 +18,7 @@ using System.Collections.Generic;
 
 namespace Unity.Robotics.UrdfImporter
 {
-    public enum GeometryTypes { Box, Cylinder, Sphere, Mesh }
-
-    public enum UrdfCoordinateSpace
-    {
-        ENUFLU = 0, NEDFRD = 1
-    }
+    public enum GeometryTypes { Box, Cylinder, Capsule, Sphere, Mesh }
 
     public class UrdfRobot : MonoBehaviour
     {
@@ -31,7 +26,7 @@ namespace Unity.Robotics.UrdfImporter
         [SerializeField] private string robotName;
         
         public string FilePath;
-        public ImportSettings.axisType choosenAxis ;
+        public ImportSettings.axisType chosenAxis ;
         [SerializeField]
         private ImportSettings.axisType currentOrientation = ImportSettings.axisType.yAxis;
         public List<CollisionIgnore> collisionExceptions;
@@ -40,8 +35,6 @@ namespace Unity.Robotics.UrdfImporter
         [SerializeField] public string exportPackageName = "";
         [SerializeField] public bool exportPlugins = true;
 
-        [SerializeField] public UrdfCoordinateSpace coordinateSpace = UrdfCoordinateSpace.ENUFLU;
-        
         [SerializeField] private int m_LayerIndex = 0;
         private int previousLayer = 0;
         
@@ -89,15 +82,14 @@ namespace Unity.Robotics.UrdfImporter
         }
 
         #region Configure Robot
-
+        
         public void SetCollidersConvex()
         {
             foreach (MeshCollider meshCollider in GetComponentsInChildren<MeshCollider>())
                 meshCollider.convex = !collidersConvex;
             collidersConvex = !collidersConvex;
         }
-
-
+        
         public void SetUseUrdfInertiaData()
         {
             foreach (UrdfInertial urdfInertial in GetComponentsInChildren<UrdfInertial>())
@@ -127,12 +119,12 @@ namespace Unity.Robotics.UrdfImporter
 
         public bool CheckOrientation()
         {
-            return currentOrientation == choosenAxis;
+            return currentOrientation == chosenAxis;
         }
 
         public void SetOrientation()
         {
-            currentOrientation = choosenAxis;
+            currentOrientation = chosenAxis;
         }
 
         public void AddController()
@@ -167,7 +159,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public void SetAxis(ImportSettings.axisType setAxis)
         {
-            this.choosenAxis = setAxis;
+            this.chosenAxis = setAxis;
         }
 
         void Start()
