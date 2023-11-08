@@ -195,7 +195,6 @@ namespace Unity.Robotics.UrdfImporter
             Assert.IsTrue(urdfPath.StartsWith(_PackageFilePathPrefix),
                 $"path {urdfPath} should start with {_PackageFilePathPrefix}");
             
-            //TODO - P3TE_MERGE - Figure out what SetSeparatorChar does and whether it needs to be added to the GetAbsolutePath()
             string packagePath = urdfPath.Substring(_PackageFilePathPrefix.Length).SetSeparatorChar();
             
             // TODO - This doesn't work if you don't know what that was (urdf was a ros parameter).

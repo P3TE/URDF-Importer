@@ -175,6 +175,7 @@ namespace Unity.Robotics.UrdfImporter
 
         protected override void SetAxisData(Vector3 axis)
         {
+#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             axisofMotion = axis;
             int motionAxis = -1;
             for (int i = 0; i < 3; i++)
@@ -201,10 +202,14 @@ namespace Unity.Robotics.UrdfImporter
                     break;
             }
             unityJoint.anchorRotation = motion;
+#else
+            throw new NotImplementedException("Planar joints are not supported for Rigidbodies yet.");            
+#endif
         }
 
         protected override void SetLimits(Joint joint)
         {
+#if UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             unityJoint.linearLockX = ArticulationDofLock.LockedMotion;
             if (joint.limit != null)
             {
@@ -244,8 +249,9 @@ namespace Unity.Robotics.UrdfImporter
             unityJoint.anchorRotation = motion;
 
 #else
-            throw new NotImplementedException("TODO - Implement");
+            throw new NotImplementedException("Planar joints are not supported for Rigidbodies yet.");
 #endif
+        }
 
         #endregion
     }
