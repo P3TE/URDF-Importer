@@ -66,7 +66,7 @@ namespace Unity.Robotics.UrdfImporter
 #if   UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
             ArticulationBody robotLink = urdfInertial.GetComponent<ArticulationBody>();
 #else
-            Rigidbody robotLink = urdfInertial.GetComponent<Rigidbody>();
+            Rigidbody robotLink;
             if (addRigidBody)
             {
                 robotLink = linkObject.AddComponent<Rigidbody>();
