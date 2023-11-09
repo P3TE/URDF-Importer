@@ -317,9 +317,9 @@ namespace Unity.Robotics.UrdfImporter
                     GameObject child = meshFilter.gameObject;
                     VHACD decomposer = child.AddComponent<VHACD>();
                     List<Mesh> colliderMeshes = decomposer.GenerateConvexMeshes(meshFilter.sharedMesh);
-                    foreach (Mesh collider in colliderMeshes)
+                    foreach (Mesh _c in colliderMeshes)
                     {
-                        var c = collider;
+                        Mesh collider = _c; //Redeclaration as Foreach iteration variable '_c' is immutable.
                         if (!RuntimeUrdf.IsRuntimeMode())
                         {
                             meshIndex++;
@@ -328,19 +328,19 @@ namespace Unity.Robotics.UrdfImporter
                             if ((UrdfRobotExtensions.importsettings.OverwriteExistingPrefabs || !RuntimeUrdf.AssetExists(name)) && !s_CreatedAssetNames.Contains(name))
                             {
                                 Debug.Log($"Creating new mesh file: {name}");
-                                RuntimeUrdf.AssetDatabase_CreateAsset(c, name);
+                                RuntimeUrdf.AssetDatabase_CreateAsset(collider, name);
                                 RuntimeUrdf.AssetDatabase_SaveAssets();
                                 s_CreatedAssetNames.Add(name);
                                 s_UsedTemplateFiles.Add(templateFileName);
                             }
                             else
                             {
-                                c = RuntimeUrdf.AssetDatabase_LoadAssetAtPath<Mesh>(name);
+                                collider = RuntimeUrdf.AssetDatabase_LoadAssetAtPath<Mesh>(name);
                             }
                         }
 
                         MeshCollider current = child.AddComponent<MeshCollider>();
-                        current.sharedMesh = c;
+                        current.sharedMesh = collider;
                         current.convex = setConvex;
                     }
 
