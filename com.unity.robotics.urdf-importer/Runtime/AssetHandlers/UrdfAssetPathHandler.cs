@@ -17,6 +17,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using UnityEngine;
+using System;
+using System.Diagnostics;
 using UnityEngine.Assertions;
 #if UNITY_EDITOR
 using UnityEditor;

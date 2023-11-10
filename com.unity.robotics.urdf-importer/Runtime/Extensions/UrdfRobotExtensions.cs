@@ -276,8 +276,8 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="filename">URDF filename</param>
         /// <param name="settings">Import Settings</param>
         /// <param name="loadStatus">If true, will show the progress of import step by step</param>
-        /// <param name="forceRuntimeMode"> 
-        /// When true, runs the runtime loading mode even in Editor. When false, uses the default behavior, 
+        /// <param name="forceRuntimeMode">
+        /// When true, runs the runtime loading mode even in Editor. When false, uses the default behavior,
         /// i.e. runtime will be enabled in standalone build and disable when running in editor.
         /// In runtime mode, the Controller component of the robot will be added but not activated automatically and has to be enabled manually.
         /// This is to allow initializing the controller values (stiffness, damping, etc.) before the controller.Start() is called
@@ -559,8 +559,8 @@ namespace Unity.Robotics.UrdfImporter
                 SerializedProperty t = tagsProp.GetArrayElementAtIndex(i);
                 if (t.stringValue.Equals(FKRobot.k_TagName))
                 {
-                    found = true; 
-                    break; 
+                    found = true;
+                    break;
                 }
             }
 
