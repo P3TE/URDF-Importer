@@ -77,9 +77,6 @@ namespace Unity.Robotics.UrdfImporter.Editor
             EditorGUI.BeginDisabledGroup(true);
             EditorGUILayout.PropertyField(axisType, new GUIContent("Axis Type", "Adjust this if the models that make up your robot are facing the wrong direction."));
             serializedObject.ApplyModifiedProperties();
-            // Legacy code for correcting axis in the inspector
-            // // serializedObject.ApplyModifiedProperties();
-            // // UrdfRobotExtensions.CorrectAxis(urdfRobot.gameObject);
 
             if (urdfRobot.GetComponent<Unity.Robotics.UrdfImporter.Control.Controller>() == null || urdfRobot.GetComponent<Unity.Robotics.UrdfImporter.Control.FKRobot>() == null)
             {
