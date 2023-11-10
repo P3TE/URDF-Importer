@@ -20,19 +20,24 @@ namespace Unity.Robotics.UrdfImporter
 {
     public class UrdfPlugins : MonoBehaviour
     {
-        public static void Create(Transform robot, List<Plugin> plugins = null)
+        public static UrdfPlugins Create(Transform robot, List<UrdfPluginDescription> plugins = null)
         {
             GameObject pluginsObject = new GameObject("Plugins");
             pluginsObject.transform.SetParentAndAlign(robot);
-            pluginsObject.AddComponent<UrdfPlugins>();
+            UrdfPlugins urdfPlugins = pluginsObject.AddComponent<UrdfPlugins>();
 
-            if (plugins == null) return;
-
-            foreach (var plugin in plugins)
-                UrdfPlugin.Create(pluginsObject.transform, plugin);
+            if (plugins != null)
+            {
+                foreach (var plugin in plugins)
+                {
+                    UrdfPlugin.Create(pluginsObject.transform, plugin);
+                }
+            }
+            
+            return urdfPlugins;
         }
 
-        public List<Plugin> ExportPluginsData()
+        public List<UrdfPluginDescription> ExportPluginsData()
         {
             return GetComponents<UrdfPlugin>()
                 .Select(urdfPlugin => urdfPlugin.ExportPluginData())

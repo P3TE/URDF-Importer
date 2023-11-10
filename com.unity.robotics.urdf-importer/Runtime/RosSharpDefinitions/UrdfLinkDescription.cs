@@ -10,24 +10,27 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/  
+*/
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Xml;
 using System.Xml.Linq;
+using Unity.Robotics.UrdfImporter.Urdf.Extensions;
 
 namespace Unity.Robotics.UrdfImporter
 {
-    public class Link
+    public class UrdfLinkDescription
     {
         public string name;
         public Inertial inertial;
         public List<Visual> visuals;
         public List<Collision> collisions;
-        public List<Joint> joints;
+        public List<UrdfJointDescription> joints;
 
-        public Link(XElement node)
+        public UrdfLinkDescription(XElement node)
         {
             name = (string)node.Attribute("name");  // required
             inertial = (node.Element("inertial") != null) ? new Inertial(node.Element("inertial")) : null;  // optional     
@@ -35,14 +38,14 @@ namespace Unity.Robotics.UrdfImporter
             collisions = readCollisions(node); // optional   
         }
 
-        public Link(string name, Inertial inertial = null)
+        public UrdfLinkDescription(string name, Inertial inertial = null)
         {
             this.name = name;
             this.inertial = inertial;
 
             visuals = new List<Visual>();
             collisions = new List<Collision>();
-            joints = new List<Joint>();
+            joints = new List<UrdfJointDescription>();
         }
 
         public void WriteToUrdf(XmlWriter writer)
@@ -76,24 +79,40 @@ namespace Unity.Robotics.UrdfImporter
             return visuals.ToList();
         }
 
+        [System.Serializable]
         public class Inertial
         {
             public double mass;
-            public Origin origin;
+            public UrdfOriginDescription origin;
             public Inertia inertia;
+            
+            public enum InertiaCalculationType
+            {
+                Inherit_Fallback_Manual = 0, //The default.
+                Inherit_Fallback_Automatic,
+                Force_Manual,
+                Force_Automatic
+            }
 
             public Inertial(XElement node)
             {
-                origin = (node.Element("origin") != null) ? new Origin(node.Element("origin")) : null; // optional  
+                origin = (node.Element("origin") != null) ? new UrdfOriginDescription(node.Element("origin")) : null; // optional  
                 mass = (double)node.Element("mass").Attribute("value");// required
                 inertia = new Inertia(node.Element("inertia")); // required
             }
 
-            public Inertial(double mass, Origin origin, Inertia inertia)
+            public Inertial(double mass, UrdfOriginDescription origin, Inertia inertia)
             {
                 this.mass = mass;
                 this.origin = origin;
                 this.inertia = inertia;
+            }
+
+            public Inertial(Inertial other)
+            {
+                mass = other.mass;
+                origin = other.origin;
+                inertia = other.inertia;
             }
 
             public void WriteToUrdf(XmlWriter writer)
@@ -111,17 +130,100 @@ namespace Unity.Robotics.UrdfImporter
                 writer.WriteEndElement();
             }
 
+            [System.Serializable]
             public class Inertia
             {
+
+                private static Dictionary<string, InertiaCalculationType> StringToInertiaCalculationTypeMap =
+                    new Dictionary<string, InertiaCalculationType>()
+                    {
+                        {"force_automatic", InertiaCalculationType.Force_Automatic},
+                        {"force_manual", InertiaCalculationType.Force_Manual},
+                        {"inherit_fallback_automatic", InertiaCalculationType.Inherit_Fallback_Automatic},
+                        {"inherit_fallback_manual", InertiaCalculationType.Inherit_Fallback_Manual}
+                    };
+
+
+                private const string _InertiaCalculationTypeId = "unity_automatic_inertia";
+                public InertiaCalculationType inertiaCalculationType = InertiaCalculationType.Inherit_Fallback_Manual;
+
+                public bool automaticInertiaDefined; //Used for warning messages.
+                
                 public double ixx;
                 public double ixy;
                 public double ixz;
                 public double iyy;
                 public double iyz;
                 public double izz;
+                
+                public string StringNameFromInertiaCalculationType(InertiaCalculationType inertiaCalculationType)
+                {
+                    foreach (KeyValuePair<string, InertiaCalculationType> keyValuePair in StringToInertiaCalculationTypeMap)
+                    {
+                        if (keyValuePair.Value == inertiaCalculationType)
+                        {
+                            return keyValuePair.Key;
+                        }
+                    }
+
+                    throw new Exception($"Unmapped InertiaCalculationType: {inertiaCalculationType}");
+                }
+
+                public InertiaCalculationType InertiaCalculationTypeFromString(string value)
+                {
+                    if (StringToInertiaCalculationTypeMap.TryGetValue(value, out InertiaCalculationType result))
+                    {
+                        return result;
+                    }
+
+                    StringBuilder errorMessage = new StringBuilder();
+                    
+                    errorMessage.Append($"Unknown value for '{_InertiaCalculationTypeId}'! Provided: '{value}'");
+                    int count = 0;
+                    foreach (KeyValuePair<string, InertiaCalculationType> keyValuePair in StringToInertiaCalculationTypeMap)
+                    {
+                        if (count == 0)
+                        {
+                            errorMessage.Append(", available values include: ");
+                        }
+                        else
+                        {
+                            errorMessage.Append(", ");
+                        }
+                        count++;
+                        errorMessage.Append("'");
+                        errorMessage.Append(keyValuePair.Key);
+                        errorMessage.Append("'");
+                    }
+                    throw new Exception(errorMessage.ToString());
+                }
 
                 public Inertia(XElement node)
                 {
+                    XAttribute automaticInertiaAttribute = node.Attribute(_InertiaCalculationTypeId);
+                    automaticInertiaDefined = automaticInertiaAttribute != null;
+                    if (automaticInertiaDefined)
+                    {
+                        inertiaCalculationType = InertiaCalculationTypeFromString(automaticInertiaAttribute.Value);
+                    }
+                    else
+                    {
+                        StringBuilder warningBuilder = new StringBuilder();
+                        warningBuilder.Append("In the <inertial> within ");
+                        warningBuilder.Append(UrdfPluginImplementation.GetVerboseXElementName(node.Parent.Parent));
+                        warningBuilder.Append(" inertial was defined without specifying the ");
+                        warningBuilder.Append(_InertiaCalculationTypeId);
+                        warningBuilder.Append("' behaviour, it is recommended that this is set. For automatic '");
+                        warningBuilder.Append(StringNameFromInertiaCalculationType(InertiaCalculationType.Inherit_Fallback_Automatic));
+                        warningBuilder.Append("' is recommended, if the inertia is well characterised '");
+                        warningBuilder.Append(StringNameFromInertiaCalculationType(InertiaCalculationType.Inherit_Fallback_Manual));
+                        warningBuilder.Append("' is recommended. To force a inertia mode, use '");
+                        warningBuilder.Append(StringNameFromInertiaCalculationType(InertiaCalculationType.Force_Automatic));
+                        warningBuilder.Append("' or '");
+                        warningBuilder.Append(StringNameFromInertiaCalculationType(InertiaCalculationType.Force_Manual));
+                        warningBuilder.Append("'");
+                        RuntimeUrdf.AddImportWarning(warningBuilder.ToString());
+                    }
                     ixx = (double)node.Attribute("ixx");
                     ixy = (double)node.Attribute("ixy");
                     ixz = (double)node.Attribute("ixz");
@@ -143,6 +245,15 @@ namespace Unity.Robotics.UrdfImporter
                 public void WriteToUrdf(XmlWriter writer)
                 {
                     writer.WriteStartElement("inertia");
+
+                    foreach (KeyValuePair<string,InertiaCalculationType> keyValuePair in StringToInertiaCalculationTypeMap)
+                    {
+                        if (keyValuePair.Value == inertiaCalculationType)
+                        {
+                            writer.WriteAttributeString(_InertiaCalculationTypeId, keyValuePair.Key);
+                        }
+                    }
+                    
                     writer.WriteAttributeString("ixx", ixx + "");
                     writer.WriteAttributeString("ixy", ixy + "");
                     writer.WriteAttributeString("ixz", ixz + "");
@@ -158,17 +269,17 @@ namespace Unity.Robotics.UrdfImporter
         public class Collision
         {
             public string name;
-            public Origin origin;
+            public UrdfOriginDescription origin;
             public Geometry geometry;
 
             public Collision(XElement node)
             {
                 name = (string)node.Attribute("name"); // optional
-                origin = (node.Element("origin") != null) ? new Origin(node.Element("origin")) : null; // optional  
+                origin = (node.Element("origin") != null) ? new UrdfOriginDescription(node.Element("origin")) : null; // optional  
                 geometry = new Geometry(node.Element("geometry")); // required
             }
 
-            public Collision(Geometry geometry, string name = null, Origin origin = null)
+            public Collision(Geometry geometry, string name = null, UrdfOriginDescription origin = null)
             {
                 this.name = name;
                 this.origin = origin;
@@ -192,24 +303,32 @@ namespace Unity.Robotics.UrdfImporter
         public class Visual
         {
             public string name;
-            public Origin origin;
+            public UrdfOriginDescription origin;
             public Geometry geometry;
-            public Material material;
+            public List<UrdfMaterialDescription> materials;
+            public List<UrdfUnityMaterial.ExportMaterial> exportedMaterials;
 
             public Visual(XElement node)
             {
                 name = (string)node.Attribute("name"); // optional
-                origin = (node.Element("origin") != null) ? new Origin(node.Element("origin")) : null; // optional
+                origin = (node.Element("origin") != null) ? new UrdfOriginDescription(node.Element("origin")) : null; // optional
                 geometry = new Geometry(node.Element("geometry")); // required
-                material = (node.Element("material") != null) ? new Material(node.Element("material")) : null; // optional
+                materials = new List<UrdfMaterialDescription>();
+                IEnumerable<XElement> materialElements = node.Elements("material");
+                foreach (XElement materialElement in materialElements)
+                {
+                    materials.Add(new UrdfMaterialDescription(materialElement));
+                }
             }
 
-            public Visual(Geometry geometry, string name = null, Origin origin = null, Material material = null)
+            public Visual(Geometry geometry, string name = null, UrdfOriginDescription origin = null, UrdfMaterialDescription material = null,
+                List<UrdfUnityMaterial.ExportMaterial> exportedMaterials = null)
             {
                 this.name = name;
                 this.origin = origin;
                 this.geometry = geometry;
-                this.material = material;
+                this.materials = new List<UrdfMaterialDescription>() {material}; //TODO - Add support for multiple materials.
+                this.exportedMaterials = exportedMaterials;
             }
 
             public void WriteToUrdf(XmlWriter writer)
@@ -221,7 +340,17 @@ namespace Unity.Robotics.UrdfImporter
 
                 origin?.WriteToUrdf(writer);
                 geometry?.WriteToUrdf(writer);
-                material?.WriteToUrdf(writer);
+                foreach (UrdfMaterialDescription urdfMaterialDescription in materials)
+                {
+                    urdfMaterialDescription?.WriteToUrdf(writer);
+                }
+                if(exportedMaterials != null && exportedMaterials.Count > 0)
+                {
+                    foreach (UrdfUnityMaterial.ExportMaterial exportedMaterial in exportedMaterials)
+                    {
+                        exportedMaterial.WriteToUrdf(writer);
+                    }
+                }
 
                 writer.WriteEndElement();
             }
@@ -308,6 +437,7 @@ namespace Unity.Robotics.UrdfImporter
         {
             public Box box;
             public Cylinder cylinder;
+            public Capsule capsule;
             public Sphere sphere;
             public Mesh mesh;
 
@@ -315,14 +445,16 @@ namespace Unity.Robotics.UrdfImporter
             {
                 box = (node.Element("box") != null) ? new Box(node.Element("box")) : null; // optional  
                 cylinder = (node.Element("cylinder") != null) ? new Cylinder(node.Element("cylinder")) : null; // optional  
+                capsule = (node.Element("capsule") != null) ? new Capsule(node.Element("capsule")) : null; // optional
                 sphere = (node.Element("sphere") != null) ? new Sphere(node.Element("sphere")) : null; // optional  
                 mesh = (node.Element("mesh") != null) ? new Mesh(node.Element("mesh")) : null; // optional           
             }
 
-            public Geometry(Box box = null, Cylinder cylinder = null, Sphere sphere = null, Mesh mesh = null)
+            public Geometry(Box box = null, Cylinder cylinder = null, Capsule capsule = null, Sphere sphere = null, Mesh mesh = null)
             {
                 this.box = box;
                 this.cylinder = cylinder;
+                this.capsule = capsule;
                 this.sphere = sphere;
                 this.mesh = mesh;
             }
@@ -333,6 +465,7 @@ namespace Unity.Robotics.UrdfImporter
 
                 box?.WriteToUrdf(writer);
                 cylinder?.WriteToUrdf(writer);
+                capsule?.WriteToUrdf(writer);
                 sphere?.WriteToUrdf(writer);
                 mesh?.WriteToUrdf(writer);
 
@@ -389,6 +522,33 @@ namespace Unity.Robotics.UrdfImporter
             }
 
 
+            public class Capsule
+            {
+                public double radius;
+                public double length;
+
+                public Capsule(XElement node)
+                {
+                    radius = (double)node.Attribute("radius");
+                    length = (double)node.Attribute("length");
+                }
+
+                public Capsule(double radius, double length)
+                {
+                    this.radius = radius;
+                    this.length = length;
+                }
+
+                public void WriteToUrdf(XmlWriter writer)
+                {
+                    writer.WriteStartElement("capsule");
+                    writer.WriteAttributeString("length", length + "");
+                    writer.WriteAttributeString("radius", radius + "");
+                    writer.WriteEndElement();
+                }
+            }
+
+
             public class Sphere
             {
                 public double radius;
@@ -415,10 +575,15 @@ namespace Unity.Robotics.UrdfImporter
             {
                 public string filename;
                 public double[] scale;
+                public bool colliderShouldBeConvex = true;
 
                 public Mesh(XElement node)
                 {
                     filename = (string)node.Attribute("filename");
+                
+                    XAttribute convexAttribute = node.Attribute("convex");
+                    if (convexAttribute is not null) colliderShouldBeConvex = (bool)convexAttribute; // optional
+                    
                     scale = node.Attribute("scale") != null ? node.Attribute("scale").ReadDoubleArray() : null;
                 }
 
@@ -441,5 +606,39 @@ namespace Unity.Robotics.UrdfImporter
                 }
             }
         }
+    }
+    
+    public static class InertiaCalculationTypeHelper
+    {
+        public static bool AutomaticInertiaCalculation(this UrdfLinkDescription.Inertial.InertiaCalculationType inertiaCalculationType)
+        {
+            switch (inertiaCalculationType)
+            {
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Inherit_Fallback_Automatic:
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Force_Automatic:
+                    return true;
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Inherit_Fallback_Manual:
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Force_Manual:
+                    return false;
+            }
+
+            throw new Exception($"Unhandled InertiaCalculationType {inertiaCalculationType}");
+        }
+        
+        public static bool CanInheritInertiaCalculation(this UrdfLinkDescription.Inertial.InertiaCalculationType inertiaCalculationType)
+        {
+            switch (inertiaCalculationType)
+            {
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Inherit_Fallback_Automatic:
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Inherit_Fallback_Manual:
+                    return true;
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Force_Automatic:
+                case UrdfLinkDescription.Inertial.InertiaCalculationType.Force_Manual:
+                    return false;
+            }
+
+            throw new Exception($"Unhandled InertiaCalculationType {inertiaCalculationType}");
+        }
+        
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -25,6 +26,24 @@ public static class RuntimeUrdf
     public static void SetRuntimeMode(bool enabled)
     {
         runtimeModeEnabled = enabled;
+    }
+
+    public static LinkedList<Exception> urdfBuildErrors = new LinkedList<Exception>();
+    private static LinkedList<string> urdfBuildWarnings = new LinkedList<string>();
+
+    public static void ClearImportWarningsAndErrors()
+    {
+        urdfBuildErrors.Clear();
+        urdfBuildWarnings.Clear();
+    }
+
+    public static IEnumerator<string> UrdfBuildWarnings => urdfBuildWarnings.GetEnumerator();
+
+    public static void AddImportWarning(string warningMessage)
+    {
+        urdfBuildWarnings.AddLast(warningMessage);
+        //This is so the call stack remains useful.
+        Debug.LogWarning(warningMessage);
     }
 
     public static T AssetDatabase_LoadAssetAtPath<T>(string fileAssetPath) where T : UnityEngine.Object 

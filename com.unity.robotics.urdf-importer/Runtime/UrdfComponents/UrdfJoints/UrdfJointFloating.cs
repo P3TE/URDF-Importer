@@ -23,11 +23,11 @@ namespace Unity.Robotics.UrdfImporter
         public static UrdfJoint Create(GameObject linkObject)
         {
             UrdfJointFloating urdfJoint = linkObject.AddComponent<UrdfJointFloating>();
-            #if UNITY_2020_1_OR_NEWER
+            #if  URDF_FORCE_ARTICULATION_BODY
                 urdfJoint.unityJoint = linkObject.AddComponent<ArticulationBody>();
                 //Doesnt have any equivalent Articulatiob Joint
             #else
-            urdfJoint.UnityJoint = linkObject.AddComponent<ConfigurableJoint>();
+            urdfJoint.unityJoint = linkObject.AddComponent<ConfigurableJoint>();
             #endif
             return urdfJoint;
         }
@@ -36,13 +36,14 @@ namespace Unity.Robotics.UrdfImporter
 
         public override float GetPosition()
         {
-            #if UNITY_2020_1_OR_NEWER
+            #if  URDF_FORCE_ARTICULATION_BODY
+                // not true, weird - talk to Vidur
                 Debug.Log("'ArticulationBody' does not contain a definition for 'connectedAnchor' and no accessible extension method 'connectedAnchor'");
                 Vector3 distanceFromAnchor = ((ArticulationBody)unityJoint).transform.localPosition ;/*-
                                          ((ArticulationBody)UnityJoint).connectedAnchor;*/
             #else
-            Vector3 distanceFromAnchor = ((ConfigurableJoint)UnityJoint).transform.localPosition - 
-                                         ((ConfigurableJoint)UnityJoint).connectedAnchor;
+            Vector3 distanceFromAnchor = ((ConfigurableJoint)unityJoint).transform.localPosition - 
+                                         ((ConfigurableJoint)unityJoint).connectedAnchor;
             #endif
             return distanceFromAnchor.magnitude;
         }
@@ -53,6 +54,7 @@ namespace Unity.Robotics.UrdfImporter
         {
             return true; //Axis isn't used
         }
+
     }
 }
 

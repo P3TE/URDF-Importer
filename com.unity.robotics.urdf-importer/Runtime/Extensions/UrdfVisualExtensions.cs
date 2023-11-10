@@ -10,9 +10,13 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/  
+*/
 
+using System.Collections.Generic;
+using System.Linq;
+using Unity.Robotics.UrdfImporter.Urdf.Extensions;
 using UnityEngine;
+using UnityMeshImporter;
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -31,7 +35,7 @@ namespace Unity.Robotics.UrdfImporter
 #endif
         }
 
-        public static void Create(Transform parent, Link.Visual visual)
+        public static void Create(Transform parent, UrdfLinkDescription.Visual visual)
         {
             GameObject visualObject = new GameObject(visual.name ?? "unnamed");
             visualObject.transform.SetParentAndAlign(parent);
@@ -40,8 +44,68 @@ namespace Unity.Robotics.UrdfImporter
             urdfVisual.geometryType = UrdfGeometry.GetGeometryType(visual.geometry);
             UrdfGeometryVisual.Create(visualObject.transform, urdfVisual.geometryType, visual.geometry);
 
-            UrdfMaterial.SetUrdfMaterial(visualObject, visual.material);
+            List<UrdfVisual.UrdfVisualRenderable> instantiatedMaterials = SetupMaterials(visualObject, visual);
+            foreach (UrdfVisual.UrdfVisualRenderable instantiatedMaterial in instantiatedMaterials)
+            {
+                urdfVisual.AddInstantiatedMaterial(instantiatedMaterial);
+            }
             UrdfOrigin.ImportOriginData(visualObject.transform, visual.origin);
+        }
+
+        private static List<UrdfVisual.UrdfVisualRenderable> SetupMaterials(GameObject visualObject, UrdfLinkDescription.Visual visual)
+        {
+            Dictionary<string, UrdfVisual.UrdfVisualRenderable> loadedMaterials = new Dictionary<string, UrdfVisual.UrdfVisualRenderable>();
+
+            Renderer[] renderers = visualObject.GetComponentsInChildren<Renderer>();
+            foreach (Renderer renderer in renderers)
+            {
+                string rendererName = renderer.name;
+                bool matchingMaterialFound = false;
+
+                AdditionalMeshImportGameObject additionalMeshImportData = renderer.GetComponent<AdditionalMeshImportGameObject>();
+
+                if (additionalMeshImportData != null)
+                {
+                    foreach (UrdfMaterialDescription urdfMaterialDescription in visual.materials)
+                    {
+                        string materialName = urdfMaterialDescription.name;
+                        
+                        if (additionalMeshImportData.additionalMeshImportData.materialName == materialName)
+                        {
+                            matchingMaterialFound = true;
+                            if (loadedMaterials.TryGetValue(materialName, out UrdfVisual.UrdfVisualRenderable renderable))
+                            {
+                                renderable.AddRenderer(renderer);
+                            }
+                            else
+                            {
+                                Material instantiatedMaterial = urdfMaterialDescription.CreateMaterial();
+                                renderer.sharedMaterial = instantiatedMaterial;
+                                loadedMaterials.Add(materialName, 
+                                    new UrdfVisual.UrdfVisualRenderable(materialName, renderer, instantiatedMaterial));
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if (!matchingMaterialFound)
+                {
+                    if (visual.materials.Count > 0)
+                    {
+                        UrdfMaterialDescription fallbackMaterial = visual.materials[0];
+                        RuntimeUrdf.AddImportWarning($"No material found for mesh with name {rendererName}, falling back to {fallbackMaterial.name}");
+                        renderer.sharedMaterial = fallbackMaterial.CreateMaterial();
+                    }
+                    else
+                    {
+                        RuntimeUrdf.AddImportWarning($"No material found for mesh with name {rendererName}, and no materials specified for this visual component, falling back to default shader");
+                        renderer.sharedMaterial = UrdfMaterial.GetDefaultMaterial();
+                    }
+                }
+            }
+
+            return loadedMaterials.Values.ToList();
         }
 
         public static void AddCorrespondingCollision(this UrdfVisual urdfVisual)
@@ -50,20 +114,44 @@ namespace Unity.Robotics.UrdfImporter
             UrdfCollisionExtensions.Create(collisions.transform, urdfVisual.geometryType, urdfVisual.transform);
         }
 
-        public static Link.Visual ExportVisualData(this UrdfVisual urdfVisual)
+
+        private static List<UrdfUnityMaterial.ExportMaterial> ExportMaterialData(this UrdfVisual urdfVisual)
+        {
+
+            List<UrdfUnityMaterial.ExportMaterial> exportMaterials = new List<UrdfUnityMaterial.ExportMaterial>();
+            
+            MeshRenderer[] meshRenderers = urdfVisual.GetComponentsInChildren<MeshRenderer>();
+            foreach (MeshRenderer meshRenderer in meshRenderers)
+            {
+                foreach (Material meshRendererMaterial in meshRenderer.sharedMaterials)
+                {
+                    UrdfUnityMaterial.ExportMaterial urdfUnityMaterial = UrdfUnityMaterial.GenerateAndExportNewMaterial(meshRendererMaterial);
+                    if (urdfUnityMaterial != null)
+                    {
+                        exportMaterials.Add(urdfUnityMaterial);
+                    }
+                }
+            }
+
+            return exportMaterials;
+        }
+
+        public static UrdfLinkDescription.Visual ExportVisualData(this UrdfVisual urdfVisual)
         {
             UrdfGeometry.CheckForUrdfCompatibility(urdfVisual.transform, urdfVisual.geometryType);
 
-            Link.Geometry geometry = UrdfGeometry.ExportGeometryData(urdfVisual.geometryType, urdfVisual.transform);
+            UrdfLinkDescription.Geometry geometry = UrdfGeometry.ExportGeometryData(urdfVisual.geometryType, urdfVisual.transform);
 
-            Link.Visual.Material material = null;
-            if ((geometry.mesh != null )) 
+            UrdfMaterialDescription material = null;
+            List<UrdfUnityMaterial.ExportMaterial> exportMaterials = null;
+            if ((geometry.mesh != null ))
             {
-                material = UrdfMaterial.ExportMaterialData(urdfVisual.GetComponentInChildren<MeshRenderer>().sharedMaterial);
+                exportMaterials = urdfVisual.ExportMaterialData();
+                //material = UrdfMaterial.ExportMaterialData(urdfVisual.GetComponentInChildren<MeshRenderer>().sharedMaterial);
             }
             string visualName = urdfVisual.name == "unnamed" ? null : urdfVisual.name;
 
-            return new Link.Visual(geometry, visualName, UrdfOrigin.ExportOriginData(urdfVisual.transform), material);
+            return new UrdfLinkDescription.Visual(geometry, visualName, UrdfOrigin.ExportOriginData(urdfVisual.transform), material, exportMaterials);
         }
     }
 }

@@ -12,6 +12,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#define CONTINUOUS_AS_HINGE_JOINTS
+
+using System;
 using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
@@ -23,11 +26,20 @@ namespace Unity.Robotics.UrdfImporter
         public static UrdfJoint Create(GameObject linkObject)
         {
             UrdfJointContinuous urdfJoint = linkObject.AddComponent<UrdfJointContinuous>();
-#if UNITY_2020_1_OR_NEWER
+            
+#if  URDF_FORCE_ARTICULATION_BODY
             urdfJoint.unityJoint = linkObject.GetComponent<ArticulationBody>();
             urdfJoint.unityJoint.jointType = ArticulationJointType.RevoluteJoint;
 #else
-            urdfJoint.unityJoint = linkObject.AddComponent<HingeJoint>();
+            
+#if CONTINUOUS_AS_HINGE_JOINTS
+            HingeJoint hingeJoint = linkObject.AddComponent<HingeJoint>();
+            urdfJoint.unityJoint = hingeJoint;
+#else
+            ConfigurableJoint configurableJoint = linkObject.AddComponent<ConfigurableJoint>();
+            urdfJoint.unityJoint = configurableJoint;
+#endif
+            
             urdfJoint.unityJoint.autoConfigureConnectedAnchor = true;
 #endif
             return urdfJoint;
@@ -41,11 +53,45 @@ namespace Unity.Robotics.UrdfImporter
         public override float GetPosition() // Check Units
         {
 
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
             return unityJoint.jointPosition[xAxis];
 #else
-                return -((HingeJoint)unityJoint).angle;
+    #if CONTINUOUS_AS_HINGE_JOINTS
+            return GetCurrentAngleRadHingeJoint(unityJoint as HingeJoint);
+    #else
+            ConfigurableJoint configurableJoint = (ConfigurableJoint) unityJoint;
+            Rigidbody rigidbody = configurableJoint.GetComponent<Rigidbody>();
+            return GetCurrentAngleRadContinuousJoint(rigidbody, configurableJoint, originalLocalRotation);
+    #endif
 #endif
+        }
+
+        public static float GetCurrentAngleRadHingeJoint(HingeJoint hingeJoint)
+        {
+            return -hingeJoint.angle * Mathf.Deg2Rad;
+        }
+
+        public static float GetCurrentAngleRadContinuousJoint(Rigidbody rigidbody, ConfigurableJoint configurableJoint, 
+            Quaternion originalLocalRotation)
+        {
+            Quaternion currentLocalRotation = rigidbody.transform.localRotation;
+            
+            //Useful for verifying the result:
+            //float unsignedResult = Quaternion.Angle(currentLocalRotation, originalLocalRotation);
+
+            Vector3 localUpAxis = configurableJoint.axis.normalized;
+            Vector3 localForwardAxis = configurableJoint.secondaryAxis.normalized;
+            Vector3 localRightAxis = Vector3.Cross(localUpAxis, localForwardAxis);
+            
+            Quaternion offsetRotation = currentLocalRotation * Quaternion.Inverse(originalLocalRotation);
+
+            Vector3 offsetRightVector = offsetRotation * localRightAxis;
+            
+            float adjacent = Vector3.Dot(localRightAxis, offsetRightVector);
+            float opposite = Vector3.Dot(localForwardAxis, offsetRightVector);
+            
+            float currentAngleRad = Mathf.Atan2(opposite, adjacent);
+            return currentAngleRad;
         }
 
         /// <summary>
@@ -54,11 +100,41 @@ namespace Unity.Robotics.UrdfImporter
         /// <returns>floating point for joint velocity in radians per second</returns>
         public override float GetVelocity()
         {
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
             return unityJoint.jointVelocity[xAxis];
 #else
-            return -((HingeJoint)unityJoint).velocity;
+            
+    #if CONTINUOUS_AS_HINGE_JOINTS
+            return GetCurrentLocalVelocityHingeJoint(unityJoint as HingeJoint);
+    #else
+            return GetCurrentLocalVelocityConfigurableJoint(unityJoint as ConfigurableJoint);
+    #endif
 #endif
+        }
+
+        public static float GetCurrentLocalVelocityHingeJoint(HingeJoint hingeJoint)
+        {
+            return -hingeJoint.velocity * Mathf.Deg2Rad;
+        }
+        
+        public static float GetCurrentLocalVelocityConfigurableJoint(ConfigurableJoint configurableJoint)
+        {
+            Rigidbody rigidbody = configurableJoint.GetComponent<Rigidbody>();
+            Rigidbody connectedBody = configurableJoint.connectedBody;
+
+            //Find the difference in angular velocity between the connectedBody and the rigidbody
+            Vector3 connectedBodyAngularVelocityWorld = connectedBody.angularVelocity;
+            Vector3 rigidbodyAngularVelocityWorld = rigidbody.angularVelocity;
+            Vector3 rigidbodyOffsetAngularVelocityWorld =
+                rigidbodyAngularVelocityWorld - connectedBodyAngularVelocityWorld;
+
+            //Convert the angular velocity to the local frame
+            Vector3 angularVelocityLocal = Quaternion.Inverse(rigidbody.rotation) * rigidbodyOffsetAngularVelocityWorld;
+
+            //Find the angular velocity along the axis of rotation
+            float angularVelocityUnity = Vector3.Dot(configurableJoint.axis, angularVelocityLocal);
+            
+            return angularVelocityUnity;
         }
 
         /// <summary>
@@ -67,12 +143,27 @@ namespace Unity.Robotics.UrdfImporter
         /// <returns>floating point in Nm</returns>
         public override float GetEffort()
         {
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
             return unityJoint.jointForce[xAxis];
 #else
-                return -((HingeJoint)unityJoint).motor.force;
+            
+    #if CONTINUOUS_AS_HINGE_JOINTS
+            return GetEffortHingeJoint(unityJoint as HingeJoint);
+    #else
+            return GetEffortConfigurableJoint(unityJoint as ConfigurableJoint);
+    #endif
 #endif
+        }
 
+        public static float GetEffortHingeJoint(HingeJoint hingeJoint)
+        {
+            return -hingeJoint.motor.force;
+        }
+
+        public static float GetEffortConfigurableJoint(ConfigurableJoint configurableJoint)
+        {
+            //TODO - Verify, this seems dodgy...
+            return configurableJoint.angularXDrive.maximumForce;
         }
 
         /// <summary>
@@ -82,7 +173,7 @@ namespace Unity.Robotics.UrdfImporter
         protected override void OnUpdateJointState(float deltaState)
         {
 
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
             ArticulationDrive drive = unityJoint.xDrive;
             drive.target += deltaState;
             unityJoint.xDrive = drive;
@@ -94,36 +185,37 @@ namespace Unity.Robotics.UrdfImporter
 
         #endregion
 
-        protected override void ImportJointData(Joint joint)
+        protected override void ImportJointData(UrdfJointDescription joint)
         {
             AdjustMovement(joint);
             SetDynamics(joint.dynamics);
         }
 
-        protected override Joint ExportSpecificJointData(Joint joint)
+        protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
         {
-#if UNITY_2020_1_OR_NEWER
-            joint.axis = GetAxisData(axisofMotion);
-            joint.dynamics = new Joint.Dynamics(unityJoint.angularDamping, unityJoint.jointFriction);
+#if  URDF_FORCE_ARTICULATION_BODY
+            joint.axis = new UrdfJointDescription.Axis((unityJoint.anchorRotation * Vector3.right).Unity2Ros());
+            joint.dynamics = new UrdfJointDescription.Dynamics(unityJoint.angularDamping, unityJoint.jointFriction);
             joint.limit = ExportLimitData();
 #else
-
-            joint.axis = GetAxisData(unityJoint.axis);
-            joint.dynamics = new Joint.Dynamics(
+            joint.axis = GetAxisData(unityJoint.axis.Unity2Ros());
+            Debug.LogError("TODO - Broken!");
+            joint.dynamics = new UrdfJointDescription.Dynamics(
+                ((HingeJoint)unityJoint).spring.spring,
                 ((HingeJoint)unityJoint).spring.damper, 
                 ((HingeJoint)unityJoint).spring.spring);
 #endif
             return joint;
         }
-
-
+        
         /// <summary>
         /// Reads axis joint information and rotation to the articulation body to produce the required motion
         /// </summary>
         /// <param name="joint">Structure containing joint information</param>
-        protected override void AdjustMovement(Joint joint)
+        protected override void AdjustMovement(UrdfJointDescription joint)
         {
-            axisofMotion = joint.axis.xyz.ToVector3();
+#if  URDF_FORCE_ARTICULATION_BODY
+            axisofMotion = axis;
             unityJoint.linearLockX = ArticulationDofLock.LockedMotion;
             unityJoint.linearLockY = ArticulationDofLock.LockedMotion;
             unityJoint.linearLockZ = ArticulationDofLock.LockedMotion;
@@ -143,6 +235,73 @@ namespace Unity.Robotics.UrdfImporter
                 drive.stiffness = unityJoint.xDrive.stiffness;
                 unityJoint.xDrive = drive;
             }
+#else
+            
+            //Rigidbody rigidbody = unityJoint.GetComponent<Rigidbody>();
+
+            
+            
+#if CONTINUOUS_AS_HINGE_JOINTS
+            HingeJoint hingeJoint = unityJoint as HingeJoint;
+            AdjustMovementSharedHingeJoint(joint, hingeJoint);
+            hingeJoint.useLimits = false;
+#else
+            ConfigurableJoint configurableJoint = unityJoint as ConfigurableJoint; 
+            AdjustMovementSharedConfirguableJoint(configurableJoint, joint);
+            configurableJoint.angularXMotion = ConfigurableJointMotion.Free;
+#endif
+            
+            
+#endif
+        }
+        
+        public static void AdjustMovementSharedHingeJoint(UrdfJointDescription joint, HingeJoint hingeJoint)
+        {
+            Vector3 axisOfMotionUnity = joint.axis.AxisUnity;
+            //Vector3 secondaryAxisOfMotionUnity = joint.axis.SecondaryAxisEstimateUnity;
+
+            hingeJoint.axis = axisOfMotionUnity;
+
+            // useLimits is not shared.
+
+            hingeJoint.motor = new JointMotor()
+            {
+                force = (float) joint.limit.effort,
+                targetVelocity = (float) joint.limit.velocity,
+            };
+            //TODO - hingeJoint.useMotor  
+        }
+
+
+        private void AdjustMotionConfigurableJoint(UrdfJointDescription joint, ConfigurableJoint configurableJoint)
+        {
+            AdjustMovementSharedConfirguableJoint(configurableJoint, joint);
+            configurableJoint.angularXMotion = ConfigurableJointMotion.Free;
+        }
+
+        public static void AdjustMovementSharedConfirguableJoint(ConfigurableJoint configurableJoint, UrdfJointDescription joint)
+        {
+            Vector3 axisOfMotionUnity = joint.axis.AxisUnity;
+            Vector3 secondaryAxisOfMotionUnity = joint.axis.SecondaryAxisEstimateUnity;
+
+            configurableJoint.axis = axisOfMotionUnity;
+            configurableJoint.secondaryAxis = secondaryAxisOfMotionUnity;
+
+            configurableJoint.xMotion = ConfigurableJointMotion.Locked;
+            configurableJoint.yMotion = ConfigurableJointMotion.Locked;
+            configurableJoint.zMotion = ConfigurableJointMotion.Locked;
+
+            //configurableJoint.angularXMotion = ConfigurableJointMotion.Free; Not shared.
+            configurableJoint.angularYMotion = ConfigurableJointMotion.Locked;
+            configurableJoint.angularZMotion = ConfigurableJointMotion.Locked;
+
+            configurableJoint.angularXDrive = new JointDrive()
+            {
+                maximumForce = (float) joint.limit.effort,
+                positionDamper = (float) joint.dynamics.damping,
+                positionSpring = (float) joint.dynamics.spring,
+            };
+            configurableJoint.targetAngularVelocity = new Vector3(1.0f, 0.0f, 0.0f) * (float) joint.limit.velocity;  
         }
 
     }

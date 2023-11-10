@@ -19,7 +19,7 @@ using Object = UnityEngine.Object;
 
 namespace Unity.Robotics.UrdfImporter
 {
-    internal static class BuiltInExtensions
+    public static class BuiltInExtensions
     {
         private const int RoundDigits = 6;
 
@@ -100,6 +100,31 @@ namespace Unity.Robotics.UrdfImporter
             return rpyVector == Vector3.zero ? null : rpyVector.ToRoundedDoubleArray();
         }
 
+        public enum UrdfRosUnityVector3Conversion
+        {
+            None,
+            PositionDirection,
+            Scale,
+            Rotation
+        }
+        
+        public static Vector3 Ros2Unity(this Vector3 vector3, UrdfRosUnityVector3Conversion conversion)
+        {
+            switch (conversion)
+            {
+                case UrdfRosUnityVector3Conversion.None:
+                    return vector3;
+                case UrdfRosUnityVector3Conversion.PositionDirection:
+                    return new Vector3(-vector3.y, vector3.z, vector3.x);
+                case UrdfRosUnityVector3Conversion.Scale:
+                    return new Vector3(vector3.y, vector3.z, vector3.x);
+                case UrdfRosUnityVector3Conversion.Rotation:
+                    return new Vector3(vector3.y, -vector3.z, -vector3.x);
+            }
+
+            throw new ArgumentException($"No conversion for {conversion}");
+        }
+
         public static Vector3 Ros2Unity(this Vector3 vector3)
         {
             return new Vector3(-vector3.y, vector3.z, vector3.x);
@@ -143,6 +168,12 @@ namespace Unity.Robotics.UrdfImporter
 
         public static Vector3 ToVector3(this double[] array)
         {
+            if (array == null || array.Length != 3)
+            {
+                RuntimeUrdf.urdfBuildErrors.AddLast(
+                    new Exception("Found vector that array == null || array.Length != 3"));
+                return Vector3.zero;
+            }
             return new Vector3((float)array[0], (float)array[1], (float)array[2]);
         }
 

@@ -14,14 +14,16 @@ limitations under the License.
 
 using System.Xml;
 using System.Xml.Linq;
+using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace Unity.Robotics.UrdfImporter
 {
-    public class Joint
+    public class UrdfJointDescription
     {
         public string name;
         public string type;
-        public Origin origin;
+        public UrdfOriginDescription origin;
         public string parent;
         public string child;
         public Axis axis;
@@ -31,25 +33,25 @@ namespace Unity.Robotics.UrdfImporter
         public Mimic mimic;
         public SafetyController safetyController;
 
-        public Link ChildLink;
+        public UrdfLinkDescription ChildLink;
 
-        public Joint(XElement node)
+        public UrdfJointDescription(XElement node)
         {
             name = (string)node.Attribute("name"); // required
             type = (string)node.Attribute("type"); // required
-            origin = (node.Element("origin") != null) ? new Origin(node.Element("origin")) : null; // optional  
+            origin = (node.Element("origin") != null) ? new UrdfOriginDescription(node.Element("origin")) : null; // optional  
             parent = (string)node.Element("parent").Attribute("link"); // required
             child = (string)node.Element("child").Attribute("link"); // required
-            axis = (node.Element("axis") != null) ? new Axis(node.Element("axis")) : null;  // optional 
+            axis = (node.Element("axis") != null) ? new Axis(node.Element("axis")) : Axis.DefaultAxis;  // optional 
             calibration = (node.Element("calibration") != null) ? new Calibration(node.Element("calibration")) : null;  // optional 
-            dynamics = (node.Element("dynamics") != null) ? new Dynamics(node.Element("dynamics")) : null;  // optional 
-            limit = (node.Element("limit") != null) ? new Limit(node.Element("limit")) : null;  // required only for revolute and prismatic joints
+            dynamics = (node.Element("dynamics") != null) ? new Dynamics(node.Element("dynamics")) : Dynamics.DefaultDynamics;  // optional 
+            limit = (node.Element("limit") != null) ? new Limit(node.Element("limit")) : Limit.DefaultLimit;  // required only for revolute and prismatic joints
             mimic = (node.Element("mimic") != null) ? new Mimic(node.Element("mimic")) : null;  // optional
             safetyController = (node.Element("safety_controller") != null) ? new SafetyController(node.Element("safety_controller")) : null;  // optional
         }
 
-        public Joint(string name, string type, string parent, string child,
-            Origin origin = null, Axis axis = null, Calibration calibration = null,
+        public UrdfJointDescription(string name, string type, string parent, string child,
+            UrdfOriginDescription origin = null, Axis axis = null, Calibration calibration = null,
             Dynamics dynamics = null, Limit limit = null, Mimic mimic = null, SafetyController safetyController = null)
         {
             this.name = name;
@@ -94,38 +96,125 @@ namespace Unity.Robotics.UrdfImporter
 
         public class Axis
         {
-            public double[] xyz;
+
+            public Vector3 axisROS;
+            
+            const string _AttributeName = "xyz";
+
+            private static Vector3 GetDefaultAxisValues()
+            {
+                // Default axis is forward in the ROS frame (ENU / FLU).
+                return new Vector3(1, 0, 0);
+            }
+
+            private void SetAxisRos(Vector3 newAxisRos)
+            {
+                if (newAxisRos.sqrMagnitude < 0.001f)
+                {
+                    RuntimeUrdf.AddImportWarning($"Axis attribute '{_AttributeName}' magnitude should be non zero! Found: {newAxisRos}, using default axis.");
+                    axisROS = GetDefaultAxisValues();
+                    return;
+                }
+                axisROS = newAxisRos.normalized;
+            }
+
+            public static Axis DefaultAxis => new Axis(GetDefaultAxisValues());
 
             public Axis(XElement node)
             {
-                xyz = node.Attribute("xyz") != null ? node.Attribute("xyz").ReadDoubleArray() : null;
+                
+                XAttribute xyzAttribute = node.Attribute(_AttributeName);
+                if (xyzAttribute == null)
+                {
+                    RuntimeUrdf.AddImportWarning($"Axis missing attribute '{_AttributeName}', using default axis.");
+                    axisROS = GetDefaultAxisValues();
+                    return;
+                }
+                double[] xyz = xyzAttribute.ReadDoubleArray();
+                if (xyz.Length != 3)
+                {
+                    RuntimeUrdf.AddImportWarning($"Axis attribute '{_AttributeName}' should have exactly 3 values, but has {xyz.Length}, using default axis.");
+                    axisROS = GetDefaultAxisValues();
+                    return;
+                }
+                SetAxisRos(new Vector3((float)xyz[0], (float)xyz[1], (float)xyz[2]));
             }
 
-            public Axis(double[] xyz)
+            public Axis(Vector3 axisRosEnu)
             {
-                this.xyz = xyz;
+                SetAxisRos(axisRosEnu);
             }
 
             public void WriteToUrdf(XmlWriter writer)
             {
-                if (!(xyz[0] == 0 && xyz[1] == 0 && xyz[2] == 0))
+                if (!(axisROS.sqrMagnitude > 0.001f))
                 {
+                    double[] xyz = { axisROS.x, axisROS.y, axisROS.z };
                     writer.WriteStartElement("axis");
                     writer.WriteAttributeString("xyz", xyz.DoubleArrayToString());
                     writer.WriteEndElement();
                 }
             }
 
-            public int AxisofMotion()
+            public Vector3 AxisUnity => axisROS.Ros2Unity();
+
+            public Vector3 SecondaryAxisEstimateUnity
             {
-                for (int i = 0; i < 3; i++)
+                get
                 {
-                    if (xyz[i] > 0)
+                    //We know the dot product of 2 vectors is 0 when they are perpendicular.
+                    Vector3 axis = AxisUnity;
+                    float absAxisX = Mathf.Abs(axis.x);
+                    float absAxisY = Mathf.Abs(axis.y);
+                    float absAxisZ = Mathf.Abs(axis.z);
+
+                    //Dot(axis, secondaryAxis) = 0
+                    //axis.x * secondaryAxis.x + axis.y * secondaryAxis.y + axis.z * secondaryAxis.z = 0
+                    Vector3 secondaryAxis = new Vector3(0, 1, 0); //Set a default value.
+
+                    if (absAxisX > absAxisY && absAxisX > absAxisZ)
                     {
-                        return i;
+                        //use axisX
+                        if (absAxisX > 0.0001)
+                        {
+                            //Let secondaryAxis.y = 1, secondaryAxis.z = 1
+                            //axis.x * secondaryAxis.x + axis.y * 1 + axis.z * 1 = 0
+                            //axis.x * secondaryAxis.x + axis.y + axis.z = 0
+                            //axis.x * secondaryAxis.x = -axis.y - axis.z
+                            //secondaryAxis.x = (- axis.y - axis.z) / axis.x
+                            float secondaryAxisX = (-axis.y - axis.z) / axis.x;
+                            secondaryAxis = new Vector3(secondaryAxisX, 1, 1).normalized;
+                        }
+                    } else if (absAxisY > absAxisZ)
+                    {
+                       //use axisY
+                       if (absAxisY > 0.0001)
+                       {
+                           //Let secondaryAxis.x = 1, secondaryAxis.z = 1
+                           //axis.x * 1 + axis.y * secondaryAxis.y + axis.z * 1 = 0
+                           //axis.y * secondaryAxis.y + axis.x + axis.z = 0
+                           //axis.y * secondaryAxis.y = -axis.x - axis.z
+                           //secondaryAxis.y = (- axis.x - axis.z) / axis.y
+                           float secondaryAxisY = (-axis.x - axis.z) / axis.y;
+                           secondaryAxis = new Vector3(1, secondaryAxisY, 1).normalized;
+                       }
                     }
+                    else
+                    {
+                        //Use axisZ
+                        if (absAxisZ > 0.0001)
+                        {
+                            //Let secondaryAxis.x = 1, secondaryAxis.y = 1
+                            //axis.x * 1 + axis.y * 1 + axis.z * secondaryAxis.z = 0
+                            //axis.z * secondaryAxis.z + axis.x + axis.y = 0
+                            //axis.z * secondaryAxis.z = -axis.x - axis.y
+                            //secondaryAxis.z = (- axis.x - axis.y) / axis.z
+                            float secondaryAxisZ = (-axis.x - axis.y) / axis.z;
+                            secondaryAxis = new Vector3(1, 1, secondaryAxisZ).normalized;
+                        }
+                    }
+                    return secondaryAxis;
                 }
-                return -1;
             }
         }
 
@@ -160,28 +249,39 @@ namespace Unity.Robotics.UrdfImporter
 
         public class Dynamics
         {
-            public double damping;
-            public double friction;
+            public double spring = 1000.0;
+            public double damping = 10.0;
+            public double friction = 0.0;
 
             public Dynamics(XElement node)
             {
-                damping = node.Attribute("damping").ReadOptionalDouble(); // optional
-                friction = node.Attribute("friction").ReadOptionalDouble(); // optional
+                spring = node.Attribute("spring").ReadOptionalDouble(spring); // optional
+                damping = node.Attribute("damping").ReadOptionalDouble(damping); // optional
+                friction = node.Attribute("friction").ReadOptionalDouble(friction); // optional
+            }
+            
+            private Dynamics()
+            {
             }
 
-            public Dynamics(double damping, double friction)
+            public static Dynamics DefaultDynamics => new Dynamics();
+
+            public Dynamics(double spring, double damping, double friction)
             {
+                this.spring = spring;
                 this.damping = damping;
                 this.friction = friction;
             }
 
             public void WriteToUrdf(XmlWriter writer)
             {
-                if (damping == 0 & friction == 0)
-                    return;
 
                 writer.WriteStartElement("dynamics");
 
+                if (spring != 0)
+                {
+                    writer.WriteAttributeString("spring", spring + "");
+                }
                 if (damping != 0)
                 {
                     writer.WriteAttributeString("damping", damping + "");
@@ -197,23 +297,28 @@ namespace Unity.Robotics.UrdfImporter
 
         public class Limit
         {
-            public double lower;
-            public double upper;
+            public double lowerRadians;
+            public double upperRadians;
             public double effort;
             public double velocity;
 
+            private const string _LowerAttributeName = "lower";
+            private const string _UpperAttributeName = "upper";
+
+            public static Limit DefaultLimit => new Limit(0f, 0f, float.PositiveInfinity, 0f);
+
             public Limit(XElement node)
             {
-                lower = node.Attribute("lower").ReadOptionalDouble(); // optional
-                upper = node.Attribute("upper").ReadOptionalDouble(); // optional
+                lowerRadians = node.Attribute(_LowerAttributeName).ReadOptionalDouble(); // optional
+                upperRadians = node.Attribute(_UpperAttributeName).ReadOptionalDouble(); // optional
                 effort = (double)node.Attribute("effort"); // required
                 velocity = (double)node.Attribute("velocity"); // required
             }
             
-            public Limit(double lower, double upper, double effort, double velocity)
+            public Limit(double lowerRadians, double upperRadians, double effort, double velocity)
             {
-                this.lower = lower;
-                this.upper = upper;
+                this.lowerRadians = lowerRadians;
+                this.upperRadians = upperRadians;
                 this.effort = effort;
                 this.velocity = velocity;
             }
@@ -222,8 +327,8 @@ namespace Unity.Robotics.UrdfImporter
             {
                 writer.WriteStartElement("limit");
 
-                writer.WriteAttributeString("lower", lower + "");
-                writer.WriteAttributeString("upper", upper + "");
+                writer.WriteAttributeString("lower", lowerRadians + "");
+                writer.WriteAttributeString("upper", upperRadians + "");
 
                 writer.WriteAttributeString("effort", effort + "");
                 writer.WriteAttributeString("velocity", velocity + "");

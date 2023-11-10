@@ -18,6 +18,7 @@ using System.IO;
 using Unity.Robotics;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Object = UnityEngine.Object;
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -26,11 +27,11 @@ namespace Unity.Robotics.UrdfImporter
         private const string DefaultMaterialName = "Default";
         private const int RoundDigits = 4;
 
-        public static Dictionary<string, Link.Visual.Material> Materials =
-            new Dictionary<string, Link.Visual.Material>();
+        public static Dictionary<string, UrdfMaterialDescription> Materials =
+            new Dictionary<string, UrdfMaterialDescription>();
         
         #region Import
-        private static Material CreateMaterial(this Link.Visual.Material urdfMaterial)
+        public static Material CreateMaterial(this UrdfMaterialDescription urdfMaterial)
         {
             if (urdfMaterial.name == "")
             {
@@ -38,22 +39,24 @@ namespace Unity.Robotics.UrdfImporter
             }
 
             var material = RuntimeUrdf.AssetDatabase_LoadAssetAtPath<Material>(UrdfAssetPathHandler.GetMaterialAssetPath(urdfMaterial.name));
-            if (material != null)
-            {   //material already exists
-                return material;
+            if (material == null)
+            {   
+                //material doesn't already exist, create a new one.
+                var newMaterial = MaterialExtensions.CreateBasicMaterial();
+                urdfMaterial.PopulateMaterialProperties(newMaterial);
+                
+                //Fix issue with material's not properly being instantiated
+                material = Object.Instantiate(newMaterial);
+                Object.Destroy(newMaterial);
             }
 
-            material = MaterialExtensions.CreateBasicMaterial();
-            if (urdfMaterial.color != null)
+            if (!RuntimeUrdf.IsRuntimeMode())
             {
-                MaterialExtensions.SetMaterialColor(material, CreateColor(urdfMaterial.color));
+                string materialAssetPath = UrdfAssetPathHandler.GetMaterialAssetPath(urdfMaterial.name);
+                Debug.Log($"Creating material asset at {materialAssetPath}");
+                RuntimeUrdf.AssetDatabase_CreateAsset(material, materialAssetPath);
             }
-            else if (urdfMaterial.texture != null)
-            {
-                material.mainTexture = LoadTexture(urdfMaterial.texture.filename);
-            }
-
-            RuntimeUrdf.AssetDatabase_CreateAsset(material, UrdfAssetPathHandler.GetMaterialAssetPath(urdfMaterial.name));
+            
             return material;
         }
 
@@ -86,7 +89,7 @@ namespace Unity.Robotics.UrdfImporter
 #endif
         }
 
-        private static string GenerateMaterialName(Link.Visual.Material urdfMaterial)
+        private static string GenerateMaterialName(UrdfMaterialDescription urdfMaterial)
         {
             var materialName = "";
             if (urdfMaterial.color != null)
@@ -105,7 +108,7 @@ namespace Unity.Robotics.UrdfImporter
             return materialName;
         }
 
-        private static Color CreateColor(Link.Visual.Material.Color urdfColor)
+        private static Color CreateColor(UrdfColorDescription urdfColor)
         {
             return new Color(
                 (float)urdfColor.rgba[0],
@@ -120,14 +123,17 @@ namespace Unity.Robotics.UrdfImporter
         }
 
 
-        public static void InitializeRobotMaterials(Robot robot)
+        public static void InitializeRobotMaterials(UrdfRobotDescription robot)
         {
             CreateDefaultMaterial();
             foreach (var material in robot.materials)
+            {
                 CreateMaterial(material);
+            }
+                
         }
         
-        public static void SetUrdfMaterial(GameObject gameObject, Link.Visual.Material urdfMaterial)
+        public static void SetUrdfMaterial(GameObject gameObject, UrdfMaterialDescription urdfMaterial)
         {
             if (urdfMaterial != null)
             {
@@ -141,16 +147,21 @@ namespace Unity.Robotics.UrdfImporter
                 Renderer renderer = gameObject.GetComponentInChildren<Renderer>();
                 if (renderer != null && renderer.sharedMaterial == null)
                 {
-                    Material material = defaultMaterial;
-#if UNITY_EDITOR
-                    if (!RuntimeUrdf.IsRuntimeMode())
-                    {
-                        material = RuntimeUrdf.AssetDatabase_LoadAssetAtPath<Material>(UrdfAssetPathHandler.GetMaterialAssetPath(DefaultMaterialName));
-                    }
-#endif
-                    SetMaterial(gameObject, material);
+                    SetMaterial(gameObject, GetDefaultMaterial());
                 }
             }
+        }
+
+        public static Material GetDefaultMaterial()
+        {
+            Material material = defaultMaterial;
+#if UNITY_EDITOR
+            if (!RuntimeUrdf.IsRuntimeMode())
+            {
+                material = RuntimeUrdf.AssetDatabase_LoadAssetAtPath<Material>(UrdfAssetPathHandler.GetMaterialAssetPath(DefaultMaterialName));
+            }
+#endif
+            return material;
         }
 
         private static void SetMaterial(GameObject gameObject, Material material)
@@ -166,29 +177,16 @@ namespace Unity.Robotics.UrdfImporter
 
         #region Export
 
-        public static Link.Visual.Material ExportMaterialData(Material material)
+        public static UrdfMaterialDescription ExportMaterialData(Material material)
         {
             if (material == null)
             {
                 return null;
             }
-
+            
             if (!Materials.ContainsKey(material.name))
             {
-                if (material.mainTexture != null)
-                {
-                    Link.Visual.Material.Texture texture = ExportTextureData(material.mainTexture);
-                    Materials[material.name] = new Link.Visual.Material(material.name, null, texture);
-                }
-                else if (!material.color.Equals(Color.clear))
-                {
-                    Link.Visual.Material.Color color = new Link.Visual.Material.Color(ExportRgbaData(material));
-                    Materials[material.name] = new Link.Visual.Material(material.name, color);
-                }
-                else
-                {
-                    return null;
-                }
+                Materials[material.name] = new UrdfMaterialDescription(material);
             }
 
             return Materials[material.name];
@@ -205,7 +203,7 @@ namespace Unity.Robotics.UrdfImporter
             };
         }
 
-        private static Link.Visual.Material.Texture ExportTextureData(Texture texture)
+        private static UrdfLinkDescription.Visual.Material.Texture ExportTextureData(Texture texture)
         {
             string oldTexturePath = UrdfAssetPathHandler.GetFullAssetPath(RuntimeUrdf.AssetDatabase_GetAssetPath(texture));
             string newTexturePath = UrdfExportPathHandler.GetNewResourcePath(Path.GetFileName(oldTexturePath));
@@ -215,7 +213,7 @@ namespace Unity.Robotics.UrdfImporter
             }
 
             string packagePath = UrdfExportPathHandler.GetPackagePathForResource(newTexturePath);
-            return new Link.Visual.Material.Texture(packagePath);
+            return new UrdfLinkDescription.Visual.Material.Texture(packagePath);
         }
 
         #endregion

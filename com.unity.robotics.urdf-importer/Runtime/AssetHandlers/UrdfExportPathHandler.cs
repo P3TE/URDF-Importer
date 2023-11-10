@@ -24,6 +24,7 @@ namespace Unity.Robotics.UrdfImporter
         private static string subfolder;
 
         private const string MeshFolderName = "meshes";
+        private const string MeshMaterialsFolderName = "Materials";
         private const string ResourceFolderName = "resources";
 
         public static void SetExportPath(string root, string subRoot = "")
@@ -48,6 +49,11 @@ namespace Unity.Robotics.UrdfImporter
         {
             return Path.Combine(exportRoot, subfolder, MeshFolderName, meshFileName).SetSeparatorChar();
         }
+        
+        public static string GetNewMeshTexturePath(string meshTextureFileName)
+        {
+            return Path.Combine(exportRoot, subfolder, MeshFolderName, MeshMaterialsFolderName, meshTextureFileName).SetSeparatorChar();
+        }
 
         //Returns an absolute path to the new resource
         public static string GetNewResourcePath(string resourceFileName)
@@ -60,6 +66,12 @@ namespace Unity.Robotics.UrdfImporter
         {
             //All package paths should use forward slashes
             return Path.Combine("package://", subfolder, MeshFolderName, Path.GetFileName(meshPath)).Replace("\\", "/");
+        }
+        
+        public static string GetPackagePathForMeshTexture(string meshPath)
+        {
+            //All package paths should use forward slashes
+            return Path.Combine("package://", subfolder, MeshFolderName, MeshMaterialsFolderName, Path.GetFileName(meshPath)).Replace("\\", "/");
         }
 
         public static string GetPackagePathForResource(string resourcePath)

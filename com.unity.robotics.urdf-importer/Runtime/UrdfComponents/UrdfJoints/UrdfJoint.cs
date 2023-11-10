@@ -17,10 +17,10 @@ using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
 {
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
     [RequireComponent(typeof(ArticulationBody))]
 #else
-        [RequireComponent(typeof(Joint))]
+    //[RequireComponent(typeof(Joint))]
 #endif
     public abstract class UrdfJoint : MonoBehaviour
     {
@@ -36,33 +36,61 @@ namespace Unity.Robotics.UrdfImporter
 
         public int xAxis = 0;
 
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
         protected ArticulationBody unityJoint;
         protected Vector3 axisofMotion;
 #else
-        protected UnityEngine.Joint unityJoint;
+        public UnityEngine.Joint unityJoint;
 #endif
         public string jointName;
 
         public abstract JointTypes JointType { get; } // Clear out syntax
-        public bool IsRevoluteOrContinuous => JointType == JointTypes.Revolute || JointType == JointTypes.Revolute;
+        public bool IsRevoluteOrContinuous => JointType == JointTypes.Revolute || JointType == JointTypes.Continuous;
         public double EffortLimit = 1e3;
         public double VelocityLimit = 1e3;
 
         protected const int RoundDigits = 6;
         protected const float Tolerance = 0.0000001f;
+        
+        protected Quaternion originalLocalRotation = Quaternion.identity;
 
-        protected int defaultDamping = 0;
-        protected int defaultFriction = 0;
+        public bool publishJointStateIfApplicable = false;
 
-        public static UrdfJoint Create(GameObject linkObject, JointTypes jointType, Joint joint = null)
+        //Whether the joint state publisher should publish the joint state.
+        public bool ShouldPublishJointState
         {
-#if UNITY_2020_1_OR_NEWER
+            get
+            {
+                if (!publishJointStateIfApplicable)
+                {
+                    return false;
+                }
+
+                switch (JointType)
+                {
+                    case JointTypes.Fixed:
+                        UrdfJointFixed urdfJointFixed = (UrdfJointFixed)this;
+                        return urdfJointFixed.JointIsDynamicForJointStatePublishing;
+                    default:
+                        return true;
+                }
+            }
+        }
+
+        public static UrdfJoint Create(GameObject linkObject, JointTypes jointType, UrdfJointDescription joint = null)
+        {
+#if  URDF_FORCE_ARTICULATION_BODY
 #else
-            Rigidbody parentRigidbody = linkObject.transform.parent.gameObject.GetComponent<Rigidbody>();
-            if (parentRigidbody == null) return;
+            Rigidbody parentRigidbody = FindCrucialParent(linkObject);
+            if (parentRigidbody == null)
+            {
+                UrdfLink link = linkObject.transform.parent.gameObject.GetComponent<UrdfLink>();
+                
+                throw new Exception($"No attached Rigidbody on {linkObject.transform.parent.gameObject.name}");
+            }
 #endif
             UrdfJoint urdfJoint = AddCorrectJointType(linkObject, jointType);
+            urdfJoint.originalLocalRotation = linkObject.transform.localRotation;
 
             if (joint != null)
             {
@@ -99,15 +127,53 @@ namespace Unity.Robotics.UrdfImporter
             }
 
 
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
 #else
-            UnityEngine.Joint unityJoint = linkObject.GetComponent<UnityEngine.Joint>();
-            unityJoint.connectedBody = linkObject.transform.parent.gameObject.GetComponent<Rigidbody>();
-            unityJoint.autoConfigureConnectedAnchor = true;
+            SetupConnectedBody(linkObject);
 #endif
 
             return urdfJoint;
         }
+        
+#if  URDF_FORCE_ARTICULATION_BODY
+#else
+
+        
+
+        public static Rigidbody FindCrucialParent(GameObject linkObject)
+        {
+            Transform currentTransform = linkObject.transform.parent;
+            while (currentTransform != null)
+            {
+                
+                Rigidbody connectedBody = currentTransform.GetComponent<Rigidbody>();
+                if (connectedBody != null)
+                {
+                    UrdfJointFixed urdfJointFixed = connectedBody.GetComponent<UrdfJointFixed>();
+                    if (urdfJointFixed == null)
+                    {
+                        return connectedBody;
+                    }
+                }
+                
+                currentTransform = currentTransform.parent;
+            }
+
+            throw new Exception("No connectedBody found!");
+        }
+
+        private static void SetupConnectedBody(GameObject linkObject)
+        {
+            UnityEngine.Joint unityJoint = linkObject.GetComponent<UnityEngine.Joint>();
+            if (unityJoint != null)
+            {
+                //Go up the hierarchy until you find the first rigidbody to connect to:
+                Rigidbody connectedBody = FindCrucialParent(linkObject);
+                unityJoint.connectedBody = connectedBody;
+                unityJoint.autoConfigureConnectedAnchor = true;
+            }
+        }
+#endif
 
         /// <summary>
         /// Changes the type of the joint
@@ -119,10 +185,10 @@ namespace Unity.Robotics.UrdfImporter
             linkObject.transform.DestroyImmediateIfExists<UrdfJoint>();
             linkObject.transform.DestroyImmediateIfExists<HingeJointLimitsManager>();
             linkObject.transform.DestroyImmediateIfExists<PrismaticJointLimitsManager>();
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
             linkObject.transform.DestroyImmediateIfExists<UnityEngine.ArticulationBody>();
 #else
-                        linkObject.transform.DestroyImmediateIfExists<UnityEngine.Joint>();
+            linkObject.transform.DestroyImmediateIfExists<UnityEngine.Joint>();
 #endif
             AddCorrectJointType(linkObject, newJointType);
         }
@@ -131,7 +197,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public void Start()
         {
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
             unityJoint = GetComponent<ArticulationBody>();
 #else
                         unityJoint = GetComponent<Joint>();
@@ -184,11 +250,11 @@ namespace Unity.Robotics.UrdfImporter
             }
         }
 
-        protected virtual void ImportJointData(Joint joint) { }
+        protected virtual void ImportJointData(UrdfJointDescription joint) { }
 
-        protected static Vector3 GetAxis(Joint.Axis axis)
+        protected static Vector3 GetAxis(UrdfJointDescription.Axis axis)
         {
-            return axis.xyz.ToVector3().Ros2Unity();
+            return axis.AxisUnity;
         }
 
         protected static Vector3 GetDefaultAxis()
@@ -196,46 +262,123 @@ namespace Unity.Robotics.UrdfImporter
             return new Vector3(-1, 0, 0);
         }
 
-        protected virtual void AdjustMovement(Joint joint) { }
+        protected virtual void AdjustMovement(UrdfJointDescription joint) { }
+        protected virtual void SetAxisData(Vector3 axisofMotion) { }
+        protected  virtual void SetLimits(Joint joint){}
 
-        protected void SetDynamics(Joint.Dynamics dynamics)
+        protected void SetDynamics(UrdfJointDescription.Dynamics dynamics)
         {
+            
+#if  URDF_FORCE_ARTICULATION_BODY
             if (unityJoint == null)
             {
                 unityJoint = GetComponent<ArticulationBody>();
             }
-
-            if (dynamics != null)
+            unityJoint.linearDamping = dynamics.Damping();
+            unityJoint.angularDamping = dynamics.Damping();
+            unityJoint.jointFriction = dynamics.Friction();
+#else
+            
+            if (unityJoint is HingeJoint hingeJoint)
             {
-                float damping = (double.IsNaN(dynamics.damping)) ? defaultDamping : (float)dynamics.damping;
-                unityJoint.linearDamping = damping;
-                unityJoint.angularDamping = damping;
-                unityJoint.jointFriction = (double.IsNaN(dynamics.friction)) ? defaultFriction : (float)dynamics.friction;
+                hingeJoint.useSpring = true;
+                hingeJoint.spring = new JointSpring()
+                {
+                    //damper = 0.0001f,
+                    //spring = 0.001f,
+                    damper = (float) dynamics.damping,
+                    spring = (float) dynamics.spring,
+                };
+                
+                //Note: HingeJoint doesn't have any friction component and will be ignored.
+            } else if (unityJoint is ConfigurableJoint configurableJoint)
+            {
+                configurableJoint.xDrive = UpdateSingleAxis(dynamics, configurableJoint.xDrive, configurableJoint.xMotion);
+                configurableJoint.yDrive = UpdateSingleAxis(dynamics, configurableJoint.yDrive, configurableJoint.yMotion);
+                configurableJoint.zDrive = UpdateSingleAxis(dynamics, configurableJoint.zDrive, configurableJoint.zMotion);
+            
+                configurableJoint.angularXDrive = UpdateSingleAxis(dynamics, configurableJoint.angularXDrive, configurableJoint.angularXMotion);
+                configurableJoint.angularYZDrive = UpdateSingleAxis(dynamics, configurableJoint.angularYZDrive, configurableJoint.angularYMotion, configurableJoint.angularZMotion);
+                
+                //Note: ConfigurableJoint doesn't have any friction component and will be ignored.
             }
             else
             {
-                unityJoint.linearDamping = defaultDamping;
-                unityJoint.angularDamping = defaultDamping;
-                unityJoint.jointFriction = defaultFriction;
+                throw new Exception($"Unhandled joint of type {unityJoint.GetType().Name}, unable to continue!");
             }
+            
+#endif
+        }
+
+        private bool UpdatesMotion(ConfigurableJointMotion configurableJointMotion)
+        {
+            switch (configurableJointMotion)
+            {
+                case ConfigurableJointMotion.Locked:
+                    //Nothing done, return.
+                    return false;
+                case ConfigurableJointMotion.Limited:
+                case ConfigurableJointMotion.Free:
+                    //Allow the function to continue.
+                    return true;
+                default:
+                    throw new Exception($"ConfigurableJointMotion not implemented: {configurableJointMotion}");
+            }
+        }
+
+        private JointDrive UpdateSingleAxis(UrdfJointDescription.Dynamics dynamics,
+            JointDrive originalJointDrive,
+            ConfigurableJointMotion configurableJointMotionA, 
+            ConfigurableJointMotion configurableJointMotionB = ConfigurableJointMotion.Locked)
+        {
+            if (!UpdatesMotion(configurableJointMotionA) && !UpdatesMotion(configurableJointMotionB))
+            {
+                return originalJointDrive;
+            }
+
+            JointDrive result = new JointDrive()
+            {
+                maximumForce = originalJointDrive.maximumForce,
+                positionDamper = (float) dynamics.damping,
+                positionSpring = (float) dynamics.spring
+            };
+            return result;
         }
 
         #endregion
 
         #region Export
 
-        public Joint ExportJointData()
+        public string UsedJointName
         {
-#if UNITY_2020_1_OR_NEWER
+            get
+            {
+                if (jointName == null)
+                {
+                    GenerateUniqueJointName();
+                }
+                string usedJointName = jointName;
+                if (usedJointName == "")
+                {
+                    usedJointName = $"{gameObject.name}_joint";
+                    Debug.LogWarning($"No joint name speficied for {gameObject.name}, defaulting to {usedJointName}");
+                }
+                return usedJointName;
+            }
+        }
+
+        public UrdfJointDescription ExportJointData()
+        {
+#if  URDF_FORCE_ARTICULATION_BODY
             unityJoint = GetComponent<UnityEngine.ArticulationBody>();
 #else
-                        unityJoint = GetComponent<UnityEngine.Joint>();
+            unityJoint = GetComponent<UnityEngine.Joint>();
 #endif
             CheckForUrdfCompatibility();
 
             //Data common to all joints
-            Joint joint = new Joint(
-                jointName,
+            UrdfJointDescription joint = new UrdfJointDescription(
+                UsedJointName,
                 JointType.ToString().ToLower(),
                 gameObject.transform.parent.name,
                 gameObject.name,
@@ -245,9 +388,9 @@ namespace Unity.Robotics.UrdfImporter
             return ExportSpecificJointData(joint);
         }
 
-        public static Joint ExportDefaultJoint(Transform transform)
+        public static UrdfJointDescription ExportDefaultJoint(Transform transform)
         {
-            return new Joint(
+            return new UrdfJointDescription(
                 transform.parent.name + "_" + transform.name + "_joint",
                 JointTypes.Fixed.ToString().ToLower(),
                 transform.parent.name,
@@ -257,12 +400,12 @@ namespace Unity.Robotics.UrdfImporter
 
         #region ExportHelpers
 
-        protected virtual Joint ExportSpecificJointData(Joint joint)
+        protected virtual UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
         {
             return joint;
         }
 
-        protected virtual Joint.Limit ExportLimitData()
+        protected virtual UrdfJointDescription.Limit ExportLimitData()
         {
             return null; // limits aren't used
         }
@@ -274,16 +417,13 @@ namespace Unity.Robotics.UrdfImporter
 
         protected virtual bool IsJointAxisDefined()
         {
-#if UNITY_2020_1_OR_NEWER
-            if (axisofMotion == null)
-                return false;
-            else
-                return true;
+#if  URDF_FORCE_ARTICULATION_BODY
+            return true;
 #else
-                        UnityEngine.Joint joint = GetComponent<UnityEngine.Joint>();
-                        return !(Math.Abs(joint.axis.x) < Tolerance &&
-                                 Math.Abs(joint.axis.y) < Tolerance &&
-                                 Math.Abs(joint.axis.z) < Tolerance);
+            UnityEngine.Joint joint = GetComponent<UnityEngine.Joint>();
+            return !(Math.Abs(joint.axis.x) < Tolerance &&
+                     Math.Abs(joint.axis.y) < Tolerance &&
+                     Math.Abs(joint.axis.z) < Tolerance);
 #endif
         }
 
@@ -292,10 +432,9 @@ namespace Unity.Robotics.UrdfImporter
             jointName = transform.parent.name + "_" + transform.name + "_joint";
         }
 
-        protected static Joint.Axis GetAxisData(Vector3 axis)
+        protected static UrdfJointDescription.Axis GetAxisData(Vector3 axisRosEnu)
         {
-            double[] rosAxis = axis.ToRoundedDoubleArray();
-            return new Joint.Axis(rosAxis);
+            return new UrdfJointDescription.Axis(axisRosEnu);
         }
 
         private bool IsAnchorTransformed() // TODO : Check for tolerances before implementation
@@ -318,7 +457,7 @@ namespace Unity.Robotics.UrdfImporter
                 Debug.LogWarning("Axis for joint " + jointName + " is undefined. Axis will not be written to URDF, " +
                                  "and the default axis will be used instead.",
                                  gameObject);
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
 
 #else
             if (IsAnchorTransformed())

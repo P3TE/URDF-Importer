@@ -53,7 +53,7 @@ namespace Unity.Robotics.UrdfImporter
             return urdfCollision;
         }
 
-        public static UrdfCollision Create(Transform parent, Link.Collision collision)
+        public static UrdfCollision Create(Transform parent, UrdfLinkDescription.Collision collision)
         {
             GameObject collisionObject = new GameObject("unnamed");
             collisionObject.transform.SetParentAndAlign(parent);
@@ -64,14 +64,14 @@ namespace Unity.Robotics.UrdfImporter
             return urdfCollision;
         }
     
-        public static Link.Collision ExportCollisionData(this UrdfCollision urdfCollision)
+        public static UrdfLinkDescription.Collision ExportCollisionData(this UrdfCollision urdfCollision)
         {
             UrdfGeometry.CheckForUrdfCompatibility(urdfCollision.transform, urdfCollision.geometryType);
 
-            Link.Geometry geometry = UrdfGeometry.ExportGeometryData(urdfCollision.geometryType, urdfCollision.transform, true);
+            UrdfLinkDescription.Geometry geometry = UrdfGeometry.ExportGeometryData(urdfCollision.geometryType, urdfCollision.transform, true);
             string collisionName = urdfCollision.name == "unnamed" ? null : urdfCollision.name;
 
-            return new Link.Collision(geometry, collisionName, UrdfOrigin.ExportOriginData(urdfCollision.transform));
+            return new UrdfLinkDescription.Collision(geometry, collisionName, UrdfOrigin.ExportOriginData(urdfCollision.transform));
         }
     }
 }

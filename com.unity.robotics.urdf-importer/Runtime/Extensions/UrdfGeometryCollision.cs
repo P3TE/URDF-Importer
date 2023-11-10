@@ -25,10 +25,11 @@ namespace Unity.Robotics.UrdfImporter
         static List<string> s_UsedTemplateFiles = new List<string>();
         static List<string> s_CreatedAssetNames = new List<string>();
         
-        public static void Create(Transform parent, GeometryTypes geometryType, Link.Geometry geometry = null)
+        public static void Create(Transform parent, GeometryTypes geometryType,
+            UrdfLinkDescription.Geometry geometry = null)
         {
             GameObject geometryGameObject = null;
-            
+
             switch (geometryType)
             {
                 case GeometryTypes.Box:
@@ -37,6 +38,11 @@ namespace Unity.Robotics.UrdfImporter
                     break;
                 case GeometryTypes.Cylinder:
                     geometryGameObject = CreateCylinderCollider();
+                    break;
+                case GeometryTypes.Capsule:
+                    geometryGameObject = new GameObject(geometryType.ToString());
+                    var capsuleCollider = geometryGameObject.AddComponent<CapsuleCollider>();
+                    capsuleCollider.height = 2;
                     break;
                 case GeometryTypes.Sphere:
                     geometryGameObject = new GameObject(geometryType.ToString());
@@ -65,7 +71,7 @@ namespace Unity.Robotics.UrdfImporter
             }
         }
 
-        private static GameObject CreateMeshCollider(Link.Geometry.Mesh mesh)
+        private static GameObject CreateMeshCollider(UrdfLinkDescription.Geometry.Mesh mesh)
         {
             if (!RuntimeUrdf.IsRuntimeMode())
             {
@@ -77,31 +83,130 @@ namespace Unity.Robotics.UrdfImporter
                 }
 
                 GameObject meshObject = (GameObject)RuntimeUrdf.PrefabUtility_InstantiatePrefab(prefabObject);
-                ConvertMeshToColliders(meshObject, location:mesh.filename);
+                ConvertMeshToColliders(meshObject, location: mesh.filename, mesh.colliderShouldBeConvex);
 
                 return meshObject;
             }
             return CreateMeshColliderRuntime(mesh);
         }
 
-        private static GameObject CreateMeshColliderRuntime(Link.Geometry.Mesh mesh)
+        private static GameObject CreateMeshColliderRuntime(UrdfLinkDescription.Geometry.Mesh mesh)
         {
             string meshFilePath = UrdfAssetPathHandler.GetRelativeAssetPathFromUrdfPath(mesh.filename, false);
-            GameObject meshObject = null;
-            if (meshFilePath.ToLower().EndsWith(".stl"))
+            GameObject meshObject = TryLoadCollidersWithAssimp(meshFilePath, mesh.colliderShouldBeConvex);
+
+            return meshObject;
+        }
+
+        private static void SetupTransforms(Assimp.Node node, Transform transform)
+        {
+            Assimp.Vector3D aScale = new Assimp.Vector3D();
+            Assimp.Quaternion aQuat = new Assimp.Quaternion();
+            Assimp.Vector3D aTranslation = new Assimp.Vector3D();
+            node.Transform.Decompose(out aScale, out aQuat, out aTranslation);
+
+            Quaternion uQuat = new Quaternion(aQuat.X, aQuat.Y, aQuat.Z, aQuat.W);
+            Vector3 euler = uQuat.eulerAngles;
+            transform.localScale = new Vector3(aScale.X, aScale.Y, aScale.Z);
+            transform.localPosition = new Vector3(aTranslation.X, aTranslation.Y, aTranslation.Z);
+            transform.localRotation = Quaternion.Euler(euler.x, euler.y, euler.z);
+        }
+
+        private static void PrepareNode(ref List<Mesh> meshes, Assimp.Node node, GameObject nodeGO, Transform parent = null, bool setConvex = true)
+        {
+            if (parent != null)
             {
-                meshObject = StlAssetPostProcessor.CreateStlGameObjectRuntime(meshFilePath);
+                nodeGO.transform.SetParentAndAlign(parent, false);   
             }
-            else
+                
+            SetupTransforms(node, nodeGO.transform);
+
+            if (parent == null) //Some formats are imported with a 90 degree twist relative to others. Removing this twist.
             {
-                Debug.LogError("Unable to create mesh collider for the mesh: " + mesh.filename);
+                nodeGO.transform.rotation = Quaternion.identity;
+            }
+                
+            foreach (int meshIndex in node.MeshIndices)
+            {
+                MeshCollider collider = nodeGO.AddComponent<MeshCollider>();
+                collider.sharedMesh = meshes[meshIndex];
+                collider.convex = setConvex;
+            }
+
+            foreach (Assimp.Node child in node.Children)
+            {
+                PrepareNode(ref meshes, child, new GameObject(child.Name), nodeGO.transform, setConvex);
+            }
+        }
+
+        private static GameObject TryLoadCollidersWithAssimp(string meshFilePath, bool setConvex = true)
+        {
+            if (!File.Exists(meshFilePath))
+            {
+                return null;
+            }
+
+            Assimp.AssimpContext importer = new Assimp.AssimpContext();
+            Assimp.Scene scene = importer.ImportFile(meshFilePath);
+
+            if (scene == null || !scene.HasMeshes)
+            {
+                return null;
+            }
+
+            GameObject baseObject = new GameObject(scene.RootNode.Name);
+
+            List<Mesh> meshes = new List<Mesh>(scene.MeshCount);
+
+            foreach (var m in scene.Meshes)
+            {
+                if (!m.HasVertices || !m.HasFaces)
+                {
+                    continue;
+                }
+                
+                bool degenerateFacesWarning = false;
+
+                List<Vector3> uVertices = new List<Vector3>(m.VertexCount);
+                List<int> uIndices = new List<int>(m.FaceCount); //Not 100% on how this will behave if faces aren't triangulated.
+                
+                Quaternion rotation = Quaternion.Euler(-90.0f, 0.0f, 90.0f);
+
+                foreach (var v in m.Vertices)
+                {
+                    uVertices.Add(rotation * new Vector3(-v.X, v.Y, v.Z));
+                }
+
+                foreach (var f in m.Faces)
+                {
+                    if (f.IndexCount != 3)
+                    {
+                        degenerateFacesWarning = true;
+                        continue;
+                    }
+                    
+                    uIndices.Add(f.Indices[2]);
+                    uIndices.Add(f.Indices[1]);
+                    uIndices.Add(f.Indices[0]);
+                }
+
+                if (degenerateFacesWarning)
+                {
+                    RuntimeUrdf.AddImportWarning($"{m.Name} contains non-triangular faces!");
+                }
+
+                Mesh uMesh = new Mesh
+                {
+                    vertices = uVertices.ToArray(),
+                    triangles = uIndices.ToArray()
+                };
+
+                meshes.Add(uMesh);
             }
             
-            if (meshObject != null)
-            {
-                ConvertMeshToColliders(meshObject);
-            }
-            return meshObject;
+            PrepareNode(ref meshes, scene.RootNode, baseObject, null, setConvex);
+            
+            return baseObject;
         }
 
         private static GameObject CreateCylinderCollider()
@@ -109,7 +214,8 @@ namespace Unity.Robotics.UrdfImporter
             GameObject gameObject = new GameObject("Cylinder");
             MeshFilter meshFilter = gameObject.AddComponent<MeshFilter>();
 
-            Link.Geometry.Cylinder cylinder = new Link.Geometry.Cylinder(0.5, 2); //Default unity cylinder sizes
+            UrdfLinkDescription.Geometry.Cylinder
+                cylinder = new UrdfLinkDescription.Geometry.Cylinder(0.5, 2); //Default unity cylinder sizes
 
             meshFilter.sharedMesh = CreateCylinderMesh(cylinder);
             ConvertCylinderToCollider(meshFilter);
@@ -125,25 +231,28 @@ namespace Unity.Robotics.UrdfImporter
             if (!RuntimeUrdf.IsRuntimeMode())
             {
                 var packageRoot = UrdfAssetPathHandler.GetPackageRoot();
-                var filePath = RuntimeUrdf.AssetDatabase_GUIDToAssetPath(RuntimeUrdf.AssetDatabase_CreateFolder($"{packageRoot}", "meshes"));
-                var name =$"{filePath}/Cylinder.asset";
+                var filePath =
+                    RuntimeUrdf.AssetDatabase_GUIDToAssetPath(
+                        RuntimeUrdf.AssetDatabase_CreateFolder($"{packageRoot}", "meshes"));
+                var name = $"{filePath}/Cylinder.asset";
                 // Only create new asset if one doesn't exist
                 if (!RuntimeUrdf.AssetExists(name))
                 {
                     Debug.Log($"Creating new cylinder file: {name}");
-                    RuntimeUrdf.AssetDatabase_CreateAsset(collider, name, uniquePath:true);
-                    RuntimeUrdf.AssetDatabase_SaveAssets();       
+                    RuntimeUrdf.AssetDatabase_CreateAsset(collider, name, uniquePath: true);
+                    RuntimeUrdf.AssetDatabase_SaveAssets();
                 }
                 else
                 {
                     collider = RuntimeUrdf.AssetDatabase_LoadAssetAtPath<Mesh>(name);
                 }
             }
+
             MeshCollider current = go.AddComponent<MeshCollider>();
             current.sharedMesh = collider;
             current.convex = true;
-            Object.DestroyImmediate(go.GetComponent<MeshRenderer>());
-            Object.DestroyImmediate(filter);
+            UnityEngine.Object.DestroyImmediate(go.GetComponent<MeshRenderer>());
+            UnityEngine.Object.DestroyImmediate(filter);
         }
 
         public static void CreateMatchingMeshCollision(Transform parent, Transform visualToCopy)
@@ -154,7 +263,8 @@ namespace Unity.Robotics.UrdfImporter
             }
 
             GameObject objectToCopy = visualToCopy.GetChild(0).gameObject;
-            GameObject prefabObject = (GameObject)RuntimeUrdf.PrefabUtility_GetCorrespondingObjectFromSource(objectToCopy);
+            GameObject prefabObject =
+                (GameObject)RuntimeUrdf.PrefabUtility_GetCorrespondingObjectFromSource(objectToCopy);
 
             GameObject collisionObject;
             if (prefabObject != null)
@@ -163,7 +273,7 @@ namespace Unity.Robotics.UrdfImporter
             }
             else
             {
-                collisionObject = Object.Instantiate(objectToCopy);
+                collisionObject = UnityEngine.Object.Instantiate(objectToCopy);
             }
 
             collisionObject.name = objectToCopy.name;
@@ -185,8 +295,8 @@ namespace Unity.Robotics.UrdfImporter
 
                     meshCollider.convex = setConvex;
 
-                    Object.DestroyImmediate(child.GetComponent<MeshRenderer>());
-                    Object.DestroyImmediate(meshFilter);
+                    UnityEngine.Object.DestroyImmediate(child.GetComponent<MeshRenderer>());
+                    UnityEngine.Object.DestroyImmediate(meshFilter);
                 }
             }
             else
@@ -202,38 +312,41 @@ namespace Unity.Robotics.UrdfImporter
                 }
 
                 foreach (MeshFilter meshFilter in meshFilters)
-                {                  
+                {
                     GameObject child = meshFilter.gameObject;
                     VHACD decomposer = child.AddComponent<VHACD>();
                     List<Mesh> colliderMeshes = decomposer.GenerateConvexMeshes(meshFilter.sharedMesh);
-                    foreach (Mesh collider in colliderMeshes)
+                    for (var index = 0; index < colliderMeshes.Count; index++)
                     {
-                        var c = collider;
+                        Mesh collider = colliderMeshes[index];
                         if (!RuntimeUrdf.IsRuntimeMode())
                         {
                             meshIndex++;
                             string name = $"{filePath}/{templateFileName}_{meshIndex}.asset";
                             // Only create new asset if one doesn't exist or should overwrite
-                            if ((UrdfRobotExtensions.importsettings.OverwriteExistingPrefabs || !RuntimeUrdf.AssetExists(name)) && !s_CreatedAssetNames.Contains(name))
+                            if ((UrdfRobotExtensions.importsettings.OverwriteExistingPrefabs ||
+                                 !RuntimeUrdf.AssetExists(name)) && !s_CreatedAssetNames.Contains(name))
                             {
                                 Debug.Log($"Creating new mesh file: {name}");
-                                RuntimeUrdf.AssetDatabase_CreateAsset(c, name);
+                                RuntimeUrdf.AssetDatabase_CreateAsset(collider, name);
                                 RuntimeUrdf.AssetDatabase_SaveAssets();
                                 s_CreatedAssetNames.Add(name);
                                 s_UsedTemplateFiles.Add(templateFileName);
                             }
                             else
                             {
-                                c = RuntimeUrdf.AssetDatabase_LoadAssetAtPath<Mesh>(name);
+                                collider = RuntimeUrdf.AssetDatabase_LoadAssetAtPath<Mesh>(name);
                             }
                         }
+
                         MeshCollider current = child.AddComponent<MeshCollider>();
-                        current.sharedMesh = c;
+                        current.sharedMesh = collider;
                         current.convex = setConvex;
                     }
+
                     Component.DestroyImmediate(child.GetComponent<VHACD>());
-                    Object.DestroyImmediate(child.GetComponent<MeshRenderer>());
-                    Object.DestroyImmediate(meshFilter);
+                    UnityEngine.Object.DestroyImmediate(child.GetComponent<MeshRenderer>());
+                    UnityEngine.Object.DestroyImmediate(meshFilter);
                 }
             }
         }

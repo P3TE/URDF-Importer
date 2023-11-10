@@ -20,7 +20,7 @@ namespace Unity.Robotics.UrdfImporter
 {
     public class UrdfGeometryVisual : UrdfGeometry
     {
-        public static void Create(Transform parent, GeometryTypes geometryType, Link.Geometry geometry = null)
+        public static void Create(Transform parent, GeometryTypes geometryType, UrdfLinkDescription.Geometry geometry = null)
         {
             GameObject geometryGameObject = null;
 
@@ -32,6 +32,10 @@ namespace Unity.Robotics.UrdfImporter
                     break;
                 case GeometryTypes.Cylinder:
                     geometryGameObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    geometryGameObject.transform.DestroyImmediateIfExists<CapsuleCollider>();
+                    break;
+                case GeometryTypes.Capsule:
+                    geometryGameObject = GameObject.CreatePrimitive(PrimitiveType.Capsule);
                     geometryGameObject.transform.DestroyImmediateIfExists<CapsuleCollider>();
                     break;
                 case GeometryTypes.Sphere:
@@ -57,7 +61,7 @@ namespace Unity.Robotics.UrdfImporter
             }
         }
 
-        private static GameObject CreateMeshVisual(Link.Geometry.Mesh mesh)
+        private static GameObject CreateMeshVisual(UrdfLinkDescription.Geometry.Mesh mesh)
         {
 #if UNITY_EDITOR
             if (!RuntimeUrdf.IsRuntimeMode())
@@ -69,7 +73,7 @@ namespace Unity.Robotics.UrdfImporter
             return CreateMeshVisualRuntime(mesh);
         }
 
-        private static GameObject CreateMeshVisualRuntime(Link.Geometry.Mesh mesh)
+        private static GameObject CreateMeshVisualRuntime(UrdfLinkDescription.Geometry.Mesh mesh)
         {
             GameObject meshObject = null;
             if (!string.IsNullOrEmpty(mesh.filename))
@@ -85,14 +89,27 @@ namespace Unity.Robotics.UrdfImporter
                     {
                         float globalScale = ColladaAssetPostProcessor.ReadGlobalScale(meshFilePath);
                         meshObject = MeshImporter.Load(meshFilePath, globalScale, globalScale, globalScale);
+                        
+                        Quaternion rotation = Quaternion.Euler(0.0f, 90.0f, 0.0f);
+                        meshObject.transform.rotation = rotation * meshObject.transform.rotation;
+                        
+                        /* TODO - Review
+                        // I understand why this has been made; however, this means that different mesh formats with the same export settings behave differently.
+                        // Blender appears to not actually change this value when selecting other up axes, it is always Z_UP.
+                        // RVIZ and Gazebo appear to ignore this value. Changing it does not cause the mesh to rotate.
+                        // In order to have a standard FLU coordinate frame, always export all meshes X Forward, Z Up out of Blender (left and right should align with the named views when editing).
                         if (meshObject != null) 
                         {
                             ColladaAssetPostProcessor.ApplyColladaOrientation(meshObject, meshFilePath);
                         }
+                        */
                     }
                     else if (meshFilePath.ToLower().EndsWith(".obj"))
                     {
                         meshObject = MeshImporter.Load(meshFilePath);
+                        
+                        Quaternion rotation = Quaternion.Euler(-90.0f, 0.0f, 90.0f);
+                        meshObject.transform.rotation = rotation * meshObject.transform.rotation;
                     }
                 }
                 catch (Exception ex) 

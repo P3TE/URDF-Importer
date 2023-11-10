@@ -25,20 +25,37 @@ namespace Unity.Robotics.UrdfImporter.Editor
         private static GUIStyle buttonStyle;
         private string exportRoot = "";
         SerializedProperty axisType;
+        SerializedProperty robotNamespace;
+        SerializedProperty robotName;
+        SerializedProperty layerIndex;
 
         public void OnEnable()
         {
-            axisType = serializedObject.FindProperty("chosenAxis");
+            robotNamespace = serializedObject.FindProperty("robotNamespace");
+            robotName = serializedObject.FindProperty("robotName");
+            axisType = serializedObject.FindProperty("choosenAxis");
+            layerIndex = serializedObject.FindProperty("m_LayerIndex");
         }
+        
         public override void OnInspectorGUI()
         {
             if (buttonStyle == null)
                 buttonStyle = new GUIStyle(EditorStyles.miniButtonRight) { fixedWidth = 75 };
 
             urdfRobot = (UrdfRobot) target;
+            
+            //drawer.Field("pauseOnOverAcceleration");
+            EditorGUILayout.PropertyField(robotNamespace);
+            EditorGUILayout.PropertyField(robotName);
+
+            EditorGUILayout.PropertyField(axisType, new GUIContent("Axis Type"));
+            serializedObject.ApplyModifiedProperties();
+            //UrdfRobotExtensions.CorrectAxis(urdfRobot.gameObject); TODO - This correct axis is causing issues.
+            
+            layerIndex.intValue = EditorGUILayout.LayerField(new GUIContent("Robot Layer", "The Unity Layer the robot will be on."), layerIndex.intValue);
 
             GUILayout.Space(5);
-            GUILayout.Label("All Rigidbodies", EditorStyles.boldLabel);
+            GUILayout.Label("All Bodies", EditorStyles.boldLabel);
             DisplaySettingsToggle(new GUIContent("Use Gravity", "If disabled, robot is not affected by gravity."), urdfRobot.SetRigidbodiesUseGravity, UrdfRobot.useGravity);
             DisplaySettingsToggle(new GUIContent("Use Inertia from URDF", "If disabled, Unity will generate new inertia tensor values automatically."),urdfRobot.SetUseUrdfInertiaData,
                 UrdfRobot.useUrdfInertiaData);
@@ -59,10 +76,7 @@ namespace Unity.Robotics.UrdfImporter.Editor
             GUILayout.Space(5);
             EditorGUI.BeginDisabledGroup(true);
             EditorGUILayout.PropertyField(axisType, new GUIContent("Axis Type", "Adjust this if the models that make up your robot are facing the wrong direction."));
-            EditorGUI.EndDisabledGroup();
-            // Legacy code for correcting axis in the inspector
-            // serializedObject.ApplyModifiedProperties();
-            // UrdfRobotExtensions.CorrectAxis(urdfRobot.gameObject);
+            serializedObject.ApplyModifiedProperties();
 
             if (urdfRobot.GetComponent<Unity.Robotics.UrdfImporter.Control.Controller>() == null || urdfRobot.GetComponent<Unity.Robotics.UrdfImporter.Control.FKRobot>() == null)
             {
@@ -84,10 +98,33 @@ namespace Unity.Robotics.UrdfImporter.Editor
 
             GUILayout.Space(5);
             GUILayout.Label("URDF Files", EditorStyles.boldLabel);
+            
+            EditorGUILayout.BeginHorizontal();
+            GUIContent overrideExportPackageNameLabel = new GUIContent("Export Package Directory",
+                "Whether to override the name of the package when generating relative paths for the exported URDF.");
+            EditorGUILayout.PrefixLabel(overrideExportPackageNameLabel);
+            urdfRobot.exportPackageDirectory = GUILayout.TextField(urdfRobot.exportPackageDirectory);
+            EditorGUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUIContent exportPackageNameLabel = new GUIContent("Export Package Name",
+                "The name of the package when generating relative paths for the exported URDF.");
+            EditorGUILayout.PrefixLabel(exportPackageNameLabel);
+            urdfRobot.exportPackageName = GUILayout.TextField(urdfRobot.exportPackageName);
+            GUILayout.EndHorizontal();
+            
+            GUILayout.BeginHorizontal();
+            GUIContent exportPluiginsLabel = new GUIContent("Export Plugins",
+                "Whether plugins should be included in the export.");
+            EditorGUILayout.PrefixLabel(exportPluiginsLabel);
+            urdfRobot.exportPlugins = GUILayout.Toggle(urdfRobot.exportPlugins, "");
+            GUILayout.EndHorizontal();
+            
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Export robot to URDF"))
             {
-                exportRoot = EditorUtility.OpenFolderPanel("Select export directory", exportRoot, "");
+                string directorySelection = Path.Combine(urdfRobot.exportPackageDirectory, urdfRobot.exportPackageName);
+                exportRoot = EditorUtility.OpenFolderPanel("Select export directory", directorySelection, "");
 
                 if (exportRoot.Length == 0)
                     return;
@@ -95,7 +132,19 @@ namespace Unity.Robotics.UrdfImporter.Editor
                     EditorUtility.DisplayDialog("Export Error", "Export root folder must be defined and folder must exist.", "Ok");
                 else
                 {
-                    urdfRobot.ExportRobotToUrdf(exportRoot);
+
+                    if(UrdfAssetPathHandler.DirectoryContainsFileWithName(exportRoot, "package.xml"))
+                    {
+                        urdfRobot.exportPackageDirectory = Directory.GetParent(exportRoot).FullName;
+                        urdfRobot.exportPackageName = Path.GetFileName(exportRoot);;
+                    }
+                    else
+                    {
+                        urdfRobot.exportPackageDirectory = exportRoot;
+                        urdfRobot.exportPackageName = "";
+                    }
+                    
+                    urdfRobot.ExportRobotToUrdf(urdfRobot.exportPackageDirectory, urdfRobot.exportPackageName);
                     SetEditorPrefs();
                 }
             }

@@ -1,21 +1,22 @@
 ﻿using System;
 using System.IO;
+using System.Xml.Linq;
 using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
 {
     public class UrdfComparator
     {
-        Robot source;
-        Robot exported;
+        UrdfRobotDescription source;
+        UrdfRobotDescription exported;
         string logFileName = "";
         System.Text.StringBuilder jointLog;
         System.Text.StringBuilder linkLog;
 
         public UrdfComparator(string sourceFilePath, string exportedFilePath, string logFilePath)
         {
-            this.source = new Robot(sourceFilePath);
-            this.exported = new Robot(exportedFilePath);
+            this.source = new UrdfRobotDescription(XDocument.Load(sourceFilePath));
+            this.exported = new UrdfRobotDescription(XDocument.Load(sourceFilePath));
             this.logFileName = @logFilePath + "/" + Path.GetFileName(sourceFilePath) + "_" + Path.GetFileName(exportedFilePath)
                                    + "_" + DateTime.Now.TimeOfDay + ".txt";
             Debug.Log("Compared Log Filepath :" + logFilePath);
@@ -81,7 +82,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second link to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareLink( Link source,  Link exported, int indent)
+        private bool CompareLink( UrdfLinkDescription source,  UrdfLinkDescription exported, int indent)
         {
             linkLog.AppendLine("\n\n********LINK*****\n");
 
@@ -162,9 +163,9 @@ namespace Unity.Robotics.UrdfImporter
                 return false;
             }
 
-            foreach (Joint jointSource in source.joints)
+            foreach (UrdfJointDescription jointSource in source.joints)
             {
-                Joint jointExported = exported.joints.Find(x => x.name == jointSource.name); // Check for no match
+                UrdfJointDescription jointExported = exported.joints.Find(x => x.name == jointSource.name); // Check for no match
                 if (jointExported == null)
                 {
                     linkLog.AppendLine(String.Format("{0}Joint Not Found in Exported: Joint Name:{1,12}",Indent(indent + 1),jointSource.name));
@@ -186,7 +187,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second joint to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareJoint( Joint source,  Joint exported, int indent) // This function does not test for Mimic, Calibration and SafetyController as they are not imported in Unity
+        private bool CompareJoint( UrdfJointDescription source,  UrdfJointDescription exported, int indent) // This function does not test for Mimic, Calibration and SafetyController as they are not imported in Unity
         {
             linkLog.AppendLine("\n\n********Joint*****\n");
 
@@ -234,7 +235,7 @@ namespace Unity.Robotics.UrdfImporter
             {
                 return false;
             }
-            if (source.type == "revolute" || source.type == "revolute")
+            if (source.type == "revolute" || exported.type == "revolute")
             {
                 if (!CompareLimit(source.limit, exported.limit, indent + 2))
                 {
@@ -274,7 +275,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second link's inertial information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareInertial(Link.Inertial source, Link.Inertial exported, int indent)
+        private bool CompareInertial(UrdfLinkDescription.Inertial source, UrdfLinkDescription.Inertial exported, int indent)
         {
             if (source == null && exported == null)
             {
@@ -310,7 +311,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second link's origin information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareOrigin( Origin source,  Origin exported, int indent)
+        private bool CompareOrigin( UrdfOriginDescription source,  UrdfOriginDescription exported, int indent)
         {
             linkLog.AppendLine(String.Format("{0}Origin Checks", Indent(indent)));
 
@@ -429,7 +430,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second link's visual information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareVisual( Link.Visual source,  Link.Visual exported, int indent)
+        private bool CompareVisual( UrdfLinkDescription.Visual source,  UrdfLinkDescription.Visual exported, int indent)
         {
             bool visualNameEqual = (source.name == exported.name);
             linkLog.AppendLine(String.Format("{0}Visual Component Name : {1,6}", Indent(indent + 1), visualNameEqual));
@@ -439,33 +440,46 @@ namespace Unity.Robotics.UrdfImporter
             if (!CompareOrigin( source.origin,  exported.origin, indent))
                 return false;
 
-            linkLog.AppendLine(String.Format("{0}Geometry Checks", Indent(indent)));
+            linkLog.AppendLine($"{Indent(indent)}Geometry Checks");
             if (!CompareGeometry( source.geometry,  exported.geometry, indent+1))
                 return false;
 
-            linkLog.AppendLine(String.Format("{0}Material Checks", Indent(indent)));
-            if (source.material == null && exported.material == null)
+            linkLog.AppendLine($"{Indent(indent)}Materials Checks");
+            if (source.materials == null && exported.materials == null)
             {
-                linkLog.AppendLine(String.Format("{0}Material Nullity Check: {1,6}", Indent(indent), "True"));
+                linkLog.AppendLine($"{Indent(indent)}Materials Nullity Check: {"True",6}");
                 return true;
             }
-            else if (source.material != null && exported.material != null)
+            else if (source.materials == null && exported.materials != null || source.materials != null && exported.materials == null)
             {
-                linkLog.AppendLine(String.Format("{0}Material Nullity Check: {1,6}", Indent(indent), "True"));
-                if (!CompareMaterial(source.material, exported.material, indent + 1))
-                {
-                    return false;
-                }
-            }
-            else if ((source.material == null && exported.material.name == "Default-Material")|| (exported.material == null && source.material?.name == "Default-Material"))
+                linkLog.AppendLine($"{Indent(indent)}Materials Nullity Check: {"False",6}");
+                return false;
+            } else if (source.materials.Count != exported.materials.Count)
             {
-                linkLog.AppendLine(String.Format("{0}Material Nullity Check: {1,6}", Indent(indent), "True"));
-                return true;
+                linkLog.AppendLine($"{Indent(indent)}Materials Nullity Check: {"False",6}");
+                return false;
             }
             else
             {
-                linkLog.AppendLine(String.Format("{0}Material Nullity Check: {1,6}", Indent(indent), "False"));
-                return false;
+                for (int i = 0; i < source.materials.Count; i++)
+                {
+                    UrdfMaterialDescription sourceMaterial = source.materials[i];
+                    UrdfMaterialDescription exportMaterial = exported.materials[i];
+                    if ((sourceMaterial == null && exportMaterial.name == "Default-Material") ||
+                        (exportMaterial == null && sourceMaterial?.name == "Default-Material"))
+                    {
+                        linkLog.AppendLine($"{Indent(indent)}Materials Nullity Check: {"True",6}");
+                        return true;
+                    }
+                    else
+                    {
+                        linkLog.AppendLine($"{Indent(indent)}Materials Nullity Check: {"True",6}");
+                        if (!CompareMaterial(sourceMaterial, exportMaterial, indent + 1))
+                        {
+                            return false;
+                        }
+                    }
+                }
             }
 
             return true;
@@ -478,7 +492,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second visuals's geometry information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareGeometry( Link.Geometry source,  Link.Geometry exported, int indent)
+        private bool CompareGeometry( UrdfLinkDescription.Geometry source,  UrdfLinkDescription.Geometry exported, int indent)
         {
             if (source.box != null && exported != null)
             {
@@ -487,10 +501,8 @@ namespace Unity.Robotics.UrdfImporter
                 linkLog.AppendLine(String.Format("{0}Type:{1,5}", Indent(indent), "Box"));
                 linkLog.AppendLine(String.Format("{0}Dimensions Equal: {1,6} ", Indent(indent), boxEqual));
                 linkLog.AppendLine(String.Format("{0}Dimensions: Source: {1,5:F3} {2,5:F3} {3,5:F3} Exported: {4,5:F3} {5,5:F3} {6,5:F3}", Indent(indent), source.box.size[0], source.box.size[1], source.box.size[2], exported.box.size[0], exported.box.size[1], exported.box.size[2]));
-                if (boxEqual)
-                  return true;
-                else
-                  return false;
+                
+                return boxEqual;
             }
 
             if (source.cylinder != null && exported.cylinder != null)
@@ -501,11 +513,18 @@ namespace Unity.Robotics.UrdfImporter
                 linkLog.AppendLine(String.Format("{0}Dimensions Equal: {1,6}", Indent(indent), cylinderEqual));
                 linkLog.AppendLine(String.Format("{0}Source: Radius: {1,5:F3} Length: {2,5:F3} Exported: Radius: {3,5:F3} Length: {4,5:F3}", Indent(indent), source.cylinder.radius, source.cylinder.length, exported.cylinder.radius, exported.cylinder.length));
 
-                if (cylinderEqual)
-                    return true;
+                return cylinderEqual;
+            }
 
-                else
-                    return false;
+            if (source.capsule != null && exported.capsule != null)
+            {
+                bool capsuleEqual = (source.capsule.radius == exported.capsule.radius && source.capsule.length == exported.capsule.length);
+                linkLog.AppendLine(String.Format("{0}Geometry:", Indent(indent)));
+                linkLog.AppendLine(String.Format("{0}Type:{1,5}", Indent(indent), "Capsule"));
+                linkLog.AppendLine(String.Format("{0}Dimensions Equal: {1,6}", Indent(indent), capsuleEqual));
+                linkLog.AppendLine(String.Format("{0}Source: Radius: {1,5:F3} Length: {2,5:F3} Exported: Radius: {3,5:F3} Length: {4,5:F3}", Indent(indent), source.capsule.radius, source.capsule.length, exported.capsule.radius, exported.capsule.length));
+
+                return capsuleEqual;
             }
 
             if (source.sphere != null && exported.sphere != null)
@@ -516,11 +535,7 @@ namespace Unity.Robotics.UrdfImporter
                 linkLog.AppendLine(String.Format("{0}Dimensions Equal: {1,6}", Indent(indent), sphereEqual));
                 linkLog.AppendLine(String.Format("{0}Source: Radius: {1,5:F3} Exported: Radius: {1,5:F3}", Indent(indent), source.sphere.radius, exported.sphere.radius));
 
-                if (sphereEqual)
-                    return true;  
-                else
-                    return false;
-                
+                return sphereEqual;
             }
 
             if (source.mesh != null && exported.mesh != null)
@@ -580,7 +595,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second visuals's material information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareMaterial( Link.Visual.Material source,  Link.Visual.Material exported, int indent)
+        private bool CompareMaterial( UrdfMaterialDescription source,  UrdfMaterialDescription exported, int indent)
         {
             bool materialNameEqual = source.name == exported.name;
             linkLog.AppendLine(String.Format("{0}Name Equal:{1,6}", Indent(indent), materialNameEqual));
@@ -648,7 +663,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second link's collision information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareCollisions( Link.Collision source,  Link.Collision exported, int indent)
+        private bool CompareCollisions( UrdfLinkDescription.Collision source,  UrdfLinkDescription.Collision exported, int indent)
         {
             bool colliisonNameEqual = (source.name == exported.name);
             linkLog.AppendLine(String.Format("{0}Collision Name", Indent(indent)));
@@ -673,20 +688,21 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second joint's axis information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareAxis(Joint.Axis source, Joint.Axis exported, int indent)
+        private bool CompareAxis(UrdfJointDescription.Axis source, UrdfJointDescription.Axis exported, int indent)
         {
             linkLog.AppendLine(String.Format("{0}Axis Checks", Indent(indent)));
             if (source == null && source == null)
             {
                 linkLog.AppendLine(String.Format("{0},Origin Nullity Check: {1,6}", Indent(indent), "True"));
             }
+
             else if (source == null && exported != null)
             {
-                bool axisEqual = exported.xyz.DoubleDeltaCompare(new double[] { 1, 0, 0 }, 0);
+                bool axisEqual = (exported.axisROS - source.axisROS).sqrMagnitude < 0.0001f;
                 linkLog.AppendLine(String.Format("{0}Axis", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), axisEqual));
                 linkLog.AppendLine(String.Format("{0}XYZ Source: NULL ", Indent(indent)));
-                linkLog.AppendLine(String.Format("{0}XYZ Exported: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), exported.xyz[0], exported.xyz[1], exported.xyz[2]));
+                linkLog.AppendLine(String.Format("{0}XYZ Exported: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), exported.axisROS.x, exported.axisROS.y, exported.axisROS.z));
 
                 if (!axisEqual)
                     return false;
@@ -694,11 +710,11 @@ namespace Unity.Robotics.UrdfImporter
             }
             else if (exported == null && source != null)
             {
-                bool axisEqual = source.xyz.DoubleDeltaCompare(new double[] { 1, 0, 0 }, 0);
+                bool axisEqual = (exported.axisROS - source.axisROS).sqrMagnitude < 0.0001f;
                 linkLog.AppendLine(String.Format("{0}Axis", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), axisEqual));
                 linkLog.AppendLine(String.Format("{0}XYZ Source: NULL ", Indent(indent)));
-                linkLog.AppendLine(String.Format("{0}XYZ Exported: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), exported.xyz[0], exported.xyz[1], exported.xyz[2]));
+                linkLog.AppendLine(String.Format("{0}XYZ Exported: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), exported.axisROS.x, exported.axisROS.y, exported.axisROS.z));
 
                 if (!axisEqual)
                     return false;
@@ -707,18 +723,18 @@ namespace Unity.Robotics.UrdfImporter
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    if (source.xyz[i] != exported.xyz[i])
+                    if ((exported.axisROS - source.axisROS).sqrMagnitude < 0.0001f)
                     {
                         linkLog.AppendLine(String.Format("{0}Axis", Indent(indent)));
                         linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "False"));
-                        linkLog.AppendLine(String.Format("{0}XYZ Source: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), source.xyz[0], source.xyz[1], source.xyz[2]));
-                        linkLog.AppendLine(String.Format("{0}XYZ Exported: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), exported.xyz[0], exported.xyz[1], exported.xyz[2]));
+                        linkLog.AppendLine(String.Format("{0}XYZ Source: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), source.axisROS.x, source.axisROS.y, source.axisROS.z));
+                        linkLog.AppendLine(String.Format("{0}XYZ Exported: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), exported.axisROS.x, exported.axisROS.y, exported.axisROS.z));
                         return false;
                     }
                 }
                 linkLog.AppendLine(String.Format("{0}Axis", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "True"));
-                linkLog.AppendLine(String.Format("{0}XYZ : ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), source.xyz[0], source.xyz[1], source.xyz[2]));
+                linkLog.AppendLine(String.Format("{0}XYZ : ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), source.axisROS.x, source.axisROS.y, source.axisROS.z));
             }
 
             return true;
@@ -731,7 +747,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second link's dynamics information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareDynamics(Joint.Dynamics source, Joint.Dynamics exported, int indent)
+        private bool CompareDynamics(UrdfJointDescription.Dynamics source, UrdfJointDescription.Dynamics exported, int indent)
         {
             linkLog.AppendLine(String.Format("{0}Dynamics Checks", Indent(indent)));
             if (source == null && source == null)
@@ -812,60 +828,60 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="exported">Second joint's limit information to be compared</param>
         /// <param name="indent">Indent level in the log file</param>
         /// <returns></returns>
-        private bool CompareLimit(Joint.Limit source, Joint.Limit exported, int indent)
+        private bool CompareLimit(UrdfJointDescription.Limit source, UrdfJointDescription.Limit exported, int indent)
         {
             //Lower
-            if ((source.lower == double.NaN && exported.lower == 0) || (source.lower == 0 && exported.lower == double.NaN))
+            if ((source.lowerRadians == double.NaN && exported.lowerRadians == 0) || (source.lowerRadians == 0 && exported.lowerRadians == double.NaN))
             {
                 linkLog.AppendLine(String.Format("{0}Lower Limit:", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "True"));
                 linkLog.AppendLine(String.Format("{0}Lower Limit Value: 0", Indent(indent)));
             }
-            else if ((source.lower == double.NaN && exported.lower != 0) || (source.lower != 0 && exported.lower == double.NaN))
+            else if ((source.lowerRadians == double.NaN && exported.lowerRadians != 0) || (source.lowerRadians != 0 && exported.lowerRadians == double.NaN))
             {
                 linkLog.AppendLine(String.Format("{0}Lower Limit: {1,6}", Indent(indent), "False"));
                 return false;
             }
-            else if (!source.lower.EqualsDelta(exported.lower, .05))
+            else if (!source.lowerRadians.EqualsDelta(exported.lowerRadians, .05))
             {
                 linkLog.AppendLine(String.Format("{0}Lower Limit:", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "False"));
-                linkLog.AppendLine(String.Format("{0}Lower Limit Value: Source: {1,12}", Indent(indent), source.lower));
-                linkLog.AppendLine(String.Format("{0}Lower Limit Value: Exported: {1,12}", Indent(indent), exported.lower));
+                linkLog.AppendLine(String.Format("{0}Lower Limit Value: Source: {1,12}", Indent(indent), source.lowerRadians));
+                linkLog.AppendLine(String.Format("{0}Lower Limit Value: Exported: {1,12}", Indent(indent), exported.lowerRadians));
                 return false;
             }
             else
             {
                 linkLog.AppendLine(String.Format("{0}Lower Limit:", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "True"));
-                linkLog.AppendLine(String.Format("{0}Lower Limit Value: {1,12}", Indent(indent), source?.lower));
+                linkLog.AppendLine(String.Format("{0}Lower Limit Value: {1,12}", Indent(indent), source?.lowerRadians));
             }
 
             //Upper
-            if ((source.upper == double.NaN && exported.upper == 0) || (source.upper == 0 && exported.upper == double.NaN))
+            if ((source.upperRadians == double.NaN && exported.upperRadians == 0) || (source.upperRadians == 0 && exported.upperRadians == double.NaN))
             {
                 linkLog.AppendLine(String.Format("{0}Upper Limit:", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "True"));
                 linkLog.AppendLine(String.Format("{0}Upper Limit Value: 0", Indent(indent)));
             }
-            else if ((source.upper == double.NaN && exported.upper != 0) || (source.upper != 0 && exported.upper == double.NaN))
+            else if ((source.upperRadians == double.NaN && exported.upperRadians != 0) || (source.upperRadians != 0 && exported.upperRadians == double.NaN))
             {
                 linkLog.AppendLine(String.Format("{0}Upper Limit: {1,6}", Indent(indent), "False"));
                 return false;
             }
-            else if (!source.upper.EqualsDelta(exported.upper, .05))
+            else if (!source.upperRadians.EqualsDelta(exported.upperRadians, .05))
             {
                 linkLog.AppendLine(String.Format("{0}Upper Limit:", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "False"));
-                linkLog.AppendLine(String.Format("{0}Upper Limit Value: Source: {1,12}", Indent(indent), source.upper));
-                linkLog.AppendLine(String.Format("{0}Upper Limit Value: Exported: {1,12}", Indent(indent), exported.upper));
+                linkLog.AppendLine(String.Format("{0}Upper Limit Value: Source: {1,12}", Indent(indent), source.upperRadians));
+                linkLog.AppendLine(String.Format("{0}Upper Limit Value: Exported: {1,12}", Indent(indent), exported.upperRadians));
                 return false;
             }
             else
             {
                 linkLog.AppendLine(String.Format("{0}Upper Limit:", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "True"));
-                linkLog.AppendLine(String.Format("{0}Upper Limit Value: {1,12}", Indent(indent), source?.upper));
+                linkLog.AppendLine(String.Format("{0}Upper Limit Value: {1,12}", Indent(indent), source?.upperRadians));
             }
 
             if (!source.effort.EqualsDelta(exported.effort,.05))

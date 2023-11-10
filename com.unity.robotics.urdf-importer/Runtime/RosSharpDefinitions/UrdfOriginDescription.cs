@@ -10,25 +10,27 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/  
+*/
 
+using System;
 using System.Xml;
 using System.Xml.Linq;
 
 namespace Unity.Robotics.UrdfImporter
 {
-    public class Origin
+    [Serializable]
+    public class UrdfOriginDescription
     {
         public double[] Xyz;
         public double[] Rpy;
 
-        public Origin(XElement node)
+        public UrdfOriginDescription(XElement node)
         {
             Xyz = node.Attribute("xyz") != null ? node.Attribute("xyz").ReadDoubleArray() : null;
             Rpy = node.Attribute("rpy") != null ? node.Attribute("rpy").ReadDoubleArray() : null;
         }
 
-        public Origin(double[] xyz, double[] rpy)
+        public UrdfOriginDescription(double[] xyz, double[] rpy)
         {
             Xyz = xyz;
             Rpy = rpy;

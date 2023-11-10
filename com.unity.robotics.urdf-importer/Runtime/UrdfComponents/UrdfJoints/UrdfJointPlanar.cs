@@ -12,6 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+using System;
 using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
@@ -23,7 +24,7 @@ namespace Unity.Robotics.UrdfImporter
         public static UrdfJoint Create(GameObject linkObject)
         {
             UrdfJointPlanar urdfJoint = linkObject.AddComponent<UrdfJointPlanar>();
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
             urdfJoint.unityJoint = linkObject.GetComponent<ArticulationBody>();
             urdfJoint.unityJoint.jointType = ArticulationJointType.PrismaticJoint;
 #else
@@ -32,7 +33,7 @@ namespace Unity.Robotics.UrdfImporter
 #endif
 
 
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
 #else
             ConfigurableJoint configurableJoint = (ConfigurableJoint) urdfJoint.unityJoint;
 
@@ -54,10 +55,16 @@ namespace Unity.Robotics.UrdfImporter
             return distanceFromAnchor.magnitude;
         }
 
-        protected override void ImportJointData(Joint joint)
+        protected override void ImportJointData(UrdfJointDescription joint)
         {
-#if UNITY_2020_1_OR_NEWER
-            AdjustMovement(joint);
+#if  URDF_FORCE_ARTICULATION_BODY
+            if (joint.axis == null || joint.axis.xyz == null)
+            {
+                joint.axis = new Joint.Axis(new double[] { 1, 0, 0 });
+            }
+            var axis = new Vector3((float)joint.axis.xyz[0], (float)joint.axis.xyz[1], (float)joint.axis.xyz[2]);
+            SetAxisData(axis);
+            SetLimits(joint);
             SetDynamics(joint.dynamics);
 #else
             ConfigurableJoint configurableJoint = (ConfigurableJoint)unityJoint;
@@ -80,7 +87,7 @@ namespace Unity.Robotics.UrdfImporter
 #endif
         }
 
-        private static JointDrive GetJointDrive(Joint.Dynamics dynamics)
+        private static JointDrive GetJointDrive(UrdfJointDescription.Dynamics dynamics)
         {
             return new JointDrive
             {
@@ -90,7 +97,7 @@ namespace Unity.Robotics.UrdfImporter
             };
         }
 
-        private static JointSpring GetJointSpring(Joint.Dynamics dynamics)
+        private static JointSpring GetJointSpring(UrdfJointDescription.Dynamics dynamics)
         {
             return new JointSpring
             {
@@ -100,45 +107,45 @@ namespace Unity.Robotics.UrdfImporter
             };
         }
 
-        private static SoftJointLimit GetLinearLimit(Joint.Limit limit)
+        private static SoftJointLimit GetLinearLimit(UrdfJointDescription.Limit limit)
         {
-            return new SoftJointLimit { limit = (float)limit.upper };
+            return new SoftJointLimit { limit = (float)limit.upperRadians };
         }
 
         #region Export
 
-        protected override Joint ExportSpecificJointData(Joint joint)
+        protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
         {
-#if UNITY_2020_1_OR_NEWER
-            joint.axis = GetAxisData(axisofMotion);
+#if  URDF_FORCE_ARTICULATION_BODY
+            joint.axis = new UrdfJointDescription.Axis((unityJoint.anchorRotation * Vector3.right).Unity2Ros());
             joint.dynamics = new Joint.Dynamics(unityJoint.linearDamping, unityJoint.jointFriction);
             joint.limit = ExportLimitData();
 #else
             ConfigurableJoint configurableJoint = (ConfigurableJoint)unityJoint;
             joint.axis = GetAxisData(Vector3.Cross(configurableJoint.axis, configurableJoint.secondaryAxis));
-            joint.dynamics = new Joint.Dynamics(configurableJoint.xDrive.positionDamper, configurableJoint.xDrive.positionSpring);
+            joint.dynamics = new UrdfJointDescription.Dynamics(configurableJoint.xDrive.positionSpring, configurableJoint.xDrive.positionDamper, configurableJoint.xDrive.positionSpring);
             joint.limit = ExportLimitData();
 #endif
             return joint;
         }
 
-        protected override Joint.Limit ExportLimitData()
+        protected override UrdfJointDescription.Limit ExportLimitData()
         {
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
             ArticulationDrive drive = GetComponent<ArticulationBody>().yDrive;
-            return new Joint.Limit(drive.lowerLimit, drive.upperLimit, EffortLimit, VelocityLimit);
+            return new UrdfJointDescription.Limit(drive.lowerLimit, drive.upperLimit, EffortLimit, VelocityLimit);
 #else
             ConfigurableJoint configurableJoint = (ConfigurableJoint)unityJoint;
-            return new Joint.Limit(
-                Math.Round(-configurableJoint.linearLimit.limit, RoundDigits),
-                Math.Round(configurableJoint.linearLimit.limit, RoundDigits),
+            return new UrdfJointDescription.Limit(
+                System.Math.Round(-configurableJoint.linearLimit.limit, RoundDigits),
+                System.Math.Round(configurableJoint.linearLimit.limit, RoundDigits),
                 EffortLimit, VelocityLimit);
 #endif
         }
 
         public override bool AreLimitsCorrect()
         {
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
             ArticulationBody joint = GetComponent<ArticulationBody>();
             return joint.linearLockY == ArticulationDofLock.LimitedMotion &&
                 joint.linearLockZ == ArticulationDofLock.LimitedMotion &&
@@ -152,30 +159,57 @@ namespace Unity.Robotics.UrdfImporter
 
         protected override bool IsJointAxisDefined()
         {
-#if UNITY_2020_1_OR_NEWER
+#if  URDF_FORCE_ARTICULATION_BODY
             Debug.Log("Cannot convert type 'UnityEngine.ArticulationBody' to 'UnityEngine.ConfigurableJoint'");
             return false;
 #else
             ConfigurableJoint joint = (ConfigurableJoint)unityJoint;
-            return !(Math.Abs(joint.axis.x) < Tolerance &&
-                     Math.Abs(joint.axis.y) < Tolerance &&
-                     Math.Abs(joint.axis.z) < Tolerance)
-                   && !(Math.Abs(joint.secondaryAxis.x) < Tolerance &&
-                        Math.Abs(joint.secondaryAxis.y) < Tolerance &&
-                        Math.Abs(joint.secondaryAxis.z) < Tolerance);
+            return !(Mathf.Abs(joint.axis.x) < Tolerance &&
+                     Mathf.Abs(joint.axis.y) < Tolerance &&
+                     Mathf.Abs(joint.axis.z) < Tolerance)
+                   && !(Mathf.Abs(joint.secondaryAxis.x) < Tolerance &&
+                        Mathf.Abs(joint.secondaryAxis.y) < Tolerance &&
+                        Mathf.Abs(joint.secondaryAxis.z) < Tolerance);
 #endif
         }
 
-        protected override void AdjustMovement(Joint joint)
+        protected override void SetAxisData(Vector3 axis)
         {
-            if (joint.axis == null || joint.axis.xyz == null)
+#if  URDF_FORCE_ARTICULATION_BODY
+            axisofMotion = axis;
+            int motionAxis = -1;
+            for (int i = 0; i < 3; i++)
             {
-                joint.axis = new Joint.Axis(new double[] { 1, 0, 0 });
+                if (axisofMotion[i] > 0)
+                {
+                    motionAxis = i;
+                    break;
+                }
             }
-            axisofMotion = new Vector3((float)joint.axis.xyz[0], (float)joint.axis.xyz[1], (float)joint.axis.xyz[2]);
-            int motionAxis = joint.axis.AxisofMotion();
+            
             Quaternion motion = unityJoint.anchorRotation;
 
+            switch (motionAxis)
+            {
+                case 0: // Axis: (1,0,0)
+                    motion.eulerAngles = new Vector3(0, -90, 0);
+                    break;
+                case 1: // Axis: (0,1,0)
+                    motion.eulerAngles = new Vector3(0, 0, 0);
+                    break;
+                case 2:// Axis: (0,0,1)
+                    motion.eulerAngles = new Vector3(0, 0, 90);
+                    break;
+            }
+            unityJoint.anchorRotation = motion;
+#else
+            throw new NotImplementedException("Planar joints are not supported for Rigidbodies yet.");            
+#endif
+        }
+
+        protected override void SetLimits(Joint joint)
+        {
+#if URDF_FORCE_ARTICULATION_BODY
             unityJoint.linearLockX = ArticulationDofLock.LockedMotion;
             if (joint.limit != null)
             {
@@ -213,6 +247,10 @@ namespace Unity.Robotics.UrdfImporter
                     break;
             }
             unityJoint.anchorRotation = motion;
+
+#else
+            throw new NotImplementedException("Planar joints are not supported for Rigidbodies yet.");
+#endif
         }
 
         #endregion

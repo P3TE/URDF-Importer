@@ -19,28 +19,29 @@ using System.Threading;
 using System.Xml;
 using System.Xml.Linq;
 using System;
+using System.Text;
 
 
 namespace Unity.Robotics.UrdfImporter
 {
-    public class Robot
+    public class UrdfRobotDescription
     {
         public string filename;
         public string name;
-        public Link root;
-        public List<Link.Visual.Material> materials;
+        public UrdfLinkDescription root;
+        public List<UrdfMaterialDescription> materials;
 
-        public List<Link> links;
-        public List<Joint> joints;
-        public List<Plugin> plugins;
+        public List<UrdfLinkDescription> links;
+        public List<UrdfJointDescription> joints;
+        public List<UrdfPluginDescription> plugins;
+        public bool exportPlugins = true;
         public List<Tuple<string, string>> ignoreCollisionPair;
 
-        public Robot(string filename)
+        public UrdfRobotDescription(XDocument xdoc, string filename = "")
         {
             
             this.filename = filename;
             
-            XDocument xdoc = XDocument.Load(filename);
             XElement node = xdoc.Element("robot");
 
             name = node.Attribute("name").Value;
@@ -52,9 +53,9 @@ namespace Unity.Robotics.UrdfImporter
             
 
             // build tree structure from link and joint lists:
-            foreach (Link link in links)
+            foreach (UrdfLinkDescription link in links)
                 link.joints = joints.FindAll(v => v.parent == link.name);
-            foreach (Joint joint in joints)
+            foreach (UrdfJointDescription joint in joints)
                 joint.ChildLink = links.Find(v => v.name == joint.child);
 
             // save root node only:
@@ -62,35 +63,35 @@ namespace Unity.Robotics.UrdfImporter
             
         }
 
-        public Robot(string filename, string name)
+        public UrdfRobotDescription(string filename, string name)
         {
             this.filename = filename;
             this.name = name;
 
-            links = new List<Link>();
-            joints = new List<Joint>();
-            plugins = new List<Plugin>();
-            materials = new List<Link.Visual.Material>();
+            links = new List<UrdfLinkDescription>();
+            joints = new List<UrdfJointDescription>();
+            plugins = new List<UrdfPluginDescription>();
+            materials = new List<UrdfMaterialDescription>();
         }
 
-        private static List<Link.Visual.Material> ReadMaterials(XElement node)
+        private static List<UrdfMaterialDescription> ReadMaterials(XElement node)
         {
             var materials =
                 from child in node.Elements("material")
-                select new Link.Visual.Material(child);
+                select new UrdfMaterialDescription(child);
             return materials.ToList();
         }
 
-        private static List<Link> ReadLinks(XElement node)
+        private static List<UrdfLinkDescription> ReadLinks(XElement node)
         {
             List<String> importedLinks = new List<String>();
-            List<Link> links = new List<Link>();
+            List<UrdfLinkDescription> links = new List<UrdfLinkDescription>();
             foreach (XElement child in node.Elements("link"))
             {
                 string name = (String)child.Attribute("name");
                 if (importedLinks.Find(p => name == p ? true : false) == null)
                 {
-                    links.Add(new Link(child));
+                    links.Add(new UrdfLinkDescription(child));
                     importedLinks.Add(name);
                 }
                 else
@@ -99,20 +100,20 @@ namespace Unity.Robotics.UrdfImporter
             return links;
         }
 
-        private static List<Joint> ReadJoints(XElement node)
+        private static List<UrdfJointDescription> ReadJoints(XElement node)
         {
             var joints =
                 from child in node.Elements("joint")
-                select new Joint(child);
+                select new UrdfJointDescription(child);
             return joints.ToList();
         }
 
-        private List<Plugin> ReadPlugins(XElement node)
+        private List<UrdfPluginDescription> ReadPlugins(XElement node)
         {
             var plugins =
                 from child in node.Elements()
                 where child.Name != "link" && child.Name != "joint" && child.Name != "material"
-                select new Plugin(child.ToString());
+                select new UrdfPluginDescription(child.ToString());
             return plugins.ToList();
         }
 
@@ -124,12 +125,12 @@ namespace Unity.Robotics.UrdfImporter
             return disable_collisions.ToList();
         }
 
-        private static Link FindRootLink(List<Link> links, List<Joint> joints)
+        private static UrdfLinkDescription FindRootLink(List<UrdfLinkDescription> links, List<UrdfJointDescription> joints)
         {
             if (joints.Count == 0)
                 return links[0];
 
-            Joint joint = joints[0];
+            UrdfJointDescription joint = joints[0];
             string parent;
             do
             {
@@ -147,13 +148,27 @@ namespace Unity.Robotics.UrdfImporter
             thread.Start();
             thread.Join();
         }
+        
+        public class UTF8StringWriter : StringWriter
+        {
+            public override Encoding Encoding
+            {
+                get
+                {
+                    return Encoding.UTF8;
+                }
+            }
+        }
+        
         private void writeToUrdf()
         {
             Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
             Directory.CreateDirectory(Path.GetDirectoryName(filename));
-            XmlWriterSettings settings = new XmlWriterSettings { Indent = true, NewLineOnAttributes = false };
+            XmlWriterSettings settings = new XmlWriterSettings { Indent = true, NewLineOnAttributes = false, Encoding = new UTF8Encoding(true) };
 
-            using (XmlWriter writer = XmlWriter.Create(filename, settings))
+            //StringBuilder xmlBuilder = new StringBuilder();
+            StringWriter stringWriter = new UTF8StringWriter();
+            using (XmlWriter writer = XmlWriter.Create(stringWriter, settings))
             {
                 writer.WriteStartDocument();
                 writer.WriteStartElement("robot");
@@ -165,14 +180,18 @@ namespace Unity.Robotics.UrdfImporter
                     link.WriteToUrdf(writer);
                 foreach (var joint in joints)
                     joint.WriteToUrdf(writer);
-                foreach (var plugin in plugins)
-                    plugin.WriteToUrdf(writer);
+                if (exportPlugins)
+                    foreach (var plugin in plugins)
+                        plugin.WriteToUrdf(writer);
+                
                 
                 writer.WriteEndElement();
                 writer.WriteEndDocument();
 
                 writer.Close();
             }
+            
+            File.WriteAllBytes(filename, settings.Encoding.GetBytes(stringWriter.ToString()));
         }
     }
     public class InvalidNameException : System.Exception

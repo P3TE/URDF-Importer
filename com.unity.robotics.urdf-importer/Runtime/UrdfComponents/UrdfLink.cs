@@ -19,5 +19,17 @@ namespace Unity.Robotics.UrdfImporter
     public class UrdfLink : MonoBehaviour
     {
         public bool IsBaseLink;
+
+        public UrdfVisuals Visuals
+        {
+            get;
+            set;
+        }
+        
+        public UrdfCollisions Collisions
+        {
+            get;
+            set;
+        }
     }
 }

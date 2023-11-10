@@ -17,16 +17,16 @@ using System.Xml.Linq;
 
 namespace Unity.Robotics.UrdfImporter
 {
-    public class Plugin
+    public class UrdfPluginDescription
     {
         public string text;
 
-        public Plugin(XElement node)
+        public UrdfPluginDescription(XElement node)
         {
             text = node.ToString();
         }
 
-        public Plugin(string text)
+        public UrdfPluginDescription(string text)
         {
             this.text = text;
         }
@@ -36,7 +36,7 @@ namespace Unity.Robotics.UrdfImporter
             XmlDocument xDoc = new XmlDocument {PreserveWhitespace = true};
             xDoc.LoadXml(text);
             xDoc.WriteContentTo(writer);
-            writer.WriteWhitespace("\n");
+            //writer.WriteWhitespace("\n");
         }
     }
 }

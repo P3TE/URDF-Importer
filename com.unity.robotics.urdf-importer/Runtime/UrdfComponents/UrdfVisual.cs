@@ -10,8 +10,9 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/  
+*/
 
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
@@ -21,5 +22,49 @@ namespace Unity.Robotics.UrdfImporter
     {
         [SerializeField]
         public GeometryTypes geometryType;
+
+        private Dictionary<string, UrdfVisualRenderable> instantiatedMaterialMap = new();
+
+        public void AddInstantiatedMaterial(UrdfVisualRenderable instantiatedMaterial)
+        {
+            if (instantiatedMaterialMap.TryGetValue(instantiatedMaterial.materialName, out UrdfVisualRenderable renderable))
+            {
+                foreach (Renderer correspondingRenderer in instantiatedMaterial.correspondingRenderers)
+                {
+                    renderable.AddRenderer(correspondingRenderer);
+                }
+            }
+            else
+            {
+                instantiatedMaterialMap.Add(instantiatedMaterial.materialName, instantiatedMaterial);
+            }
+        }
+
+        public bool TryGetMaterialsByName(string materialName, out UrdfVisualRenderable renderable)
+        {
+            return instantiatedMaterialMap.TryGetValue(materialName, out renderable);
+        }
+        
+        public class UrdfVisualRenderable
+        {
+            public readonly string materialName;
+            public readonly List<Renderer> correspondingRenderers;
+            public readonly Material correspondingMaterial;
+
+            public UrdfVisualRenderable(string materialName, Renderer correspondingRenderer, Material correspondingMaterial)
+            {
+                this.materialName = materialName;
+                correspondingRenderers = new List<Renderer> { correspondingRenderer };
+                this.correspondingMaterial = correspondingMaterial;
+            }
+
+            public void AddRenderer(Renderer renderer)
+            {
+                renderer.material = correspondingMaterial;
+                correspondingRenderers.Add(renderer);
+            }
+        }
     }
+
+
 }

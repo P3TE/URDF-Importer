@@ -18,15 +18,27 @@ using System.Collections.Generic;
 
 namespace Unity.Robotics.UrdfImporter
 {
-    public enum GeometryTypes { Box, Cylinder, Sphere, Mesh }
+    public enum GeometryTypes { Box, Cylinder, Capsule, Sphere, Mesh }
 
     public class UrdfRobot : MonoBehaviour
     {
+        [SerializeField] private string robotNamespace;
+        [SerializeField] private string robotName;
+        
         public string FilePath;
         public ImportSettings.axisType chosenAxis ;
         [SerializeField]
         private ImportSettings.axisType currentOrientation = ImportSettings.axisType.yAxis;
         public List<CollisionIgnore> collisionExceptions;
+
+        [SerializeField] public string exportPackageDirectory = "";
+        [SerializeField] public string exportPackageName = "";
+        [SerializeField] public bool exportPlugins = true;
+
+        [SerializeField] private int m_LayerIndex = 0;
+        private int previousLayer = 0;
+        
+        private bool startCalled = false;
 
         //Current Settings
         public static bool collidersConvex = true;
@@ -36,16 +48,48 @@ namespace Unity.Robotics.UrdfImporter
         public static bool addFkRobot = true;
         public static bool changetoCorrectedSpace = false;
 
-        #region Configure Robot
+        public string RobotNamespace => robotNamespace;
+        
+        public string RobotName => robotName;
+        
+        public string ModelName => gameObject.name;
 
+        public void SetRobotNamespace(string rawRobotNamespace)
+        {
+            while (rawRobotNamespace.EndsWith('/'))
+            {
+                rawRobotNamespace = rawRobotNamespace.Substring(0, rawRobotNamespace.Length - 1);
+            }
+            while (rawRobotNamespace.StartsWith('/'))
+            {
+                rawRobotNamespace = rawRobotNamespace.Substring(1, rawRobotNamespace.Length - 1);
+            }
+            this.robotNamespace = rawRobotNamespace;
+        }
+        
+        public void SetRobotName(string robotName)
+        {
+            this.robotName = robotName;
+        }
+        
+        public void SetLayer(int layerIndex)
+        {
+            this.m_LayerIndex = layerIndex;
+            if (startCalled)
+            {
+                UpdateLayerForAllTransforms();
+            }
+        }
+
+        #region Configure Robot
+        
         public void SetCollidersConvex()
         {
             foreach (MeshCollider meshCollider in GetComponentsInChildren<MeshCollider>())
                 meshCollider.convex = !collidersConvex;
             collidersConvex = !collidersConvex;
         }
-
-
+        
         public void SetUseUrdfInertiaData()
         {
             foreach (UrdfInertial urdfInertial in GetComponentsInChildren<UrdfInertial>())
@@ -58,7 +102,6 @@ namespace Unity.Robotics.UrdfImporter
             foreach (ArticulationBody ar in GetComponentsInChildren<ArticulationBody>())
                 ar.useGravity = !useGravity;
             useGravity = !useGravity;
-
         }
 
         public void GenerateUniqueJointNames()
@@ -70,7 +113,7 @@ namespace Unity.Robotics.UrdfImporter
         // Add a rotation in the model which gives the correct correspondence between UnitySpace and RosSpace
         public void ChangeToCorrectedSpace()
         {
-            this.transform.Rotate(0, 180, 0);
+            //this.transform.Rotate(0, 180, 0);
             changetoCorrectedSpace = !changetoCorrectedSpace;
         }
 
@@ -121,7 +164,9 @@ namespace Unity.Robotics.UrdfImporter
 
         void Start()
         {
+            startCalled = true;
             CreateCollisionExceptions();
+            UpdateLayerForAllTransforms();
         }
 
         public void CreateCollisionExceptions()
@@ -142,6 +187,67 @@ namespace Unity.Robotics.UrdfImporter
                 }
             }
         }
+
+        private void UpdateLayerForAllTransforms()
+        {
+            if (m_LayerIndex == previousLayer)
+            {
+                return;
+            }
+
+            LinkedList<Transform> transformQueue = new LinkedList<Transform>();
+            transformQueue.AddLast(transform);
+            while (transformQueue.Count > 0)
+            {
+                Transform current = transformQueue.First.Value;
+                transformQueue.RemoveFirst();
+
+                if (current.gameObject.layer == previousLayer)
+                {
+                    current.gameObject.layer = m_LayerIndex;
+                }
+
+                for (int i = 0; i < current.childCount; i++)
+                {
+                    transformQueue.AddLast(current.GetChild(i));
+                }
+
+            }
+
+            previousLayer = m_LayerIndex;
+        }
+        
         #endregion
+
+        public UrdfLink FindBaseLink()
+        {
+            //Go for a breadth first search.
+            LinkedList<Transform> queue = new LinkedList<Transform>();
+            queue.AddLast(transform);
+
+            while (queue.Count > 0)
+            {
+                Transform current = queue.First.Value;
+                queue.RemoveFirst();
+                UrdfLink currentLink = current.GetComponent<UrdfLink>();
+                if (currentLink != null)
+                {
+                    if (currentLink.IsBaseLink)
+                    {
+                        return currentLink;
+                    }
+                }
+
+                int childCount = current.childCount;
+                for (int i = 0; i < childCount; i++)
+                {
+                    queue.AddLast(current.GetChild(i));
+                }
+            }
+            
+            //Couldn't find the base_link!
+            return null;
+        }
+
     }
 }

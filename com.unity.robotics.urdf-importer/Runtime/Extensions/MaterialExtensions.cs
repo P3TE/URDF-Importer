@@ -69,8 +69,10 @@ namespace Unity.Robotics
 
         public static void SetMaterialColor(Material material, Color color)
         {
-            material.SetColor(GetRenderPipelineType() != RenderPipelineType.Standard ? "_BaseColor" : "_Color", color);
+            material.SetColor(DefaultMaterialColourPropertyId, color);
         }
+
+        public static string DefaultMaterialColourPropertyId => GetRenderPipelineType() != RenderPipelineType.Standard ? "_BaseColor" : "_Color";
 
         public static void SetMaterialEmissionColor(Material material, Color color)
         {
@@ -82,14 +84,7 @@ namespace Unity.Robotics
 
         public static Color GetMaterialColor(Renderer renderer)
         {
-            if (GetRenderPipelineType() != RenderPipelineType.Standard)
-            {
-                return renderer.material.GetColor("_BaseColor");
-            }
-            else
-            {
-                return renderer.sharedMaterial.GetColor("_Color");
-            }
+            return renderer.material.GetColor(DefaultMaterialColourPropertyId);
         }
     }
 }

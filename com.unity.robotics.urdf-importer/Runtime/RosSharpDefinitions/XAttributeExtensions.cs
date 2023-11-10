@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
 using System.Globalization;
+using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -29,15 +30,41 @@ namespace Unity.Robotics.UrdfImporter
                 i => Convert.ToDouble(i, CultureInfo.InvariantCulture));
         }
 
-        public static double ReadOptionalDouble(this XAttribute attribute)
+        public static double ReadOptionalDouble(this XAttribute attribute, double fallbackDefaultValue = 0.0)
         {
-            return (attribute != null) ? (double)attribute : double.NaN;
+            if (attribute == null) return fallbackDefaultValue;
+            double result = (double)attribute;
+            if (double.IsNaN(result)) return fallbackDefaultValue;
+            return result;
         }
 
         public static string DoubleArrayToString(this IEnumerable<double> arr)
         {
             string arrString = arr.Aggregate("", (current, num) => (current + " " + num));
             return arrString.Substring(1); //Gets rid of extra space at start of string
+        }
+
+        public static Color FloatArrayToColor(float[] data)
+        {
+            if (data.Length < 3)
+            {
+                throw new ArgumentException($"Colour data doesn't contain enough information, length = {data.Length}, should be 3 or 4");
+            }
+            if (data.Length > 5)
+            {
+                throw new ArgumentException($"Colour data contains too much information, length = {data.Length}, should be 3 or 4");
+            }
+
+            float r = data[0];
+            float g = data[1];
+            float b = data[2];
+            float a = 1.0f;
+            if (data.Length > 3)
+            {
+                a = data[3];
+            }
+
+            return new Color(r, g, b, a);
         }
     }
 }

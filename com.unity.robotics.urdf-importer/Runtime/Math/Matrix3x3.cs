@@ -160,6 +160,94 @@ namespace Unity.Robotics.UrdfImporter
                                   elements[0][1], elements[1][1], elements[2][1],
                                   elements[0][2], elements[1][2], elements[2][2] });
         }
+        
+        public static Matrix3x3 Quaternion2Matrix(Quaternion quaternion)
+        {
+            Quaternion rosQuaternion = Quaternion.Normalize(quaternion);
+            float qx = rosQuaternion.x;
+            float qy = rosQuaternion.y;
+            float qz = rosQuaternion.z;
+            float qw = rosQuaternion.w;
+
+            //From http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm
+            return new Matrix3x3(new float[] {
+                1 - (2 * qy * qy) - (2 * qz * qz),
+                (2 * qx * qy) - (2 * qz * qw),
+                (2 * qx * qz) + (2 * qy * qw),
+
+                (2 * qx * qy) + (2 * qz * qw),
+                1 - (2 * qx * qx) - (2 * qz * qz),
+                (2 * qy * qz) - (2 * qx * qw),
+
+                (2 * qx * qz) - (2 * qy * qw),
+                (2 * qy * qz) + (2 * qx * qw),
+                1 - (2 * qx * qx) - (2 * qy * qy)});
+        }
+        
+        /**
+         * Adapted from the PhysX cpp code.
+         */
+        public Vector3 PxDiagonalize(out Quaternion massFrame)
+        {
+            // jacobi rotation using quaternions (from an idea of Stan Melax, with fix for precision issues)
+ 
+            const int MAX_ITERS = 24;
+ 
+            Quaternion q = Quaternion.identity;
+ 
+            Matrix3x3 d = new Matrix3x3();
+            for(int i = 0; i < MAX_ITERS; i++)
+            {
+                Matrix3x3 axes = Matrix3x3.Quaternion2Matrix(q);
+                d = axes.Transpose() * this * axes;
+ 
+                float d0 = Mathf.Abs(d[1][2]), d1 = Mathf.Abs(d[0][2]), d2 = Mathf.Abs(d[0][1]);
+                int a = (d0 > d1 && d0 > d2 ? 0 : d1 > d2 ? 1 : 2); // rotation axis index, from largest off-diagonal
+                // element
+ 
+                int a1 = (a+1)%3; 
+                int a2 = (a1+1)%3;
+                if(d[a1][a2] == 0.0f || Mathf.Abs(d[a1][a1] - d[a2][a2]) > 2e6f * Mathf.Abs(2.0f * d[a1][a2]))
+                    break;
+ 
+                float w = (d[a1][a1] - d[a2][a2]) / (2.0f * d[a1][a2]); // cot(2 * phi), where phi is the rotation angle
+                float absw = Mathf.Abs(w);
+ 
+                Quaternion r;
+                if (absw > 1000)
+                {
+                    //Inline indexedRotation
+                    float s = 1 / (4 * w);
+                    float c = 1.0f; // h will be very close to 1, so use small angle approx instead
+                    float[] v = { 0, 0, 0 };
+                    v[a] = s;
+                    r = new Quaternion(v[0], v[1], v[2], c);
+                }
+                else
+                {
+                    float t = 1 / (absw + Mathf.Sqrt(w * w + 1)); // absolute value of tan phi
+                    float h = 1 / Mathf.Sqrt(t * t + 1);          // absolute value of cos phi
+
+                    if (h == 1)
+                    {
+                        // |w|<1000 guarantees this with typical IEEE754 machine eps (approx 6e-8)
+                        Debug.LogError("Assert failed.");
+                    } 
+                    
+                    //Inline indexedRotation
+                    float s = Mathf.Sqrt((1 - h) / 2) * Mathf.Sign(w);
+                    float c = Mathf.Sqrt((1 + h) / 2);
+                    float[] v = { 0, 0, 0 };
+                    v[a] = s;
+                    r = new Quaternion(v[0], v[1], v[2], c);
+                }
+ 
+                q = (q * r).normalized;
+            }
+ 
+            massFrame = q;
+            return new Vector3(d[0][0], d[1][1], d[2][2]);
+        }
 
         public void DiagonalizeRealSymmetric(out Vector3 EigenvaluesOut, out Vector3[] EigenvectorsOut)
         {
