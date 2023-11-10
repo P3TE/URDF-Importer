@@ -62,19 +62,24 @@ namespace Unity.Robotics.UrdfImporter
         
         public static string GetRelativeAssetPath(string absolutePath)
         {
+            string assetPath = absolutePath;
             var absolutePathUnityFormat = absolutePath.SetSeparatorChar();
             if (!absolutePathUnityFormat.StartsWith(Application.dataPath.SetSeparatorChar()))
             {
 #if UNITY_EDITOR
                 if (!RuntimeUrdf.IsRuntimeMode())
                 {
-                    return null;
+                    if (absolutePath.Length > Application.dataPath.Length)
+                    {
+                        assetPath = absolutePath.Substring(Application.dataPath.Length - "Assets".Length);
+                    }
                 }
 #endif
-                return absolutePath; // so that it works in runtime
             }
-
-            var assetPath = "Assets" + absolutePath.Substring(Application.dataPath.Length);
+            else 
+            {
+                assetPath = "Assets" + absolutePath.Substring(Application.dataPath.Length);
+            }
             return assetPath.SetSeparatorChar();
         }
 
@@ -175,7 +180,8 @@ namespace Unity.Robotics.UrdfImporter
             return absolutePath;
         }
 
-        private static bool FromPackagePath(string urdfPath)
+        // loading assets relative path from ROS/ROS2 package.
+        private static string FromPackagePath(string urdfPath)
         {
             
             //A URDF may have a line like this:
@@ -183,21 +189,16 @@ namespace Unity.Robotics.UrdfImporter
             //For this to work, we have to know this 'package' this is referring to.
             //My proposal to figure this out would be to use the file location of the
             //imported URDF.
-            //This doesn't work if you don't know what that was (urdf was a ros parameter).
-            throw new NotImplementedException("Needs work, see above.");
-            /*
-            Debug.LogError("TODO...");
             
             Assert.IsTrue(urdfPath.StartsWith(_PackageFilePathPrefix),
                 $"path {urdfPath} should start with {_PackageFilePathPrefix}");
             
-            string relativePath = urdfPath.Substring(_PackageFilePathPrefix.Length);
-            */
-            //_PackageFilePathPrefix
+            string packagePath = urdfPath.Substring(_PackageFilePathPrefix.Length).SetSeparatorChar();
             
-            //TODO...
-            
-            //RosPackagePathHelper.TryResolvePackageNamePath()
+            // TODO - This doesn't work if you don't know what that was (urdf was a ros parameter).
+            RuntimeUrdf.AddImportWarning("Package relative paths for URDF imports are not currently working properly, needs more work...");
+
+            return packagePath;
         }
 
         private static void TryFindRosPackageForFile(string absolutePath)
@@ -352,33 +353,24 @@ namespace Unity.Robotics.UrdfImporter
 
         public static string GetRelativeAssetPathFromUrdfPath(string urdfPath, bool convertToPrefab=true)
         {
+            
+            string path;
+            bool useFileUri = false;
+            const string _UpOneDirectoryPath = "../";
+            
             if (urdfPath.StartsWith(_AbsoluteFilePathPrefix))
             {
-                return FromAbsolutePath(urdfPath);
-                //Copy the files to the Assets directory.
-                //urdfPath = AttemptToCopyFileToAssets(urdfPath);
-            }
-            if (!urdfPath.StartsWith(@"package://"))
+                path = FromAbsolutePath(urdfPath);
+                useFileUri = true;
+            } else if (urdfPath.StartsWith(_PackageFilePathPrefix))
             {
-                RuntimeUrdf.AddImportWarning(
-                    $"{urdfPath} is not a valid URDF package file path. Path should start with package://, and URDF file should be in the directory root.");
-               //Debug.LogWarning(@$"{urdfPath} is not a valid URDF package file path. Path should start with package://, and URDF file should be in the directory root.");
-               if (urdfPath.Substring(0, 3) == "../")
-               {
-                   RuntimeUrdf.AddImportWarning(
-                       "Attempting to replace file path's starting instance of `../` with standard package notation `package://` to prevent manual path traversal at root of directory!");
-                   //Debug.LogWarning("Attempting to replace file path's starting instance of `../` with standard package notation `package://` to prevent manual path traversal at root of directory!");
-                   urdfPath = $@"package://{urdfPath.Substring(3)}";
-               }
-               else
-               {
-                   return urdfPath;
-               }
+                path = FromPackagePath(urdfPath);
             }
-            string path;
-            if (urdfPath.StartsWith(@"package://"))
+            else if (urdfPath.StartsWith(_UpOneDirectoryPath))
             {
-                path = urdfPath.Substring(10).SetSeparatorChar();
+                RuntimeUrdf.AddImportWarning($"Attempting to replace file path's starting instance of `{_UpOneDirectoryPath}` with standard package notation `{_PackageFilePathPrefix}` to prevent manual path traversal at root of directory!");
+                string urdfPackagePath = _PackageFilePathPrefix + urdfPath.Substring(_UpOneDirectoryPath.Length);
+                path = FromPackagePath(urdfPackagePath);
             }
             else
             {
@@ -391,6 +383,10 @@ namespace Unity.Robotics.UrdfImporter
                     path = path.Substring(0, path.Length - 3) + "prefab";
 
             }
+            
+            if (useFileUri) {
+                return path;
+            }
             return Path.Combine(packageRoot, path);
         }
         #endregion
@@ -400,7 +396,7 @@ namespace Unity.Robotics.UrdfImporter
 #if UNITY_EDITOR
             if (!RuntimeUrdf.IsRuntimeMode())
             {
-                return GetRelativeAssetPath(path) != null;
+                return Directory.Exists(path) || File.Exists(path);
             }
 #endif
             //RuntimeImporter. TODO: check if the path really exists

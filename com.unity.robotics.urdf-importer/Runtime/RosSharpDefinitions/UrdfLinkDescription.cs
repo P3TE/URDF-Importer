@@ -19,7 +19,6 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using Unity.Robotics.UrdfImporter.Urdf.Extensions;
-using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
 {
@@ -80,6 +79,7 @@ namespace Unity.Robotics.UrdfImporter
             return visuals.ToList();
         }
 
+        [System.Serializable]
         public class Inertial
         {
             public double mass;
@@ -108,6 +108,13 @@ namespace Unity.Robotics.UrdfImporter
                 this.inertia = inertia;
             }
 
+            public Inertial(Inertial other)
+            {
+                mass = other.mass;
+                origin = other.origin;
+                inertia = other.inertia;
+            }
+
             public void WriteToUrdf(XmlWriter writer)
             {
                 writer.WriteStartElement("inertial");
@@ -123,6 +130,7 @@ namespace Unity.Robotics.UrdfImporter
                 writer.WriteEndElement();
             }
 
+            [System.Serializable]
             public class Inertia
             {
 
@@ -429,6 +437,7 @@ namespace Unity.Robotics.UrdfImporter
         {
             public Box box;
             public Cylinder cylinder;
+            public Capsule capsule;
             public Sphere sphere;
             public Mesh mesh;
 
@@ -436,14 +445,16 @@ namespace Unity.Robotics.UrdfImporter
             {
                 box = (node.Element("box") != null) ? new Box(node.Element("box")) : null; // optional  
                 cylinder = (node.Element("cylinder") != null) ? new Cylinder(node.Element("cylinder")) : null; // optional  
+                capsule = (node.Element("capsule") != null) ? new Capsule(node.Element("capsule")) : null; // optional
                 sphere = (node.Element("sphere") != null) ? new Sphere(node.Element("sphere")) : null; // optional  
                 mesh = (node.Element("mesh") != null) ? new Mesh(node.Element("mesh")) : null; // optional           
             }
 
-            public Geometry(Box box = null, Cylinder cylinder = null, Sphere sphere = null, Mesh mesh = null)
+            public Geometry(Box box = null, Cylinder cylinder = null, Capsule capsule = null, Sphere sphere = null, Mesh mesh = null)
             {
                 this.box = box;
                 this.cylinder = cylinder;
+                this.capsule = capsule;
                 this.sphere = sphere;
                 this.mesh = mesh;
             }
@@ -454,6 +465,7 @@ namespace Unity.Robotics.UrdfImporter
 
                 box?.WriteToUrdf(writer);
                 cylinder?.WriteToUrdf(writer);
+                capsule?.WriteToUrdf(writer);
                 sphere?.WriteToUrdf(writer);
                 mesh?.WriteToUrdf(writer);
 
@@ -503,6 +515,33 @@ namespace Unity.Robotics.UrdfImporter
                 public void WriteToUrdf(XmlWriter writer)
                 {
                     writer.WriteStartElement("cylinder");
+                    writer.WriteAttributeString("length", length + "");
+                    writer.WriteAttributeString("radius", radius + "");
+                    writer.WriteEndElement();
+                }
+            }
+
+
+            public class Capsule
+            {
+                public double radius;
+                public double length;
+
+                public Capsule(XElement node)
+                {
+                    radius = (double)node.Attribute("radius");
+                    length = (double)node.Attribute("length");
+                }
+
+                public Capsule(double radius, double length)
+                {
+                    this.radius = radius;
+                    this.length = length;
+                }
+
+                public void WriteToUrdf(XmlWriter writer)
+                {
+                    writer.WriteStartElement("capsule");
                     writer.WriteAttributeString("length", length + "");
                     writer.WriteAttributeString("radius", radius + "");
                     writer.WriteEndElement();

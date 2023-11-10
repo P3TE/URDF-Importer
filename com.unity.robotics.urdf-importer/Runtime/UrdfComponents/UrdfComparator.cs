@@ -501,10 +501,8 @@ namespace Unity.Robotics.UrdfImporter
                 linkLog.AppendLine(String.Format("{0}Type:{1,5}", Indent(indent), "Box"));
                 linkLog.AppendLine(String.Format("{0}Dimensions Equal: {1,6} ", Indent(indent), boxEqual));
                 linkLog.AppendLine(String.Format("{0}Dimensions: Source: {1,5:F3} {2,5:F3} {3,5:F3} Exported: {4,5:F3} {5,5:F3} {6,5:F3}", Indent(indent), source.box.size[0], source.box.size[1], source.box.size[2], exported.box.size[0], exported.box.size[1], exported.box.size[2]));
-                if (boxEqual)
-                  return true;
-                else
-                  return false;
+                
+                return boxEqual;
             }
 
             if (source.cylinder != null && exported.cylinder != null)
@@ -515,11 +513,18 @@ namespace Unity.Robotics.UrdfImporter
                 linkLog.AppendLine(String.Format("{0}Dimensions Equal: {1,6}", Indent(indent), cylinderEqual));
                 linkLog.AppendLine(String.Format("{0}Source: Radius: {1,5:F3} Length: {2,5:F3} Exported: Radius: {3,5:F3} Length: {4,5:F3}", Indent(indent), source.cylinder.radius, source.cylinder.length, exported.cylinder.radius, exported.cylinder.length));
 
-                if (cylinderEqual)
-                    return true;
+                return cylinderEqual;
+            }
 
-                else
-                    return false;
+            if (source.capsule != null && exported.capsule != null)
+            {
+                bool capsuleEqual = (source.capsule.radius == exported.capsule.radius && source.capsule.length == exported.capsule.length);
+                linkLog.AppendLine(String.Format("{0}Geometry:", Indent(indent)));
+                linkLog.AppendLine(String.Format("{0}Type:{1,5}", Indent(indent), "Capsule"));
+                linkLog.AppendLine(String.Format("{0}Dimensions Equal: {1,6}", Indent(indent), capsuleEqual));
+                linkLog.AppendLine(String.Format("{0}Source: Radius: {1,5:F3} Length: {2,5:F3} Exported: Radius: {3,5:F3} Length: {4,5:F3}", Indent(indent), source.capsule.radius, source.capsule.length, exported.capsule.radius, exported.capsule.length));
+
+                return capsuleEqual;
             }
 
             if (source.sphere != null && exported.sphere != null)
@@ -530,11 +535,7 @@ namespace Unity.Robotics.UrdfImporter
                 linkLog.AppendLine(String.Format("{0}Dimensions Equal: {1,6}", Indent(indent), sphereEqual));
                 linkLog.AppendLine(String.Format("{0}Source: Radius: {1,5:F3} Exported: Radius: {1,5:F3}", Indent(indent), source.sphere.radius, exported.sphere.radius));
 
-                if (sphereEqual)
-                    return true;  
-                else
-                    return false;
-                
+                return sphereEqual;
             }
 
             if (source.mesh != null && exported.mesh != null)
@@ -694,13 +695,14 @@ namespace Unity.Robotics.UrdfImporter
             {
                 linkLog.AppendLine(String.Format("{0},Origin Nullity Check: {1,6}", Indent(indent), "True"));
             }
+
             else if (source == null && exported != null)
             {
-                bool axisEqual = exported.xyz.DoubleDeltaCompare(new double[] { 1, 0, 0 }, 0);
+                bool axisEqual = (exported.axisROS - source.axisROS).sqrMagnitude < 0.0001f;
                 linkLog.AppendLine(String.Format("{0}Axis", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), axisEqual));
                 linkLog.AppendLine(String.Format("{0}XYZ Source: NULL ", Indent(indent)));
-                linkLog.AppendLine(String.Format("{0}XYZ Exported: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), exported.xyz[0], exported.xyz[1], exported.xyz[2]));
+                linkLog.AppendLine(String.Format("{0}XYZ Exported: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), exported.axisROS.x, exported.axisROS.y, exported.axisROS.z));
 
                 if (!axisEqual)
                     return false;
@@ -708,11 +710,11 @@ namespace Unity.Robotics.UrdfImporter
             }
             else if (exported == null && source != null)
             {
-                bool axisEqual = source.xyz.DoubleDeltaCompare(new double[] { 1, 0, 0 }, 0);
+                bool axisEqual = (exported.axisROS - source.axisROS).sqrMagnitude < 0.0001f;
                 linkLog.AppendLine(String.Format("{0}Axis", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), axisEqual));
                 linkLog.AppendLine(String.Format("{0}XYZ Source: NULL ", Indent(indent)));
-                linkLog.AppendLine(String.Format("{0}XYZ Exported: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), exported.xyz[0], exported.xyz[1], exported.xyz[2]));
+                linkLog.AppendLine(String.Format("{0}XYZ Exported: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), exported.axisROS.x, exported.axisROS.y, exported.axisROS.z));
 
                 if (!axisEqual)
                     return false;
@@ -721,18 +723,18 @@ namespace Unity.Robotics.UrdfImporter
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    if (source.xyz[i] != exported.xyz[i])
+                    if ((exported.axisROS - source.axisROS).sqrMagnitude < 0.0001f)
                     {
                         linkLog.AppendLine(String.Format("{0}Axis", Indent(indent)));
                         linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "False"));
-                        linkLog.AppendLine(String.Format("{0}XYZ Source: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), source.xyz[0], source.xyz[1], source.xyz[2]));
-                        linkLog.AppendLine(String.Format("{0}XYZ Exported: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), exported.xyz[0], exported.xyz[1], exported.xyz[2]));
+                        linkLog.AppendLine(String.Format("{0}XYZ Source: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), source.axisROS.x, source.axisROS.y, source.axisROS.z));
+                        linkLog.AppendLine(String.Format("{0}XYZ Exported: ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), exported.axisROS.x, exported.axisROS.y, exported.axisROS.z));
                         return false;
                     }
                 }
                 linkLog.AppendLine(String.Format("{0}Axis", Indent(indent)));
                 linkLog.AppendLine(String.Format("{0}Equal: {1,6}", Indent(indent), "True"));
-                linkLog.AppendLine(String.Format("{0}XYZ : ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), source.xyz[0], source.xyz[1], source.xyz[2]));
+                linkLog.AppendLine(String.Format("{0}XYZ : ({1,5:F3},{2,5:F3},{3,5:F3}) ", Indent(indent), source.axisROS.x, source.axisROS.y, source.axisROS.z));
             }
 
             return true;

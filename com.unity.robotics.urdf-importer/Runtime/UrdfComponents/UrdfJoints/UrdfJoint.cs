@@ -17,7 +17,7 @@ using UnityEngine;
 
 namespace Unity.Robotics.UrdfImporter
 {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
     [RequireComponent(typeof(ArticulationBody))]
 #else
     //[RequireComponent(typeof(Joint))]
@@ -36,8 +36,8 @@ namespace Unity.Robotics.UrdfImporter
 
         public int xAxis = 0;
 
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
-        public ArticulationBody unityJoint;
+#if  URDF_FORCE_ARTICULATION_BODY
+        protected ArticulationBody unityJoint;
         protected Vector3 axisofMotion;
 #else
         public UnityEngine.Joint unityJoint;
@@ -79,7 +79,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public static UrdfJoint Create(GameObject linkObject, JointTypes jointType, UrdfJointDescription joint = null)
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
 #else
             Rigidbody parentRigidbody = FindCrucialParent(linkObject);
             if (parentRigidbody == null)
@@ -127,7 +127,7 @@ namespace Unity.Robotics.UrdfImporter
             }
 
 
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
 #else
             SetupConnectedBody(linkObject);
 #endif
@@ -135,7 +135,7 @@ namespace Unity.Robotics.UrdfImporter
             return urdfJoint;
         }
         
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
 #else
 
         
@@ -185,10 +185,10 @@ namespace Unity.Robotics.UrdfImporter
             linkObject.transform.DestroyImmediateIfExists<UrdfJoint>();
             linkObject.transform.DestroyImmediateIfExists<HingeJointLimitsManager>();
             linkObject.transform.DestroyImmediateIfExists<PrismaticJointLimitsManager>();
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             linkObject.transform.DestroyImmediateIfExists<UnityEngine.ArticulationBody>();
 #else
-                        linkObject.transform.DestroyImmediateIfExists<UnityEngine.Joint>();
+            linkObject.transform.DestroyImmediateIfExists<UnityEngine.Joint>();
 #endif
             AddCorrectJointType(linkObject, newJointType);
         }
@@ -197,7 +197,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public void Start()
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             unityJoint = GetComponent<ArticulationBody>();
 #else
                         unityJoint = GetComponent<Joint>();
@@ -254,7 +254,7 @@ namespace Unity.Robotics.UrdfImporter
 
         protected static Vector3 GetAxis(UrdfJointDescription.Axis axis)
         {
-            return axis.xyz.ToVector3().Ros2Unity();
+            return axis.AxisUnity;
         }
 
         protected static Vector3 GetDefaultAxis()
@@ -263,11 +263,13 @@ namespace Unity.Robotics.UrdfImporter
         }
 
         protected virtual void AdjustMovement(UrdfJointDescription joint) { }
+        protected virtual void SetAxisData(Vector3 axisofMotion) { }
+        protected  virtual void SetLimits(Joint joint){}
 
         protected void SetDynamics(UrdfJointDescription.Dynamics dynamics)
         {
             
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             if (unityJoint == null)
             {
                 unityJoint = GetComponent<ArticulationBody>();
@@ -367,7 +369,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public UrdfJointDescription ExportJointData()
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             unityJoint = GetComponent<UnityEngine.ArticulationBody>();
 #else
             unityJoint = GetComponent<UnityEngine.Joint>();
@@ -415,11 +417,8 @@ namespace Unity.Robotics.UrdfImporter
 
         protected virtual bool IsJointAxisDefined()
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
-            if (axisofMotion == null)
-                return false;
-            else
-                return true;
+#if  URDF_FORCE_ARTICULATION_BODY
+            return true;
 #else
             UnityEngine.Joint joint = GetComponent<UnityEngine.Joint>();
             return !(Math.Abs(joint.axis.x) < Tolerance &&
@@ -433,10 +432,9 @@ namespace Unity.Robotics.UrdfImporter
             jointName = transform.parent.name + "_" + transform.name + "_joint";
         }
 
-        protected static UrdfJointDescription.Axis GetAxisData(Vector3 axis)
+        protected static UrdfJointDescription.Axis GetAxisData(Vector3 axisRosEnu)
         {
-            double[] rosAxis = axis.ToRoundedDoubleArray();
-            return new UrdfJointDescription.Axis(rosAxis);
+            return new UrdfJointDescription.Axis(axisRosEnu);
         }
 
         private bool IsAnchorTransformed() // TODO : Check for tolerances before implementation
@@ -459,7 +457,7 @@ namespace Unity.Robotics.UrdfImporter
                 Debug.LogWarning("Axis for joint " + jointName + " is undefined. Axis will not be written to URDF, " +
                                  "and the default axis will be used instead.",
                                  gameObject);
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
 
 #else
             if (IsAnchorTransformed())

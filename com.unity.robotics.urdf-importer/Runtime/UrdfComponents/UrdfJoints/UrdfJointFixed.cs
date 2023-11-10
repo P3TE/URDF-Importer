@@ -10,7 +10,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
+*/ 
 
 using System;
 using System.Text;
@@ -37,7 +37,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public static UrdfJoint Create(GameObject linkObject)
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             UrdfJointFixed urdfJoint = linkObject.AddComponent<UrdfJointFixed>();
             urdfJoint.unityJoint = linkObject.GetComponent<ArticulationBody>();
 #else
@@ -62,7 +62,7 @@ namespace Unity.Robotics.UrdfImporter
             return true; //Axis isn't used
         }
         
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
 #else
 
         public static UrdfJointFixed CreateOptimizeFixedJoint(GameObject fixedJointToOptimize, UrdfLinkDescription link, UrdfJointDescription joint)

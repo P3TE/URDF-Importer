@@ -30,7 +30,7 @@ namespace Unity.Robotics.UrdfImporter
         public static UrdfJoint Create(GameObject linkObject)
         {
             UrdfJointPrismatic urdfJoint = linkObject.AddComponent<UrdfJointPrismatic>();
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             urdfJoint.unityJoint = linkObject.GetComponent<ArticulationBody>();
             urdfJoint.unityJoint.jointType = ArticulationJointType.PrismaticJoint;
 #else
@@ -60,7 +60,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <returns>floating point number for joint position in meters</returns>
         public override float GetPosition()
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             return unityJoint.jointPosition[xAxis];
 #else
             return Vector3.Dot(unityJoint.transform.localPosition - unityJoint.connectedAnchor, unityJoint.axis);
@@ -73,7 +73,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <returns>floating point for joint velocity in meters per second</returns>
         public override float GetVelocity()
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             return unityJoint.jointVelocity[xAxis];
 #else
             return float.NaN;
@@ -86,7 +86,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <returns>floating point in N</returns>
         public override float GetEffort()
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             return unityJoint.jointForce[xAxis];
 #else
                 return float.NaN;
@@ -100,7 +100,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="deltaState">amount in m by which joint needs to be rotated</param>
         protected override void OnUpdateJointState(float deltaState)
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             ArticulationDrive drive = unityJoint.xDrive;
             drive.target += deltaState;
             unityJoint.xDrive = drive;
@@ -115,57 +115,62 @@ namespace Unity.Robotics.UrdfImporter
 
         protected override void ImportJointData(UrdfJointDescription joint)
         {
-            AdjustMovement(joint);
+#if  URDF_FORCE_ARTICULATION_BODY
+            var axis = (joint.axis != null && joint.axis.xyz != null) ? joint.axis.xyz.ToVector3() : new Vector3(1, 0, 0);
+            SetAxisData(axis);
+            SetLimits(joint);
             SetDynamics(joint.dynamics);
+#else
+            throw new NotImplementedException();
+#endif
         }
 
+#if  URDF_FORCE_ARTICULATION_BODY
         /// <summary>
         /// Reads axis joint information and rotation to the articulation body to produce the required motion
         /// </summary>
         /// <param name="joint">Structure containing joint information</param>
-        protected override void AdjustMovement(UrdfJointDescription joint) // Test this function
+        protected override void SetAxisData(Vector3 axis) // Test this function
         {
-#if !URDF_FORCE_RIGIDBODY
-            axisofMotion = (joint.axis != null && joint.axis.xyz != null) ? joint.axis.xyz.ToVector3() : new Vector3(1, 0, 0);
-            unityJoint.linearLockX = (joint.limit != null) ? ArticulationDofLock.LimitedMotion : ArticulationDofLock.FreeMotion;
-            unityJoint.linearLockY = ArticulationDofLock.LockedMotion;
-            unityJoint.linearLockZ = ArticulationDofLock.LockedMotion;
-
+            axisofMotion = axis;
             Vector3 axisofMotionUnity = axisofMotion.Ros2Unity();
             Quaternion Motion = new Quaternion();
             Motion.SetFromToRotation(new Vector3(1, 0, 0), axisofMotionUnity);
             unityJoint.anchorRotation = Motion;
+        }
 
+        protected override void SetLimits(Joint joint)
+        {
+            unityJoint.linearLockX = (joint.limit != null) ? ArticulationDofLock.LimitedMotion : ArticulationDofLock.FreeMotion;
+            unityJoint.linearLockY = ArticulationDofLock.LockedMotion;
+            unityJoint.linearLockZ = ArticulationDofLock.LockedMotion;
+            
             if (joint.limit != null)
             {
                 ArticulationDrive drive = unityJoint.xDrive;
                 drive.upperLimit = (float)joint.limit.upper;
                 drive.lowerLimit = (float)joint.limit.lower;
                 drive.forceLimit = (float)joint.limit.effort;
-#if UNITY_2020_2_OR_NEWER
-                unityJoint.maxLinearVelocity = (float)joint.limit.velocity;
-#elif UNITY_2020_1
-                maxLinearVelocity = (float)joint.limit.velocity;
-#endif
-                unityJoint.xDrive = drive;
 
+                unityJoint.maxLinearVelocity = (float)joint.limit.velocity;
+                unityJoint.xDrive = drive;
             }
-#else
-            throw new NotImplementedException("TODO - Implement");
-#endif
         }
 
+#endif
+        
         #endregion
-
-
+        
         #region Export
 
         protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
-            joint.axis = GetAxisData(axisofMotion);
-            joint.dynamics = new UrdfJointDescription.Dynamics(unityJoint.linearDamping, unityJoint.jointFriction);
+#if  URDF_FORCE_ARTICULATION_BODY
+            
+            joint.axis = new UrdfJointDescription.Axis((unityJoint.anchorRotation * Vector3.right).Unity2Ros());
+            joint.dynamics = new Joint.Dynamics(unityJoint.linearDamping, unityJoint.jointFriction);
             joint.limit = ExportLimitData();
+            return joint;
 #else
             ConfigurableJoint configurableJoint = (ConfigurableJoint)unityJoint;
 
@@ -178,7 +183,7 @@ namespace Unity.Robotics.UrdfImporter
 
         public override bool AreLimitsCorrect()
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             ArticulationBody joint = GetComponent<ArticulationBody>();
             return joint.linearLockX == ArticulationDofLock.LimitedMotion && joint.xDrive.lowerLimit < joint.xDrive.upperLimit;
 #else
@@ -189,7 +194,7 @@ namespace Unity.Robotics.UrdfImporter
 
         protected override UrdfJointDescription.Limit ExportLimitData()
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             ArticulationDrive drive = GetComponent<ArticulationBody>().xDrive;
 #if UNITY_2020_2_OR_NEWER
             return new UrdfJointDescription.Limit(drive.lowerLimit, drive.upperLimit, drive.forceLimit, unityJoint.maxLinearVelocity);

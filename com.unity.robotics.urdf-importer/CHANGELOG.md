@@ -11,6 +11,43 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 ### Known Issues
 
 ### Added
+- Added capsule shape support
+
+- Added mesh filetype export support for .dae, .obj, .fbx, .ma, .max, .jas, .dxf, .c4d, .blend, .lxo, .3ds
+
+### Changed
+- Changed "Use URDF Values" to "Override URDF Values" in URDF Inertial scripts and updated behavior to match expectation
+
+### Deprecated
+
+### Removed
+- Removed option on UrdfRobot inspector window to set all MeshColliders to non-Convex meshes.
+
+### Fixed
+- Added check for NaN values during inertia matrix's conversion to inertia tensor rotation.
+
+## [0.5.2-preview] - 2022-02-01
+
+Added Sonarqube scanner
+
+### Fixed
+Fixed inability to read relative file paths 
+
+Correct Axis change issues in URDF Importer
+
+
+## [0.5.1-preview] - 2021-10-04
+Fixed bug with multiple references to the same mesh during import
+
+Add the [Close Stale Issues](https://github.com/marketplace/actions/close-stale-issues) action
+
+### Upgrade Notes
+
+### Known Issues
+
+### Added
+
+Start supporting file:// type URI.
 
 ### Changed
 

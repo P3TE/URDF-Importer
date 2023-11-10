@@ -55,7 +55,7 @@ namespace Unity.Robotics.UrdfImporter.Editor
             layerIndex.intValue = EditorGUILayout.LayerField(new GUIContent("Robot Layer", "The Unity Layer the robot will be on."), layerIndex.intValue);
 
             GUILayout.Space(5);
-            GUILayout.Label("All Rigidbodies", EditorStyles.boldLabel);
+            GUILayout.Label("All Bodies", EditorStyles.boldLabel);
             DisplaySettingsToggle(new GUIContent("Use Gravity", "If disabled, robot is not affected by gravity."), urdfRobot.SetRigidbodiesUseGravity, UrdfRobot.useGravity);
             DisplaySettingsToggle(new GUIContent("Use Inertia from URDF", "If disabled, Unity will generate new inertia tensor values automatically."),urdfRobot.SetUseUrdfInertiaData,
                 UrdfRobot.useUrdfInertiaData);
