@@ -501,10 +501,8 @@ namespace Unity.Robotics.UrdfImporter
                 linkLog.AppendLine(String.Format("{0}Type:{1,5}", Indent(indent), "Box"));
                 linkLog.AppendLine(String.Format("{0}Dimensions Equal: {1,6} ", Indent(indent), boxEqual));
                 linkLog.AppendLine(String.Format("{0}Dimensions: Source: {1,5:F3} {2,5:F3} {3,5:F3} Exported: {4,5:F3} {5,5:F3} {6,5:F3}", Indent(indent), source.box.size[0], source.box.size[1], source.box.size[2], exported.box.size[0], exported.box.size[1], exported.box.size[2]));
-                if (boxEqual)
-                  return true;
-                else
-                  return false;
+                
+                return boxEqual;
             }
 
             if (source.cylinder != null && exported.cylinder != null)
@@ -515,11 +513,7 @@ namespace Unity.Robotics.UrdfImporter
                 linkLog.AppendLine(String.Format("{0}Dimensions Equal: {1,6}", Indent(indent), cylinderEqual));
                 linkLog.AppendLine(String.Format("{0}Source: Radius: {1,5:F3} Length: {2,5:F3} Exported: Radius: {3,5:F3} Length: {4,5:F3}", Indent(indent), source.cylinder.radius, source.cylinder.length, exported.cylinder.radius, exported.cylinder.length));
 
-                if (cylinderEqual)
-                    return true;
-
-                else
-                    return false;
+                return cylinderEqual;
             }
 
             if (source.capsule != null && exported.capsule != null)
@@ -530,11 +524,7 @@ namespace Unity.Robotics.UrdfImporter
                 linkLog.AppendLine(String.Format("{0}Dimensions Equal: {1,6}", Indent(indent), capsuleEqual));
                 linkLog.AppendLine(String.Format("{0}Source: Radius: {1,5:F3} Length: {2,5:F3} Exported: Radius: {3,5:F3} Length: {4,5:F3}", Indent(indent), source.capsule.radius, source.capsule.length, exported.capsule.radius, exported.capsule.length));
 
-                if (capsuleEqual)
-                    return true;
-
-                else
-                    return false;
+                return capsuleEqual;
             }
 
             if (source.sphere != null && exported.sphere != null)
@@ -545,11 +535,7 @@ namespace Unity.Robotics.UrdfImporter
                 linkLog.AppendLine(String.Format("{0}Dimensions Equal: {1,6}", Indent(indent), sphereEqual));
                 linkLog.AppendLine(String.Format("{0}Source: Radius: {1,5:F3} Exported: Radius: {1,5:F3}", Indent(indent), source.sphere.radius, exported.sphere.radius));
 
-                if (sphereEqual)
-                    return true;  
-                else
-                    return false;
-                
+                return sphereEqual;
             }
 
             if (source.mesh != null && exported.mesh != null)

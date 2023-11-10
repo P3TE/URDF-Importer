@@ -99,10 +99,11 @@ namespace Unity.Robotics.UrdfImporter
 
             public Vector3 axisROS;
             
-            const string _AtrributeName = "xyz";
+            const string _AttributeName = "xyz";
 
             private static Vector3 GetDefaultAxisValues()
             {
+                // Default axis is forward in the ROS frame (ENU / FLU).
                 return new Vector3(1, 0, 0);
             }
 
@@ -110,7 +111,7 @@ namespace Unity.Robotics.UrdfImporter
             {
                 if (newAxisRos.sqrMagnitude < 0.001f)
                 {
-                    RuntimeUrdf.AddImportWarning($"Axis attribute '{_AtrributeName}' magnitude should be non zero! Found: {newAxisRos}, using default axis.");
+                    RuntimeUrdf.AddImportWarning($"Axis attribute '{_AttributeName}' magnitude should be non zero! Found: {newAxisRos}, using default axis.");
                     axisROS = GetDefaultAxisValues();
                     return;
                 }
@@ -122,17 +123,17 @@ namespace Unity.Robotics.UrdfImporter
             public Axis(XElement node)
             {
                 
-                XAttribute xyzAttribute = node.Attribute(_AtrributeName);
+                XAttribute xyzAttribute = node.Attribute(_AttributeName);
                 if (xyzAttribute == null)
                 {
-                    RuntimeUrdf.AddImportWarning($"Axis missing attribute '{_AtrributeName}', using default axis.");
+                    RuntimeUrdf.AddImportWarning($"Axis missing attribute '{_AttributeName}', using default axis.");
                     axisROS = GetDefaultAxisValues();
                     return;
                 }
                 double[] xyz = xyzAttribute.ReadDoubleArray();
                 if (xyz.Length != 3)
                 {
-                    RuntimeUrdf.AddImportWarning($"Axis attribute '{_AtrributeName}' should have exactly 3 values, but has {xyz.Length}, using default axis.");
+                    RuntimeUrdf.AddImportWarning($"Axis attribute '{_AttributeName}' should have exactly 3 values, but has {xyz.Length}, using default axis.");
                     axisROS = GetDefaultAxisValues();
                     return;
                 }

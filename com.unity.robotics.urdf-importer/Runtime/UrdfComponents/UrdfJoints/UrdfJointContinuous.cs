@@ -27,7 +27,7 @@ namespace Unity.Robotics.UrdfImporter
         {
             UrdfJointContinuous urdfJoint = linkObject.AddComponent<UrdfJointContinuous>();
             
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             urdfJoint.unityJoint = linkObject.GetComponent<ArticulationBody>();
             urdfJoint.unityJoint.jointType = ArticulationJointType.RevoluteJoint;
 #else
@@ -53,7 +53,7 @@ namespace Unity.Robotics.UrdfImporter
         public override float GetPosition() // Check Units
         {
 
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             return unityJoint.jointPosition[xAxis];
 #else
     #if CONTINUOUS_AS_HINGE_JOINTS
@@ -100,7 +100,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <returns>floating point for joint velocity in radians per second</returns>
         public override float GetVelocity()
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             return unityJoint.jointVelocity[xAxis];
 #else
             
@@ -143,7 +143,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <returns>floating point in Nm</returns>
         public override float GetEffort()
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             return unityJoint.jointForce[xAxis];
 #else
             
@@ -173,7 +173,7 @@ namespace Unity.Robotics.UrdfImporter
         protected override void OnUpdateJointState(float deltaState)
         {
 
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             ArticulationDrive drive = unityJoint.xDrive;
             drive.target += deltaState;
             unityJoint.xDrive = drive;
@@ -193,7 +193,7 @@ namespace Unity.Robotics.UrdfImporter
 
         protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             joint.axis = new UrdfJointDescription.Axis((unityJoint.anchorRotation * Vector3.right).Unity2Ros());
             joint.dynamics = new UrdfJointDescription.Dynamics(unityJoint.angularDamping, unityJoint.jointFriction);
             joint.limit = ExportLimitData();
@@ -214,7 +214,7 @@ namespace Unity.Robotics.UrdfImporter
         /// <param name="joint">Structure containing joint information</param>
         protected override void AdjustMovement(UrdfJointDescription joint)
         {
-#if  UNITY_2020_1_OR_NEWER && !URDF_FORCE_RIGIDBODY
+#if  URDF_FORCE_ARTICULATION_BODY
             axisofMotion = axis;
             unityJoint.linearLockX = ArticulationDofLock.LockedMotion;
             unityJoint.linearLockY = ArticulationDofLock.LockedMotion;

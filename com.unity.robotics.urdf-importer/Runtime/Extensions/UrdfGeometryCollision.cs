@@ -317,15 +317,16 @@ namespace Unity.Robotics.UrdfImporter
                     GameObject child = meshFilter.gameObject;
                     VHACD decomposer = child.AddComponent<VHACD>();
                     List<Mesh> colliderMeshes = decomposer.GenerateConvexMeshes(meshFilter.sharedMesh);
-                    foreach (Mesh _c in colliderMeshes)
+                    for (var index = 0; index < colliderMeshes.Count; index++)
                     {
-                        Mesh collider = _c; //Redeclaration as Foreach iteration variable '_c' is immutable.
+                        Mesh collider = colliderMeshes[index];
                         if (!RuntimeUrdf.IsRuntimeMode())
                         {
                             meshIndex++;
                             string name = $"{filePath}/{templateFileName}_{meshIndex}.asset";
                             // Only create new asset if one doesn't exist or should overwrite
-                            if ((UrdfRobotExtensions.importsettings.OverwriteExistingPrefabs || !RuntimeUrdf.AssetExists(name)) && !s_CreatedAssetNames.Contains(name))
+                            if ((UrdfRobotExtensions.importsettings.OverwriteExistingPrefabs ||
+                                 !RuntimeUrdf.AssetExists(name)) && !s_CreatedAssetNames.Contains(name))
                             {
                                 Debug.Log($"Creating new mesh file: {name}");
                                 RuntimeUrdf.AssetDatabase_CreateAsset(collider, name);
