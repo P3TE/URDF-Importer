@@ -140,7 +140,6 @@ namespace Unity.Robotics.UrdfImporter
             SetTag(im.robotGameObject);
 
             UrdfRobot urdfRobot = im.robotGameObject.AddComponent<UrdfRobot>();
-            urdfRobot.SetLayer(im.settings.defaultVehicleLayerIndex);
             if (string.IsNullOrWhiteSpace(im.robotNamespace))
             {
                 throw new Exception($"Robot Namespace was not set!");

@@ -20,7 +20,6 @@ namespace Unity.Robotics.UrdfImporter
 
         public axisType chosenAxis = axisType.yAxis;
         public convexDecomposer convexMethod = convexDecomposer.vHACD;
-        public int defaultVehicleLayerIndex = 0;
 
         public bool OverwriteExistingPrefabs { get; set; } = false;
 
