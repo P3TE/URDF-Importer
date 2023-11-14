@@ -139,7 +139,13 @@ namespace Unity.Robotics.UrdfImporter
 #else
 
         
-
+        /// <summary>
+        /// Given a link, search up the tree to find a rigidbody.
+        /// If a rigidbody is connected by a fixed joint, keep searching. 
+        /// </summary>
+        /// <param name="linkObject"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public static Rigidbody FindCrucialParent(GameObject linkObject)
         {
             Transform currentTransform = linkObject.transform.parent;

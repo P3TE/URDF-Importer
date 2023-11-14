@@ -217,6 +217,7 @@ namespace Unity.Robotics.UrdfImporter
         }
 
         /**
+         * Calls CheckForInvalidElements with an auto-generated HashSet of validElements.
          * Takes a static class in the form of:
          * static class ListOfIds{
          *  public const string IDA = "id_a";
