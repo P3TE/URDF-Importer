@@ -52,19 +52,17 @@ namespace Unity.Robotics.UrdfImporter
         protected const int RoundDigits = 6;
         protected const float Tolerance = 0.0000001f;
         
+        // TODO: This is used with when REVOLUTE_AS_HINGE_JOINTS and CONTINUOUS_AS_HINGE_JOINTS
         protected Quaternion originalLocalRotation = Quaternion.identity;
 
-        public bool publishJointStateIfApplicable = false;
+        private bool _shouldPublishJointState = true;
 
-        //Whether the joint state publisher should publish the joint state.
+        // Whether the JointStatePublisher should publish the joint state.
         public bool ShouldPublishJointState
         {
             get
             {
-                if (!publishJointStateIfApplicable)
-                {
-                    return false;
-                }
+                if (!_shouldPublishJointState) return false;
 
                 switch (JointType)
                 {
@@ -75,6 +73,8 @@ namespace Unity.Robotics.UrdfImporter
                         return true;
                 }
             }
+
+            set => _shouldPublishJointState = value;
         }
 
         public static UrdfJoint Create(GameObject linkObject, JointTypes jointType, UrdfJointDescription joint = null)
@@ -287,6 +287,7 @@ namespace Unity.Robotics.UrdfImporter
             
             if (unityJoint is HingeJoint hingeJoint)
             {
+                
                 hingeJoint.useSpring = true;
                 hingeJoint.spring = new JointSpring()
                 {

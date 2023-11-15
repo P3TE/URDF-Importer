@@ -188,7 +188,7 @@ namespace Unity.Robotics.UrdfImporter
         protected override void ImportJointData(UrdfJointDescription joint)
         {
             AdjustMovement(joint);
-            SetDynamics(joint.dynamics);
+            //SetDynamics(joint.dynamics);
         }
 
         protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
@@ -264,22 +264,22 @@ namespace Unity.Robotics.UrdfImporter
 
             // useLimits is not shared.
 
-            hingeJoint.motor = new JointMotor()
+            /*hingeJoint.motor = new JointMotor()
             {
                 force = (float) joint.limit.effort,
                 targetVelocity = (float) joint.limit.velocity,
-            };
+            };*/
             //TODO - hingeJoint.useMotor  
         }
 
 
         private void AdjustMotionConfigurableJoint(UrdfJointDescription joint, ConfigurableJoint configurableJoint)
         {
-            AdjustMovementSharedConfirguableJoint(configurableJoint, joint);
+            AdjustMovementSharedConfigurableJoint(configurableJoint, joint);
             configurableJoint.angularXMotion = ConfigurableJointMotion.Free;
         }
 
-        public static void AdjustMovementSharedConfirguableJoint(ConfigurableJoint configurableJoint, UrdfJointDescription joint)
+        public static void AdjustMovementSharedConfigurableJoint(ConfigurableJoint configurableJoint, UrdfJointDescription joint)
         {
             Vector3 axisOfMotionUnity = joint.axis.AxisUnity;
             Vector3 secondaryAxisOfMotionUnity = joint.axis.SecondaryAxisEstimateUnity;
