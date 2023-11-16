@@ -33,7 +33,7 @@ namespace Unity.Robotics.UrdfImporter.Editor
         {
             robotNamespace = serializedObject.FindProperty("robotNamespace");
             robotName = serializedObject.FindProperty("robotName");
-            axisType = serializedObject.FindProperty("choosenAxis");
+            axisType = serializedObject.FindProperty("chosenAxis");
             layerIndex = serializedObject.FindProperty("m_LayerIndex");
         }
         
