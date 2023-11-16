@@ -287,7 +287,6 @@ namespace Unity.Robotics.UrdfImporter
             
             if (unityJoint is HingeJoint hingeJoint)
             {
-                
                 hingeJoint.useSpring = true;
                 hingeJoint.spring = new JointSpring()
                 {

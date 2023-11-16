@@ -33,7 +33,7 @@ namespace Unity.Robotics.UrdfImporter
         
         public bool useUrdfData;
         public Vector3 centerOfMass;
-        public Vector3? _adjustedCenterOfMass = null;
+        private Vector3? _adjustedCenterOfMass = null;
         private bool startCalled = false;
         public UrdfLinkDescription.Inertial.InertiaCalculationType inertiaCalculationType;
         public Vector3 inertiaTensor;
@@ -45,6 +45,8 @@ namespace Unity.Robotics.UrdfImporter
         
         [SerializeField, HideInInspector]
         UrdfLinkDescription.Inertial m_Overrides;
+
+        public bool HasAdjustedCenterOfMass => _adjustedCenterOfMass.HasValue;
 
         public Vector3 AdjustedCenterOfMass
         {
@@ -127,25 +129,32 @@ namespace Unity.Robotics.UrdfImporter
                     m_OriginalValues = ToLinkInertial();
                 }
                 Assert.IsNotNull(m_OriginalValues);
+
+                if (HasAdjustedCenterOfMass)
+                {
+                    robotLink.centerOfMass = AdjustedCenterOfMass;
+                }
+                else
+                {
+                    robotLink.ResetCenterOfMass();
+                }
                 
-                robotLink.centerOfMass = AdjustedCenterOfMass;
                 if (inertiaCalculationType.AutomaticInertiaCalculation())
                 {
                     robotLink.ResetInertiaTensor();
                 }
                 else
                 {
-                    robotLink.inertiaTensor = inertiaTensor;
+                    Vector3 safeInertia = EnsureMinimumInertia(inertiaTensor, out bool wasBelowMinimumInertia);
+                    
                     robotLink.inertiaTensorRotation = inertiaTensorRotation * inertialAxisRotation;
-                }
-
-                Vector3 safeInertia = EnsureMinimumInertia(robotLink.inertiaTensor, out bool wasBelowMinimumInertia);
-                if(wasBelowMinimumInertia)
-                {
                     robotLink.inertiaTensor = safeInertia;
-                    RuntimeUrdf.AddImportWarning($"Inertia Tensor below {k_MinInertia} detected on {robotLink.gameObject.name}! Due to floating-point precision values lower than {k_MinInertia} may cause erratic behaviour so the Inertia Tensor for this object has been adjusted to be at least the minimum value.");
+                    
+                    if (wasBelowMinimumInertia)
+                    {
+                        RuntimeUrdf.AddImportWarning($"Inertia Tensor below {k_MinInertia} detected on {robotLink.gameObject.name}! Due to floating-point precision values lower than {k_MinInertia} may cause erratic behaviour so the Inertia Tensor for this object has been adjusted to be at least the minimum value.");
+                    }
                 }
-                
             }
             else
             {

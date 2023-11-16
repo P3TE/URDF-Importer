@@ -188,7 +188,7 @@ namespace Unity.Robotics.UrdfImporter
         protected override void ImportJointData(UrdfJointDescription joint)
         {
             AdjustMovement(joint);
-            //SetDynamics(joint.dynamics);
+            SetDynamics(joint.dynamics);
         }
 
         protected override UrdfJointDescription ExportSpecificJointData(UrdfJointDescription joint)
