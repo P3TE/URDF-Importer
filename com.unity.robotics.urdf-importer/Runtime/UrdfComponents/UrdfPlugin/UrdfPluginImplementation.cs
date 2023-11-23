@@ -277,6 +277,11 @@ namespace Unity.Robotics.UrdfImporter
             return true;
         }
         
+        public static bool ReadStringFromChildXElement(XElement node, string childElementName, ref string result)
+        {
+            return ReadStringFromChildXElement(node, childElementName, out result, false, result);
+        }
+        
         public static bool ReadStringFromChildXElement(XElement node, string childElementName, out string result, 
             bool required = true, string defaultValue = "")
         {
