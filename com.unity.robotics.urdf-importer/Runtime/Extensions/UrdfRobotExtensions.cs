@@ -250,6 +250,11 @@ namespace Unity.Robotics.UrdfImporter
                     RuntimeUrdf.urdfBuildErrors.AddLast(e);
                 }
             }
+            else
+            {
+                UrdfRobot urdfRobot = im.robotGameObject.GetComponent<UrdfRobot>();
+                urdfRobot.FlagAsDestroyed();
+            }
 
             if (im.forceRuntimeMode) 
             { // set runtime mode back to what it was

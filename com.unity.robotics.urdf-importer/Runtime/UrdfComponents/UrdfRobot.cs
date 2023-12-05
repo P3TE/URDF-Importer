@@ -58,6 +58,22 @@ namespace Unity.Robotics.UrdfImporter
         
         public string ModelName => gameObject.name;
 
+        public bool DestroyCalled
+        {
+            get;
+            private set;
+        } = false;
+
+        private void OnDestroy()
+        {
+            DestroyCalled = true;
+        }
+
+        public void FlagAsDestroyed()
+        {
+            DestroyCalled = true;
+        }
+
         public void SetRobotNamespace(string rawRobotNamespace)
         {
             while (rawRobotNamespace.EndsWith('/'))
