@@ -127,7 +127,7 @@ namespace Unity.Robotics.UrdfImporter
             Rigidbody fixedParent;
             try
             {
-                fixedParent = FindCrucialParent(fixedJointToOptimize);
+                fixedParent = FindRigidBody(fixedJointToOptimize.transform.parent);
             }
             catch
             {

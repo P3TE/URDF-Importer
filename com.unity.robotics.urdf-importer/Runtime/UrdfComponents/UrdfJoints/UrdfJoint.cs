@@ -81,7 +81,7 @@ namespace Unity.Robotics.UrdfImporter
         {
 #if  URDF_FORCE_ARTICULATION_BODY
 #else
-            Rigidbody parentRigidbody = FindCrucialParent(linkObject);
+            Rigidbody parentRigidbody = FindRigidBody(linkObject.transform.parent);
             if (parentRigidbody == null)
             {
                 UrdfLink link = linkObject.transform.parent.gameObject.GetComponent<UrdfLink>();
@@ -138,17 +138,13 @@ namespace Unity.Robotics.UrdfImporter
 #if  URDF_FORCE_ARTICULATION_BODY
 #else
 
-        
         /// <summary>
         /// Given a link, search up the tree to find a rigidbody.
         /// If a rigidbody is connected by a fixed joint, keep searching. 
         /// </summary>
-        /// <param name="linkObject"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public static Rigidbody FindCrucialParent(GameObject linkObject)
+        public static Rigidbody FindRigidBody(Transform fromTransform)
         {
-            Transform currentTransform = linkObject.transform.parent;
+            Transform currentTransform = fromTransform;
             while (currentTransform != null)
             {
                 
@@ -174,7 +170,7 @@ namespace Unity.Robotics.UrdfImporter
             if (unityJoint != null)
             {
                 //Go up the hierarchy until you find the first rigidbody to connect to:
-                Rigidbody connectedBody = FindCrucialParent(linkObject);
+                Rigidbody connectedBody = FindRigidBody(linkObject.transform.parent);
                 unityJoint.connectedBody = connectedBody;
                 unityJoint.autoConfigureConnectedAnchor = true;
             }

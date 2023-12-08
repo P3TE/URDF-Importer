@@ -307,6 +307,12 @@ namespace Unity.Robotics.UrdfImporter
             result = xAttribute.Value;
             return true;
         }
+
+        public static bool ReadIntegerFromChildXElement(XElement node, string childElementName, ref int result)
+        {
+            int defualtValue = result;
+            return ReadIntegerFromChildXElement(node, childElementName, out result, false, defualtValue);
+        }
         
         public static bool ReadIntegerFromChildXElement(XElement node, string childElementName, out int result, 
             bool required = true, int defaultValue = 0)

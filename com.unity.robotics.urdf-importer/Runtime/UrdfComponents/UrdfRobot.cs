@@ -37,6 +37,10 @@ namespace Unity.Robotics.UrdfImporter
 
         [SerializeField] private int m_LayerIndex = 0;
         private int previousLayer = 0;
+
+        // To make sure this is called after start is called, this dictionary stores
+        // any layer requests until start is called. 
+        private Dictionary<Transform, int> linksWithSpecificLayersToSet = new();
         
         private bool startCalled = false;
 
@@ -54,6 +58,22 @@ namespace Unity.Robotics.UrdfImporter
         
         public string ModelName => gameObject.name;
 
+        public bool DestroyCalled
+        {
+            get;
+            private set;
+        } = false;
+
+        private void OnDestroy()
+        {
+            DestroyCalled = true;
+        }
+
+        public void FlagAsDestroyed()
+        {
+            DestroyCalled = true;
+        }
+
         public void SetRobotNamespace(string rawRobotNamespace)
         {
             while (rawRobotNamespace.EndsWith('/'))
@@ -70,6 +90,18 @@ namespace Unity.Robotics.UrdfImporter
         public void SetRobotName(string robotName)
         {
             this.robotName = robotName;
+        }
+        
+        public void QueueLayerChangeForTransformAndChildren(Transform transformToSet, int layer)
+        {
+            if (startCalled)
+            {
+                SetLayerForObjectAndChildren(transformToSet, layer);
+            }
+            else
+            {
+                linksWithSpecificLayersToSet.Add(transformToSet, layer);
+            }
         }
         
         public void SetLayer(int layerIndex)
@@ -166,6 +198,11 @@ namespace Unity.Robotics.UrdfImporter
         {
             startCalled = true;
             CreateCollisionExceptions();
+            foreach (KeyValuePair<Transform,int> keyValuePair in linksWithSpecificLayersToSet)
+            {
+                SetLayerForObjectAndChildren(keyValuePair.Key, keyValuePair.Value);
+            }
+            linksWithSpecificLayersToSet = null;
             UpdateLayerForAllTransforms();
         }
 
@@ -195,16 +232,27 @@ namespace Unity.Robotics.UrdfImporter
                 return;
             }
 
+            transform.gameObject.layer = previousLayer;
+            SetLayerForObjectAndChildren(transform, m_LayerIndex);
+
+            previousLayer = m_LayerIndex;
+        }
+
+        public static void SetLayerForObjectAndChildren(Transform parentTransform, int newLayer)
+        {
+            int layerToChange = parentTransform.gameObject.layer;
             LinkedList<Transform> transformQueue = new LinkedList<Transform>();
-            transformQueue.AddLast(transform);
+            transformQueue.AddLast(parentTransform);
             while (transformQueue.Count > 0)
             {
                 Transform current = transformQueue.First.Value;
                 transformQueue.RemoveFirst();
 
-                if (current.gameObject.layer == previousLayer)
+                if (current.gameObject.layer == layerToChange)
                 {
-                    current.gameObject.layer = m_LayerIndex;
+                    // Only change the layer if it matches the parent layer
+                    // otherwise it was probably set by something so we should leave it as is (e.g. visualisers) 
+                    current.gameObject.layer = newLayer;
                 }
 
                 for (int i = 0; i < current.childCount; i++)
@@ -213,8 +261,6 @@ namespace Unity.Robotics.UrdfImporter
                 }
 
             }
-
-            previousLayer = m_LayerIndex;
         }
         
         #endregion
