@@ -126,10 +126,10 @@ namespace Unity.Robotics.UrdfImporter
             }
         }
 
-        public static bool GetUrdfLinkWithNameFromElement(XElement element, string linkElementName, out string linkName,
+        public static bool GetUrdfLinkWithNameFromElement(XElement element, string linkElementName,
             out UrdfLink urdfLink, bool required = true)
         {
-            bool linkNameExists = ReadStringFromChildXElement(element, linkElementName, out linkName, required);
+            bool linkNameExists = ReadStringFromChildXElement(element, linkElementName, out string linkName, required);
             if (!linkNameExists)
             {
                 urdfLink = null;
@@ -145,10 +145,10 @@ namespace Unity.Robotics.UrdfImporter
             return true;
         }
         
-        public static bool GetUrdfJointWithNameFromElement(XElement element, string jointElementName, out string jointName,
+        public static bool GetUrdfJointWithNameFromElement(XElement element, string jointElementName,
             out UrdfJoint urdfJoint, bool required = true)
         {
-            bool linkNameExists = ReadStringFromChildXElement(element, jointElementName, out jointName, required);
+            bool linkNameExists = ReadStringFromChildXElement(element, jointElementName, out string jointName, required);
             if (!linkNameExists)
             {
                 urdfJoint = null;
