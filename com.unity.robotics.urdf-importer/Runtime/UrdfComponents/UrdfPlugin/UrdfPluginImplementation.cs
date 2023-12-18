@@ -658,9 +658,9 @@ namespace Unity.Robotics.UrdfImporter
             return ReadIntArrayFromString(node.Name.ToString(), arrayString, out result);
         }
 
-        public static bool ReadFloatArrayFromChildXElement(XElement node, string childElementName, out float[] result)
+        public static bool ReadFloatArrayFromChildXElement(XElement node, string childElementName, out float[] result, bool required = true)
         {
-            if (!ReadStringFromChildXElement(node, childElementName, out string arrayString, true))
+            if (!ReadStringFromChildXElement(node, childElementName, out string arrayString, required))
             {
                 result = Array.Empty<float>();
                 return false;
