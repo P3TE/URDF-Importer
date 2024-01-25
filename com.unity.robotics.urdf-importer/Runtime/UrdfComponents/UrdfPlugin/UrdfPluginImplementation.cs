@@ -409,9 +409,10 @@ namespace Unity.Robotics.UrdfImporter
         }
         
         public static bool ReadVector3FromXElementAttribute(XElement node, string attributeName, out Vector3 result,
-            BuiltInExtensions.UrdfRosUnityVector3Conversion appliedConversion = BuiltInExtensions.UrdfRosUnityVector3Conversion.PositionDirection, bool required = true)
+            bool required = true, Vector3 defaultValue = new(),
+            BuiltInExtensions.UrdfRosUnityVector3Conversion appliedConversion = BuiltInExtensions.UrdfRosUnityVector3Conversion.PositionDirection)
         {
-            return ReadVector3FromXElementAttribute(node, attributeName, out result, appliedConversion, required, Vector3.zero);
+            return ReadVector3FromXElementAttribute(node, attributeName, out result, appliedConversion, required, defaultValue);
         }
 
         public static bool ReadVector3FromXElementAttribute(XElement node, string attributeName, out Vector3 result, 
@@ -433,7 +434,6 @@ namespace Unity.Robotics.UrdfImporter
             if (width != 3 || height != 1)
             {
                 throw new Exception($"Failed to parse Vector3 in node {GetVerboseXElementName(node)} Expected elements of dimensions 1x3, found {height}x{width}");
-                //Good.
             }
 
             result = new Vector3(vector3AsMatrix[0][0], vector3AsMatrix[0][1], vector3AsMatrix[0][2]);
