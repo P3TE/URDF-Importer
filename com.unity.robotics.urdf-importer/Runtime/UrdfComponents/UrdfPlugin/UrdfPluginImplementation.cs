@@ -408,6 +408,31 @@ namespace Unity.Robotics.UrdfImporter
             return wasSuccess;
         }
         
+        public static bool ReadVector2FromXElementAttribute(XElement node, string attributeName, out Vector2 result,
+            bool required = true, Vector2 defaultValue = new())
+        {
+            bool exists = ReadMatrixNxMFromXElementAttribute(node, attributeName, out float[][] vector2AsMatrix,
+                out int width, out int height, required);
+            if (!exists)
+            {
+                result = defaultValue;
+                if (required)
+                {
+                    throw new Exception($"Unable to find {nameof(Vector2)} in node {GetVerboseXElementName(node)}");
+                }
+                return false;
+            }
+
+            if (width != 2 || height != 1)
+            {
+                throw new Exception($"Failed to parse {nameof(Vector2)} in node {GetVerboseXElementName(node)} Expected elements of dimensions 1x2, found {height}x{width}");
+            }
+
+            result = new Vector2(vector2AsMatrix[0][0], vector2AsMatrix[0][1]);
+
+            return true;
+        }
+        
         public static bool ReadVector3FromXElementAttribute(XElement node, string attributeName, out Vector3 result,
             bool required = true, Vector3 defaultValue = new(),
             BuiltInExtensions.UrdfRosUnityVector3Conversion appliedConversion = BuiltInExtensions.UrdfRosUnityVector3Conversion.PositionDirection)
