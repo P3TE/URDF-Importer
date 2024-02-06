@@ -310,8 +310,8 @@ namespace Unity.Robotics.UrdfImporter
 
         public static bool ReadIntegerFromChildXElement(XElement node, string childElementName, ref int result)
         {
-            int defualtValue = result;
-            return ReadIntegerFromChildXElement(node, childElementName, out result, false, defualtValue);
+            int defaultValue = result;
+            return ReadIntegerFromChildXElement(node, childElementName, out result, false, defaultValue);
         }
         
         public static bool ReadIntegerFromChildXElement(XElement node, string childElementName, out int result, 
@@ -329,6 +329,11 @@ namespace Unity.Robotics.UrdfImporter
                 throw new Exception($"Node {node.Name} value expected an integer, received: {childXElement.Value}");
             }
             return true;
+        }
+
+        public static bool ReadIntegerFromXElementAttribute(XElement node, string attributeName, ref int result)
+        {
+            return ReadIntegerFromXElementAttribute(node, attributeName, out result, false, result);
         }
 
         public static bool ReadIntegerFromXElementAttribute(XElement node, string attributeName, out int result,
