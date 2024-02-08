@@ -144,6 +144,25 @@ namespace Unity.Robotics.UrdfImporter
             }
             return true;
         }
+
+        public static bool GetUrdfLinkWithNameFromAttribute(XElement element, string linkAttributeName,
+            out UrdfLink urdfLink, bool required = true)
+        {
+            bool linkNameExists = ReadStringFromXElementAttribute(element, linkAttributeName, out string linkName, required);
+            if (!linkNameExists)
+            {
+                urdfLink = null;
+                return false;
+            }
+
+            bool foundLink = UrdfLinkExtensions.TryFindLink(linkName, out urdfLink);
+            if (!foundLink)
+            {
+                throw new Exception(
+                    $"For node {GetVerboseXElementName(element)}, unable to find link with name {linkName}");
+            }
+            return true;
+        }
         
         public static bool GetUrdfJointWithNameFromElement(XElement element, string jointElementName,
             out UrdfJoint urdfJoint, bool required = true)
