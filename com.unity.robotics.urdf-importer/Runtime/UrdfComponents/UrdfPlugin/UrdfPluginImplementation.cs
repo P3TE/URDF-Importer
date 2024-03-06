@@ -327,6 +327,28 @@ namespace Unity.Robotics.UrdfImporter
             return true;
         }
 
+        public static bool ReadStringArrayFromXElementAttribute(XElement node, string attributeName,
+            out string[] result, bool required = true)
+        {
+            if (!ReadStringFromXElementAttribute(node, attributeName, out string stringResult, required))
+            {
+                result = Array.Empty<string>();
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(stringResult))
+            {
+                result = Array.Empty<string>();
+                return true;
+            }
+
+            result = stringResult.Split(',');
+
+            for (int i = 0; i < result.Length; i++) result[i] = result[i].Trim();
+            
+            return true;
+        }
+
         public static bool ReadIntegerFromChildXElement(XElement node, string childElementName, ref int result)
         {
             int defaultValue = result;
